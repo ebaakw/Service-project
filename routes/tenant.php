@@ -1,0 +1,67 @@
+<?php
+
+use App\Http\Controllers\Tenant\CompanyPriceItemController;
+use App\Http\Controllers\Tenant\CompanyPriceListController;
+use App\Http\Controllers\Tenant\DiscountController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+/*
+|--------------------------------------------------------------------------
+| Tenant UI (AdminLTE shell) — stub routes mirror Ebaa-Laundry navigation names
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['web', 'auth', 'verified'])->group(function (): void {
+    Route::get('/tenant', fn () => Inertia::render('Tenant/Dashboard'))->name('tenant.home');
+
+    Route::get('/tenant/notifications/unread', fn () => response()->json(['data' => []]))
+        ->name('tenant.notifications.unread');
+
+    Route::get('/tenant/notifications', fn () => Inertia::render('Tenant/Placeholder', [
+        'titleKey' => 'tenant.notifications',
+    ]))->name('tenant.notifications.index');
+
+    Route::get('/tenant/notifications/{id}', fn (string $id) => Inertia::render('Tenant/Placeholder', [
+        'titleKey' => 'tenant.notifications',
+        'id' => $id,
+    ]))->where('id', '[0-9]+')->name('tenant.notifications.show');
+
+    Route::post('/tenant/internal/notifications/mark-popup-shown', fn () => response()->json(['ok' => true]))
+        ->name('tenant.notifications.mark-popup-shown');
+
+    Route::post('/tenant/internal/notifications/mark-read', fn () => response()->json(['ok' => true]))
+        ->name('tenant.notifications.mark-read');
+
+    $stubRouteNames = [
+        'users.create', 'users.index', 'roles.create', 'roles.index',
+        'clients.create', 'clients.index', 'subscriptions.create', 'wallet.index', 'packages.index',
+        'invoices.create', 'invoices.index',
+        'driver-orders.index',
+        'branches.create', 'branches.index',
+        'products.create', 'products.index', 'categories.index', 'services.index', 'sub-services.index', 'units.index',
+        'expense-categories.create', 'expense-categories.index', 'expenses.create', 'expenses.index',
+        'suppliers.create', 'suppliers.index', 'purchases.create', 'purchases.index',
+        'reports.summary', 'reports.sales', 'reports.services_sales', 'reports.branch_shift_performance',
+        'reports.expenses', 'reports.purchases', 'reports.top_clients', 'reports.profit_loss', 'reports.invoices', 'reports.drivers',
+        'payment-links.index',
+        'transactions.index', 'packages.charges', 'points.index',
+        'settings.index', 'settings.excel',
+        'contactus.create',
+    ];
+
+    foreach ($stubRouteNames as $name) {
+        $uri = '/tenant/'.str_replace('.', '/', $name);
+        Route::get($uri, fn () => Inertia::render('Tenant/Placeholder', [
+            'routeName' => $name,
+        ]))->name($name);
+    }
+});
+
+Route::middleware(['web', 'auth', 'verified', 'company.user', 'company.resolve'])
+    ->prefix('tenant')
+    ->group(function (): void {
+        Route::resource('price-lists', CompanyPriceListController::class)->except(['show']);
+        Route::resource('price-items', CompanyPriceItemController::class)->except(['show']);
+        Route::resource('discounts', DiscountController::class)->except(['show']);
+    });

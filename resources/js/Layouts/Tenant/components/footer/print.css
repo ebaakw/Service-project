@@ -1,0 +1,25 @@
+@media print {
+    .bond-font-print {
+        font-size: 25px !important;
+    }
+    .bond-page{
+        border: 3px solid blue;;
+
+    }
+    .head-title {
+        margin-top: 20px;
+        color: #0C1021;
+    }
+    .hidden-print {
+        display: none!important;
+    }
+    .w-100-print {
+        width: 100% !important;
+        font-size: 20px;
+    }
+}
+@media screen {
+    .hidden-screen {
+        display: none;
+    }
+}

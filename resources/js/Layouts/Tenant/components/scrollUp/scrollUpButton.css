@@ -1,0 +1,33 @@
+.scroll-up-btn {
+    position: fixed;
+    bottom: 55px;
+    z-index: 99;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.scroll-up-btn:hover {
+    background-color: #0056b3;
+}
+
+.scroll-up-btn:active {
+    transform: scale(0.9);
+}
+
+.scroll-up-btn-en {
+    right: 20px;
+}
+
+.scroll-up-btn-ar {
+    left: 20px;
+}
