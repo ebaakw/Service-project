@@ -15,4 +15,5 @@ fi
 
 php artisan migrate --force
 
+echo "Starting Laravel (php artisan serve on 0.0.0.0:8000)..."
 exec "$@"

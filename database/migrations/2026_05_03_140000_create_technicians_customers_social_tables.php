@@ -37,7 +37,7 @@ return new class extends Migration
             $table->foreignId('service_category_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
 
-            $table->unique(['technician_id', 'service_category_id']);
+            $table->unique(['technician_id', 'service_category_id'], 'tech_svc_category_unique');
         });
 
         Schema::create('customers', function (Blueprint $table) {

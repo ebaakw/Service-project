@@ -38,6 +38,18 @@ services:
       mysql:
         condition: service_healthy
 
+  phpmyadmin:
+    image: phpmyadmin:5
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "${PHPMYADMIN_PUBLISH_PORT:-8081}:80"
+    depends_on:
+      - mysql
+
   vite:
     image: node:22-bookworm-slim
     working_dir: /var/www/html

@@ -16,14 +16,12 @@ use App\Http\Controllers\Api\V1\Technician\DeviceController as TechnicianDeviceC
 use App\Http\Controllers\Api\V1\Technician\LocationController as TechnicianLocationController;
 use App\Http\Controllers\Api\V1\Technician\OrderController as TechnicianOrderController;
 use App\Http\Controllers\Api\V1\Technician\OrderItemController as TechnicianOrderItemController;
+use App\Http\Controllers\Api\CurrentUserController;
 use App\Http\Controllers\Api\V1\Technician\OrderOfferController as TechnicianOrderOfferController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+Route::middleware('auth:sanctum')->get('/user', [CurrentUserController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Broadcast::routes();
