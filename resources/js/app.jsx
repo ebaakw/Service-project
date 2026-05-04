@@ -1,6 +1,5 @@
 import HtmlLocale from '@/Components/HtmlLocale';
 import { createInertiaApp, router } from '@inertiajs/react';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import axios from 'axios';
 import { createRoot } from 'react-dom/client';
 import { Fragment } from 'react';
@@ -28,16 +27,43 @@ router.on('before', (visit) => {
 
 createInertiaApp({
     title: (title) => (title ? `${title} — ${appName}` : appName),
-    resolve: (name) =>
-        resolvePageComponent(`./Pages/${name}.jsx`, import.meta.glob('./Pages/**/*.jsx')),
+    resolve: async (name) => {
+        const tsxGlob = import.meta.glob('./Pages/**/*.tsx');
+        const jsxGlob = import.meta.glob('./Pages/**/*.jsx');
+        const tsxPath = `./Pages/${name}.tsx`;
+        const jsxPath = `./Pages/${name}.jsx`;
+        if (tsxGlob[tsxPath]) {
+            const module = await tsxGlob[tsxPath]();
+
+            const Component = module.default;
+            const Wrapped = (props) => (
+                <Fragment>
+                    <HtmlLocale />
+                    <Component {...props} />
+                </Fragment>
+            );
+
+            return Wrapped;
+        }
+        if (jsxGlob[jsxPath]) {
+            const module = await jsxGlob[jsxPath]();
+
+            const Component = module.default;
+            const Wrapped = (props) => (
+                <Fragment>
+                    <HtmlLocale />
+                    <Component {...props} />
+                </Fragment>
+            );
+
+            return Wrapped;
+        }
+
+        throw new Error(`Inertia page not found: ./Pages/${name}.tsx or .jsx`);
+    },
     setup({ el, App, props }) {
         const root = createRoot(el);
-        root.render(
-            <Fragment>
-                <HtmlLocale />
-                <App {...props} />
-            </Fragment>,
-        );
+        root.render(<App {...props} />);
     },
     progress: {
         delay: 250,

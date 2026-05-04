@@ -1,6 +1,9 @@
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
 
-const Breadcrumb = ({name}) => {
+const Breadcrumb = ({name, hideTitle = false}) => {
+    if (!name) return null;
+    if (hideTitle) return null;
+
     return (
         <>
             {

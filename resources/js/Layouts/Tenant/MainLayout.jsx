@@ -3,6 +3,9 @@ import Navbar from "@/Layouts/Tenant/components/navbar/Navbar.jsx";
 import Sidebar from "@/Layouts/Tenant/components/sidebar/Sidebar.jsx";
 import Breadcrumb from "@/Layouts/Tenant/components/breadcrumb/Breadcrumb.jsx";
 import Footer from "@/Layouts/Tenant/components/footer/Footer.jsx";
+import {platformMenu} from "@/navigation/platformMenu.js";
+import {companyMenu} from "@/navigation/companyMenu.js";
+import {MenuList as TenantDefaultMenu} from "@/Navigation/Tenant/index.jsx";
 import config from "@/Config/config.js";
 import classNames from "classnames";
 import { Head, usePage, router } from '@inertiajs/react'
@@ -16,7 +19,21 @@ import ScrollUpButton from "@/Layouts/Tenant/components/scrollUp/ScrollUpButton.
 import SubscriptionBanner from "@/Components/Subscription/SubscriptionBanner.jsx";
 import axios from "axios";
 
-const MainLayout = ({children, title = 'page', name}) => {
+const MainLayout = ({
+    children,
+    title = 'page',
+    name,
+    menuList: menuListProp,
+    shellVariant = 'tenant',
+    hideBreadcrumbTitle,
+}) => {
+
+    const resolvedMenuList = useMemo(() => {
+        if (menuListProp) return menuListProp;
+        if (shellVariant === 'platform') return platformMenu;
+        if (shellVariant === 'company') return companyMenu;
+        return TenantDefaultMenu;
+    }, [menuListProp, shellVariant]);
 
     const {flash, locale, tenant_latest_unread_notification} = usePage().props;
     const isRtl = locale === 'ar';
@@ -35,24 +52,26 @@ const MainLayout = ({children, title = 'page', name}) => {
     useEffect(() => {
         if (!flash?.type) return;
         const msg = flash.message === 'saved' ? __('tenant.saved') : flash.message;
-        toast[flash.type](msg);
+        if (typeof toast[flash.type] === 'function') {
+            toast[flash.type](msg);
+        }
     }, [flash])
 
     useEffect(() => {
+        if (shellVariant !== 'tenant') return;
         if (!announcement?.id) {
             return;
         }
 
-        // ✅ فقط نفتح المودال، بدون request
         setShowAnnouncementModal(true);
-    }, [announcement?.id])
+    }, [announcement?.id, shellVariant])
 
-    // ✅ نعمل request فقط بعد فتح المودال
     useEffect(() => {
+        if (shellVariant !== 'tenant') return;
         if (!showAnnouncementModal || !announcement?.id) return;
 
         axios.post(route('tenant.notifications.mark-popup-shown'), {id: announcement.id}).catch(() => {});
-    }, [showAnnouncementModal, announcement?.id]);
+    }, [showAnnouncementModal, announcement?.id, shellVariant]);
 
     useEffect(() => {
         if (!showAnnouncementModal) {
@@ -90,15 +109,17 @@ const MainLayout = ({children, title = 'page', name}) => {
         >
                 <ScrollUpButton />
 
-                <Navbar/>
+                <Navbar shellVariant={shellVariant}/>
 
-                <Sidebar/>
+                <Sidebar menuList={resolvedMenuList} shellVariant={shellVariant}/>
 
-                <Head title={title === 'page' || title === '' ? __(name) : __(title) }/>
+                {shellVariant === 'tenant' && (
+                    <Head title={title === 'page' || title === '' ? __(name) : __(title) }/>
+                )}
 
                 <ToastContainer position={position} rtl={locale === 'ar'}/>
 
-                {showAnnouncementModal && announcement && (
+                {shellVariant === 'tenant' && showAnnouncementModal && announcement && (
                     <div
                         className="position-fixed w-100 h-100"
                         style={{
@@ -200,10 +221,17 @@ const MainLayout = ({children, title = 'page', name}) => {
                 )}
 
                 <div className="content-wrapper text-sm">
-                    <Breadcrumb name={name}/>
+                    <Breadcrumb
+                        name={name}
+                        hideTitle={
+                            typeof hideBreadcrumbTitle === 'boolean'
+                                ? hideBreadcrumbTitle
+                                : Boolean(shellVariant === 'tenant' && title && name && title === name)
+                        }
+                    />
                     <section className="content">
                         <div className="container-fluid">
-                            <SubscriptionBanner />
+                            {shellVariant === 'tenant' && <SubscriptionBanner />}
                             {children}
                         </div>
                     </section>

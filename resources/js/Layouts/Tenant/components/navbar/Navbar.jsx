@@ -7,7 +7,7 @@ import {asset} from "@/Utility/Hooks/useAsset.jsx";
 import {useState, useEffect} from "react";
 import {hasAnyPermissions} from "@/Utility/Hooks/usePermission.jsx";
 
-const Navbar = () => {
+const Navbar = ({shellVariant = 'tenant'}) => {
     const {locale, today, auth, timezone, tenant_notifications_unread_count} = usePage().props;
     const tz = timezone || 'UTC';
 
@@ -127,7 +127,7 @@ const Navbar = () => {
 
             {/*Right navbar links */}
             <ul className="navbar-nav ml-auto">
-                {
+                {shellVariant === 'tenant' &&
                     !route().current('invoices.create') && (
                         <li className="nav-item d-none d-sm-inline-block">
                             <Link href={linkRoute('invoices.create')} className="btn btn-primary btn-sm mt-2">
@@ -137,7 +137,7 @@ const Navbar = () => {
                         </li>
                     )
                 }
-                {
+                {shellVariant === 'tenant' &&
                     route().current('invoices.create') && (
                         <>
                             {hasAnyPermissions(['create_driver_orders']) && (
@@ -186,6 +186,16 @@ const Navbar = () => {
                     )
                 }
 
+                {shellVariant !== 'tenant' && (
+                    <li className="nav-item d-none d-md-inline-block text-sm mt-2 px-2">
+                        <span className="badge badge-light text-dark">
+                            {shellVariant === 'platform'
+                                ? __('dashboard.shell.platform_badge')
+                                : __('dashboard.shell.company_badge')}
+                        </span>
+                    </li>
+                )}
+
                 <li className="nav-item d-none d-sm-inline-block text-sm mt-1">
                     <a href={'#'} className="nav-link">
                         <span className='mx-2'> {__('tenant.today_date')}: </span>
@@ -204,6 +214,7 @@ const Navbar = () => {
                 </li>
 
                 {/* Notifications bell */}
+                {shellVariant === 'tenant' && (
                 <li className="nav-item dropdown">
                     <a
                         href="#"
@@ -268,7 +279,9 @@ const Navbar = () => {
                         </Link>
                     </div>
                 </li>
+                )}
 
+                {shellVariant === 'tenant' && (auth.user.branches ?? []).length > 0 && (
                 <li className="nav-item dropdown">
                     <a
                         href="#"
@@ -287,10 +300,11 @@ const Navbar = () => {
                         {(auth.user.branches ?? []).map((item, index) => (
                             <li key={index}>
                                 <button
+                                    type="button"
                                     className={`dropdown-item text-sm ${
                                         item.id === auth.user.currentBranch?.id ? "active" : ""
                                     }`}
-                                    onClick={() => handleSelect(item)} // Update label on click
+                                    onClick={() => handleSelect(item)}
                                 >
                                     <span>
                                         <i className='mr-2 fas fa-building text-sm'></i>
@@ -301,6 +315,7 @@ const Navbar = () => {
                         ))}
                     </ul>
                 </li>
+                )}
 
                 <li className="nav-item dropdown">
                     <a
@@ -313,7 +328,7 @@ const Navbar = () => {
                         style={{display: "flex", alignItems: "center"}}
                     >
                         <img
-                            src={asset('dashboard/dist/images/avatar.png')}
+                            src={asset('adminlte/dist/images/avatar.png')}
                             alt="User Avatar"
                             className="rounded-circle"
                             style={{width: "20px", height: "20px"}}
@@ -333,7 +348,7 @@ const Navbar = () => {
                         {/* Header Section */}
                         <div className="text-center p-4 border-bottom bg-light">
                             <img
-                                src={asset('dashboard/dist/images/avatar.png')}
+                                src={asset('adminlte/dist/images/avatar.png')}
                                 alt="User Avatar"
                                 className="rounded-circle mb-2"
                                 style={{width: "50px", height: "50px", objectFit: "cover"}}

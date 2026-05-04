@@ -18,6 +18,7 @@ use App\Observers\OrderItemObserver;
 use App\Observers\OrderOfferObserver;
 use App\Services\Payments\FakePaymentGateway;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -29,6 +30,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        if (file_exists('/.dockerenv')) {
+            config([
+                'database.connections.mysql.host' => 'mysql',
+                'database.connections.mysql.port' => '3306',
+            ]);
+        }
+
         $this->app->singleton(PaymentGatewayContract::class, FakePaymentGateway::class);
     }
 
@@ -37,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (file_exists('/.dockerenv') && $this->app->bound('db')) {
+            DB::purge('mysql');
+        }
+
         JsonResource::withoutWrapping();
 
         if (! $this->app->environment('testing')) {

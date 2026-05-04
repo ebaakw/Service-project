@@ -15,27 +15,43 @@ const SingleMenu = ({menu, index}) => {
 
     const badgeCount = menu.badgeCount || 0;
 
+    const isRouteActive = () => {
+        if (typeof route !== 'function') {
+            return false;
+        }
+        if (route().current(menu.route)) {
+            return true;
+        }
+        const patterns = menu.activePatterns;
+        if (!Array.isArray(patterns)) {
+            return false;
+        }
+        return patterns.some((p) => {
+            try {
+                return route().current(p);
+            } catch {
+                return false;
+            }
+        });
+    };
+
+    const canSee =
+        menu.bypassPermissionCheck === true ||
+        hasAnyPermissions(menu.permissions || []);
+
     return (
         <>
-            {hasAnyPermissions(menu.permissions) && (
+            {canSee && (
                 <li
                     key={index}
-                    className={
-                        typeof route === 'function' && route().current(menu.route)
-                            ? 'menu-open nav-item'
-                            : 'nav-item'
-                    }
+                    className={isRouteActive() ? 'menu-open nav-item' : 'nav-item'}
                     onClick={handleMouseEnter}
                 >
                     <Link
                         href={routeUrl(menu.route)}
                         id={menu.name}
                         onMouseEnter={() => prefetchInertiaPageForRoute(menu.route)}
-                        className={
-                            typeof route === 'function' && route().current(menu.route)
-                                ? 'ok nav-link active'
-                                : 'ok nav-link'
-                        }
+                        className={isRouteActive() ? 'ok nav-link active' : 'ok nav-link'}
                     >
                         <i className={'ok nav-icon fas ' + menu.icon + ' mr-2'}></i>
                         <p className="ok mb-0">

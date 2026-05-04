@@ -1,4 +1,8 @@
 import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
+import DataTable from '@/Components/ui/DataTable';
+import Pagination from '@/Components/ui/Pagination';
+import StatusBadge from '@/Components/ui/StatusBadge';
+import TableCard from '@/Components/ui/TableCard';
 import { Head, Link, router } from '@inertiajs/react';
 
 type ServiceCategory = { id: number; name_ar: string; name_en: string | null };
@@ -27,119 +31,82 @@ export default function CompanyTechniciansIndex({ technicians }: { technicians: 
 
     return (
         <CompanyDashboardLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Technicians</h2>}
+            header={<h1 className="m-0 text-2xl font-weight-bold text-dark">Technicians</h1>}
         >
             <Head title="Technicians" />
 
-            <div className="py-10">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="mb-6 flex items-center justify-between">
-                        <Link href={route('company.dashboard')} className="text-sm text-emerald-700 hover:text-emerald-900">
+            <TableCard
+                actions={
+                    <>
+                        <Link href={route('company.dashboard')} className="btn btn-outline-secondary btn-sm">
                             ← Dashboard
                         </Link>
-                        <Link
-                            href={route('company.technicians.create')}
-                            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-                        >
+                        <Link href={route('company.technicians.create')} className="btn btn-primary btn-sm">
                             Add technician
                         </Link>
-                    </div>
-
-                    <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        Name
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        Contact
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        Categories
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        Active
-                                    </th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 bg-white">
-                                {technicians.data.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                                            No technicians yet.
-                                        </td>
-                                    </tr>
-                                )}
-                                {technicians.data.map((t) => (
-                                    <tr key={t.id}>
-                                        <td className="px-4 py-3 text-sm text-gray-900">{t.user.name}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">
-                                            <div>{t.user.email || '—'}</div>
-                                            <div>{t.user.phone || ''}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">
-                                            {t.service_categories.map((c) => c.name_ar).join(', ') || '—'}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <span
-                                                className={
-                                                    t.is_active
-                                                        ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-800'
-                                                        : 'rounded-full bg-gray-100 px-2 py-0.5 text-gray-600'
-                                                }
-                                            >
-                                                {t.is_active ? 'Yes' : 'No'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right text-sm">
-                                            <Link
-                                                href={route('company.technicians.edit', t.id)}
-                                                className="text-emerald-700 hover:text-emerald-900"
-                                            >
-                                                Edit
-                                            </Link>
-                                            <span className="mx-2 text-gray-300">|</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => deleteTechnician(t.id)}
-                                                className="text-red-600 hover:text-red-800"
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-
-                        <div className="flex flex-wrap gap-2 border-t border-gray-100 px-4 py-3">
-                            {technicians.links.map((link, idx) =>
-                                link.url ? (
-                                    <Link
-                                        key={idx}
-                                        href={link.url}
-                                        className={`rounded px-3 py-1 text-sm ${
-                                            link.active ? 'bg-emerald-100 text-emerald-900' : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
-                                        preserveState
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
+                    </>
+                }
+                bodyPadding={false}
+            >
+                <DataTable<TechnicianRow>
+                    columns={[
+                        { key: 'name', header: 'Name', render: (r) => r.user.name },
+                        {
+                            key: 'contact',
+                            header: 'Contact',
+                            render: (r) => (
+                                <div>
+                                    <div>{r.user.email || '—'}</div>
+                                    <div>{r.user.phone || '—'}</div>
+                                </div>
+                            ),
+                        },
+                        {
+                            key: 'categories',
+                            header: 'Categories',
+                            render: (r) => r.service_categories.map((c) => c.name_ar).join(', ') || '—',
+                        },
+                        {
+                            key: 'active',
+                            header: 'Active',
+                            render: (r) =>
+                                r.is_active ? (
+                                    <StatusBadge variant="success">Yes</StatusBadge>
                                 ) : (
-                                    <span
-                                        key={idx}
-                                        className="rounded px-3 py-1 text-sm text-gray-400"
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
+                                    <StatusBadge variant="secondary">No</StatusBadge>
                                 ),
-                            )}
-                        </div>
-                    </div>
+                        },
+                        {
+                            key: 'actions',
+                            header: <span className="d-block text-end">Actions</span>,
+                            className: 'text-end',
+                            render: (r) => (
+                                <div className="btn-group btn-group-sm">
+                                    <Link
+                                        href={route('company.technicians.edit', r.id)}
+                                        className="btn btn-outline-primary"
+                                    >
+                                        Edit
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => deleteTechnician(r.id)}
+                                        className="btn btn-outline-danger"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            ),
+                        },
+                    ]}
+                    rows={technicians.data}
+                    rowKey={(r) => r.id}
+                    emptyTitle="No technicians yet."
+                />
+                <div className="px-3 pb-3">
+                    <Pagination links={technicians.links} data={technicians} />
                 </div>
-            </div>
+            </TableCard>
         </CompanyDashboardLayout>
     );
 }

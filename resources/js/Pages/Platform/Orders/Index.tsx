@@ -1,4 +1,8 @@
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
+import DataTable from '@/Components/ui/DataTable';
+import Pagination from '@/Components/ui/Pagination';
+import StatusBadge from '@/Components/ui/StatusBadge';
+import TableCard from '@/Components/ui/TableCard';
 import type { PageProps } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 
@@ -39,60 +43,50 @@ export default function PlatformOrdersIndex({ orders }: { orders: Paginated<Row>
     return (
         <PlatformAdminLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h1 className="m-0 text-2xl font-weight-bold text-dark">
                     {t.page_title ?? 'Orders'}
-                </h2>
+                </h1>
             }
         >
             <Head title={t.page_title ?? 'Orders'} />
 
-            <div className="py-10">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        {t.col_order ?? 'Order'}
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        {t.col_company ?? 'Company'}
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        {t.col_customer ?? 'Customer'}
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                                        {t.col_status ?? 'Status'}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 bg-white">
-                                {orders.data.map((o) => (
-                                    <tr key={o.id}>
-                                        <td className="px-4 py-3 text-sm text-gray-900">{o.order_number}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-700">
-                                            {localizedName(locale, o.company)}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-700">
-                                            {localizedName(locale, o.customer?.user ?? null)}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-700">
-                                            {statusLabels[o.status] ?? o.status}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {orders.data.length === 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
-                                            {t.empty ?? 'No orders found.'}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+            <TableCard bodyPadding={false}>
+                <DataTable<Row>
+                    columns={[
+                        {
+                            key: 'order',
+                            header: t.col_order ?? 'Order',
+                            render: (o) => o.order_number,
+                        },
+                        {
+                            key: 'company',
+                            header: t.col_company ?? 'Company',
+                            render: (o) => localizedName(locale, o.company),
+                        },
+                        {
+                            key: 'customer',
+                            header: t.col_customer ?? 'Customer',
+                            render: (o) => localizedName(locale, o.customer?.user ?? null),
+                        },
+                        {
+                            key: 'status',
+                            header: t.col_status ?? 'Status',
+                            render: (o) => (
+                                <StatusBadge variant="info">
+                                    {statusLabels[o.status] ?? o.status}
+                                </StatusBadge>
+                            ),
+                        },
+                    ]}
+                    rows={orders.data}
+                    rowKey={(o) => o.id}
+                    emptyTitle={t.empty ?? 'No orders found.'}
+                />
+
+                <div className="px-3 pb-3">
+                    <Pagination links={orders.links} data={orders} />
                 </div>
-            </div>
+            </TableCard>
         </PlatformAdminLayout>
     );
 }

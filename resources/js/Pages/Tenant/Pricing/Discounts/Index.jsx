@@ -1,4 +1,8 @@
 import MainLayout from '@/Layouts/Tenant/MainLayout.jsx';
+import DataTable from '@/Components/ui/DataTable';
+import TableCard from '@/Components/ui/TableCard';
+import StatusBadge from '@/Components/ui/StatusBadge';
+import Pagination from '@/Layouts/Tenant/components/pagination/Pagination.jsx';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, router } from '@inertiajs/react';
 
@@ -13,18 +17,17 @@ export default function TenantDiscountsIndex({ discounts, filters }) {
 
             <section className="content">
                 <div className="container-fluid">
-                    <div className="row mb-3">
-                        <div className="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <h1 className="h4 m-0">{__('tenant.discounts')}</h1>
+                    <TableCard
+                        title={__('tenant.discounts')}
+                        actions={
                             <Link href={route('discounts.create')} className="btn btn-primary btn-sm">
                                 {__('tenant.add_discount')}
                             </Link>
-                        </div>
-                    </div>
-
-                    <div className="card card-outline card-primary">
-                        <div className="card-body">
-                            <div className="row g-2 mb-3">
+                        }
+                        bodyPadding={false}
+                    >
+                        <div className="p-3">
+                            <div className="row g-2">
                                 <div className="col-md-4">
                                     <input
                                         type="search"
@@ -50,69 +53,74 @@ export default function TenantDiscountsIndex({ discounts, filters }) {
                                     </select>
                                 </div>
                             </div>
-
-                            <div className="table-responsive">
-                                <table className="table table-striped table-hover table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>{__('tenant.name')}</th>
-                                            <th>{__('tenant.discount_type')}</th>
-                                            <th>{__('tenant.discount_value')}</th>
-                                            <th>{__('tenant.discount_scope')}</th>
-                                            <th>{__('tenant.status')}</th>
-                                            <th className="text-end">{__('tenant.action')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {discounts.data.map((row) => (
-                                            <tr key={row.id}>
-                                                <td>{row.name}</td>
-                                                <td>{typeof row.discount_type === 'object' ? row.discount_type?.value : row.discount_type}</td>
-                                                <td>{row.discount_value}</td>
-                                                <td>
-                                                    {typeof row.discount_scope === 'object'
-                                                        ? row.discount_scope?.value
-                                                        : row.discount_scope}
-                                                </td>
-                                                <td>{row.is_active ? __('tenant.active') : __('tenant.no_active')}</td>
-                                                <td className="text-end">
-                                                    <Link
-                                                        href={route('discounts.edit', row.id)}
-                                                        className="btn btn-link btn-sm py-0"
-                                                    >
-                                                        {__('tenant.edit')}
-                                                    </Link>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-link btn-sm text-danger py-0"
-                                                        onClick={() => {
-                                                            if (confirm(__('tenant.confirm_delete'))) {
-                                                                router.delete(route('discounts.destroy', row.id));
-                                                            }
-                                                        }}
-                                                    >
-                                                        {__('tenant.delete')}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="d-flex flex-wrap gap-1 mt-2">
-                                {discounts.links.map((link, idx) => (
-                                    <Link
-                                        key={idx}
-                                        href={link.url || '#'}
-                                        className={`btn btn-sm ${link.active ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                        preserveState
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
-                                ))}
-                            </div>
                         </div>
-                    </div>
+
+                        <DataTable
+                            columns={[
+                                { key: 'name', header: __('tenant.name'), render: (r) => r.name },
+                                {
+                                    key: 'type',
+                                    header: __('tenant.discount_type'),
+                                    render: (r) =>
+                                        typeof r.discount_type === 'object'
+                                            ? r.discount_type?.value
+                                            : r.discount_type,
+                                },
+                                { key: 'value', header: __('tenant.discount_value'), render: (r) => r.discount_value },
+                                {
+                                    key: 'scope',
+                                    header: __('tenant.discount_scope'),
+                                    render: (r) =>
+                                        typeof r.discount_scope === 'object'
+                                            ? r.discount_scope?.value
+                                            : r.discount_scope,
+                                },
+                                {
+                                    key: 'status',
+                                    header: __('tenant.status'),
+                                    render: (r) =>
+                                        r.is_active ? (
+                                            <StatusBadge variant="success">{__('tenant.active')}</StatusBadge>
+                                        ) : (
+                                            <StatusBadge variant="secondary">{__('tenant.no_active')}</StatusBadge>
+                                        ),
+                                },
+                                {
+                                    key: 'actions',
+                                    header: <span className="d-block text-end">{__('tenant.action')}</span>,
+                                    className: 'text-end',
+                                    render: (r) => (
+                                        <div className="btn-group btn-group-sm">
+                                            <Link
+                                                href={route('discounts.edit', r.id)}
+                                                className="btn btn-outline-primary"
+                                            >
+                                                {__('tenant.edit')}
+                                            </Link>
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-danger"
+                                                onClick={() => {
+                                                    if (confirm(__('tenant.confirm_delete'))) {
+                                                        router.delete(route('discounts.destroy', r.id));
+                                                    }
+                                                }}
+                                            >
+                                                {__('tenant.delete')}
+                                            </button>
+                                        </div>
+                                    ),
+                                },
+                            ]}
+                            rows={discounts.data}
+                            rowKey={(r) => r.id}
+                            emptyTitle={__('tenant.no_results') !== 'tenant.no_results' ? __('tenant.no_results') : '—'}
+                        />
+
+                        <div className="px-3 pb-3">
+                            <Pagination links={discounts.links} data={discounts} />
+                        </div>
+                    </TableCard>
                 </div>
             </section>
         </MainLayout>

@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'shell' => [
+        'platform_badge' => 'Platform',
+        'company_badge' => 'Company',
+    ],
     'nav' => [
         'platform_admin' => 'Platform admin',
         'overview' => 'Overview',
@@ -13,6 +17,9 @@ return [
         'portfolio' => 'Portfolio',
         'feedback' => 'Feedback',
         'companies' => 'Companies',
+        'price_lists' => 'Price lists',
+        'price_items' => 'Price items',
+        'discounts' => 'Discounts',
         'log_out' => 'Log out',
     ],
     'actions' => [

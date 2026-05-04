@@ -22,6 +22,23 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
+            'appName' => config('app.name'),
+            'loginStrings' => [
+                'title' => __('auth.login_title'),
+                'hint' => __('auth.login_hint'),
+                'hero_title' => __('auth.hero_title'),
+                'hero_subtitle' => __('auth.hero_subtitle'),
+                'brand_subtitle' => __('auth.brand_subtitle'),
+                'switch_language' => __('auth.switch_language'),
+                'show_password' => __('auth.show_password'),
+                'hide_password' => __('auth.hide_password'),
+                'sign_in' => __('auth.sign_in'),
+                'remember_me' => __('auth.remember_me'),
+                'need_language_help' => __('auth.need_language_help'),
+                'email_placeholder' => __('auth.email_placeholder_short'),
+                'password_placeholder' => __('auth.password_placeholder_short'),
+                'forgot_password' => __('auth.forgot_password'),
+            ],
         ]);
     }
 

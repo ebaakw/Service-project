@@ -1,4 +1,7 @@
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
+import DataTable from '@/Components/ui/DataTable';
+import StatusBadge from '@/Components/ui/StatusBadge';
+import TableCard from '@/Components/ui/TableCard';
 import { Head, Link } from '@inertiajs/react';
 
 type Row = {
@@ -20,57 +23,42 @@ export default function PlatformFeedbackIndex({
     filters: { status: string; type: string };
 }) {
     return (
-        <PlatformAdminLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Feedback & complaints</h2>}>
+        <PlatformAdminLayout header={<h1 className="m-0 text-2xl font-weight-bold text-dark">Feedback & complaints</h1>}>
             <Head title="Feedback" />
 
-            <div className="py-10">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="mb-6">
-                        <Link href={route('platform.dashboard')} className="text-sm text-indigo-700 hover:text-indigo-900">
-                            ← Overview
-                        </Link>
-                    </div>
-
-                    <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Subject</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Company</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 bg-white">
-                                {tickets.data.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                                            No tickets.
-                                        </td>
-                                    </tr>
-                                )}
-                                {tickets.data.map((t) => (
-                                    <tr key={t.ulid}>
-                                        <td className="px-4 py-3 text-sm text-gray-900">{t.subject}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{t.type}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{t.status}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{t.company?.name ?? '—'}</td>
-                                        <td className="px-4 py-3 text-right text-sm">
-                                            <Link
-                                                href={route('platform.feedback-tickets.show', t.ulid)}
-                                                className="text-indigo-700 hover:text-indigo-900"
-                                            >
-                                                Open
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <TableCard
+                actions={
+                    <Link href={route('platform.dashboard')} className="btn btn-outline-secondary btn-sm">
+                        ← Overview
+                    </Link>
+                }
+                bodyPadding={false}
+            >
+                <DataTable<Row>
+                    columns={[
+                        { key: 'subject', header: 'Subject', render: (r) => r.subject },
+                        { key: 'type', header: 'Type', render: (r) => <StatusBadge variant="secondary">{r.type}</StatusBadge> },
+                        { key: 'status', header: 'Status', render: (r) => <StatusBadge variant="info">{r.status}</StatusBadge> },
+                        { key: 'company', header: 'Company', render: (r) => r.company?.name ?? '—' },
+                        {
+                            key: 'actions',
+                            header: <span className="d-block text-end">Actions</span>,
+                            className: 'text-end',
+                            render: (r) => (
+                                <Link
+                                    href={route('platform.feedback-tickets.show', r.ulid)}
+                                    className="btn btn-outline-primary btn-sm"
+                                >
+                                    Open
+                                </Link>
+                            ),
+                        },
+                    ]}
+                    rows={tickets.data}
+                    rowKey={(r) => r.ulid}
+                    emptyTitle="No tickets."
+                />
+            </TableCard>
         </PlatformAdminLayout>
     );
 }

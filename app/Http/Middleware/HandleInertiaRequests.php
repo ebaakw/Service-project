@@ -17,7 +17,11 @@ class HandleInertiaRequests extends Middleware
 
     public function rootView(Request $request): string
     {
-        if ($request->is('tenant') || $request->is('tenant/*')) {
+        if (
+            $request->is('tenant') || $request->is('tenant/*')
+            || $request->is('platform') || $request->is('platform/*')
+            || $request->is('company') || $request->is('company/*')
+        ) {
             return 'app-tenant';
         }
 

@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'shell' => [
+        'platform_badge' => 'المنصة',
+        'company_badge' => 'الشركة',
+    ],
     'nav' => [
         'platform_admin' => 'إدارة المنصة',
         'overview' => 'نظرة عامة',
@@ -13,6 +17,9 @@ return [
         'portfolio' => 'معرض الأعمال',
         'feedback' => 'الملاحظات',
         'companies' => 'الشركات',
+        'price_lists' => 'قوائم الأسعار',
+        'price_items' => 'بنود الأسعار',
+        'discounts' => 'الخصومات',
         'log_out' => 'تسجيل الخروج',
     ],
     'actions' => [

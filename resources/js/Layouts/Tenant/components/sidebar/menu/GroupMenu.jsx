@@ -16,31 +16,33 @@ const GroupMenu = ({menu, index}) => {
         return null;
     }
 
-    const currentRouteName = typeof route === 'function' ? route().current() : null;
+    const childRouteMatches = (element) => {
+        if (typeof route !== 'function') return false;
+        if (route().current(element.route)) return true;
+        const patterns = element.activePatterns;
+        if (!Array.isArray(patterns)) return false;
+        return patterns.some((p) => {
+            try {
+                return route().current(p);
+            } catch {
+                return false;
+            }
+        });
+    };
 
     const checkRoute = (children) => {
-        let check = false;
         if (typeof route !== 'function') return false;
-        // عند فتح كشف حساب العميل نعتبر المستخدم داخل قسم العملاء
-        if (currentRouteName === 'reports.customer_statement') {
-            return children.some((el) => el.route === 'clients.index');
-        }
-        children.forEach((element) => {
-            if (route().current(element.route)) check = true;
-        });
-        return check;
+        return children.some((el) => childRouteMatches(el));
     };
 
-    const isChildActive = (child) => {
-        if (typeof route !== 'function') return false;
-        if (route().current(child.route)) return true;
-        // عند فتح كشف حساب العميل نظلّل "العملاء"
-        if (currentRouteName === 'reports.customer_statement' && child.route === 'clients.index') return true;
-        return false;
-    };
+    const isChildActive = (child) => childRouteMatches(child);
+    const canSee =
+        menu.bypassPermissionCheck === true ||
+        hasAnyPermissions(menu.permissions || []);
+
     return (
         <>
-            {hasAnyPermissions(menu.permissions) && (
+            {canSee && (
                 <li
                     key={index}
                     className={checkRoute(menu.children) ? 'menu-open nav-item' : 'nav-item'}
@@ -67,7 +69,8 @@ const GroupMenu = ({menu, index}) => {
                         {menu.children.map((child, index) =>
                             child?.requiredFeature && !hasFeature(child.requiredFeature)
                                 ? null
-                                : hasAnyPermissions(child.permissions) && (
+                                : (child.bypassPermissionCheck === true ||
+                                      hasAnyPermissions(child.permissions || [])) && (
                                       <li key={index + 'children'} className="nav-item">
                                           <Link
                                               href={routeUrl(child.route)}
