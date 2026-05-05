@@ -1,10 +1,10 @@
-import {MenuList as TenantDefaultMenu} from "@/Navigation/Tenant/index.jsx";
 import classNames from "classnames";
 import config from "@/Config/config.js";
 import GroupMenu from "@/Layouts/Tenant/components/sidebar/menu/GroupMenu.jsx";
 import SingleMenu from "@/Layouts/Tenant/components/sidebar/menu/SingleMenu.jsx";
 import {usePage} from "@inertiajs/react";
 import {useEffect, useMemo, useState} from "react";
+import {__} from "@/Utility/Hooks/useTranslate.jsx";
 
 const brandIconClass = (shellVariant) => {
     if (shellVariant === 'platform') {
@@ -16,10 +16,10 @@ const brandIconClass = (shellVariant) => {
     return 'fas fa-layer-group mx-3 mt-1 text-primary';
 };
 
-const Sidebar = ({menuList: menuListProp, shellVariant = 'tenant'}) => {
-    const {auth, settings, tenant_support_unread_count} = usePage().props;
+const Sidebar = ({menuList: menuListProp, shellVariant}) => {
+    const {auth, settings, currentCompany} = usePage().props;
 
-    const baseMenu = menuListProp ?? TenantDefaultMenu;
+    const baseMenu = menuListProp ?? [];
 
     const [list, setList] = useState(baseMenu);
 
@@ -40,6 +40,16 @@ const Sidebar = ({menuList: menuListProp, shellVariant = 'tenant'}) => {
 
     const brandIcon = useMemo(() => brandIconClass(shellVariant), [shellVariant]);
 
+    const brandText = useMemo(() => {
+        if (shellVariant === 'platform') {
+            return __('dashboard.nav.platform_admin');
+        }
+        if (shellVariant === 'company') {
+            return currentCompany?.display_name || auth?.user?.tenant || '';
+        }
+        return auth?.user?.tenant || '';
+    }, [shellVariant, currentCompany?.display_name, auth?.user?.tenant]);
+
     return (
         <aside
             className={classNames(`main-sidebar elevation-4 ${sidebarBgClass}`, {
@@ -54,7 +64,7 @@ const Sidebar = ({menuList: menuListProp, shellVariant = 'tenant'}) => {
                 <i className={brandIcon}></i>
 
                 <span
-                    className="brand-text font-weight-light font-weight-bold text-uppercase">{auth.user?.tenant}</span>
+                    className="brand-text font-weight-light font-weight-bold text-uppercase">{brandText}</span>
             </a>
             <div className="sidebar">
                 <div className="form-inline">
@@ -87,12 +97,7 @@ const Sidebar = ({menuList: menuListProp, shellVariant = 'tenant'}) => {
                                     ? <GroupMenu key={index + 'menu'} menu={menu} index={index}/>
                                     : <SingleMenu
                                         key={index + 'menu'}
-                                        menu={{
-                                            ...menu,
-                                            badgeCount: menu.route === 'contactus.create'
-                                                ? tenant_support_unread_count
-                                                : 0,
-                                        }}
+                                        menu={menu}
                                         index={index}
                                     />
                             ))

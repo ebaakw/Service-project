@@ -44,6 +44,13 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->name('platform.')->group(function () {
     Route::get('/dashboard', PlatformDashboardController::class)->name('dashboard');
     Route::get('/companies', [PlatformCompaniesController::class, 'index'])->name('companies.index');
+    Route::get('/companies/export', [PlatformCompaniesController::class, 'export'])->name('companies.export');
+    Route::get('/companies/create', [PlatformCompaniesController::class, 'create'])->name('companies.create');
+    Route::post('/companies', [PlatformCompaniesController::class, 'store'])->name('companies.store');
+    Route::get('/companies/{company}/edit', [PlatformCompaniesController::class, 'edit'])->name('companies.edit');
+    Route::match(['put', 'patch'], '/companies/{company}', [PlatformCompaniesController::class, 'update'])->name('companies.update');
+    Route::delete('/companies/{company}', [PlatformCompaniesController::class, 'destroy'])->name('companies.destroy');
+    Route::post('/companies/{company}/logo', [PlatformCompaniesController::class, 'uploadLogo'])->name('companies.logo');
 
     Route::get('/customers', [PlatformCustomerController::class, 'index'])->name('customers.index');
     Route::get('/customers/{customer}', [PlatformCustomerController::class, 'show'])->name('customers.show');

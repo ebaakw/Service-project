@@ -1,4 +1,4 @@
-import MainLayout from '@/Layouts/Tenant/MainLayout.jsx';
+import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -20,7 +20,7 @@ export default function TenantPriceListsCreate() {
     };
 
     return (
-        <MainLayout title="tenant.add_price_list" name="tenant.add_price_list">
+        <CompanyDashboardLayout breadcrumbKey="dashboard.nav.company_price_lists">
             <Head title={__('tenant.add_price_list')} />
 
             <section className="content">
@@ -146,6 +146,6 @@ export default function TenantPriceListsCreate() {
                     </div>
                 </div>
             </section>
-        </MainLayout>
+        </CompanyDashboardLayout>
     );
 }

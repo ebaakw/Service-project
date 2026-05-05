@@ -22,14 +22,7 @@ export default function PlatformAdminLayout({
         <MainLayout
             shellVariant="platform"
             title="page"
-            name={breadcrumbKey ?? ''}
-            hideBreadcrumbTitle={Boolean(header)}
         >
-            {header ? (
-                <div className="row mb-3">
-                    <div className="col-12">{header}</div>
-                </div>
-            ) : null}
             {children}
         </MainLayout>
     );

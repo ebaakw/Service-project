@@ -1,4 +1,4 @@
-import MainLayout from '@/Layouts/Tenant/MainLayout.jsx';
+import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
@@ -43,7 +43,7 @@ export default function TenantPriceItemsCreate({ priceLists, categories, default
 
     if (!priceLists?.length) {
         return (
-            <MainLayout title="tenant.price_items" name="tenant.price_items">
+            <CompanyDashboardLayout breadcrumbKey="dashboard.nav.company_price_items">
                 <Head title={__('tenant.price_items')} />
                 <section className="content">
                     <div className="container-fluid">
@@ -53,12 +53,12 @@ export default function TenantPriceItemsCreate({ priceLists, categories, default
                         </div>
                     </div>
                 </section>
-            </MainLayout>
+            </CompanyDashboardLayout>
         );
     }
 
     return (
-        <MainLayout title="tenant.add_price_item" name="tenant.add_price_item">
+        <CompanyDashboardLayout breadcrumbKey="dashboard.nav.company_price_items">
             <Head title={__('tenant.add_price_item')} />
 
             <section className="content">
@@ -290,6 +290,6 @@ export default function TenantPriceItemsCreate({ priceLists, categories, default
                     </div>
                 </div>
             </section>
-        </MainLayout>
+        </CompanyDashboardLayout>
     );
 }

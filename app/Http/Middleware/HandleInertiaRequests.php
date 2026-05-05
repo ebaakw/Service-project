@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -37,49 +39,25 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Most fields here are wrapped in closures so Inertia resolves them lazily
+     * at render time. This matters because route-level middleware (notably
+     * ResolveCurrentCompany) runs AFTER this global Inertia middleware, so
+     * `$request->attributes['current_company']` is only available later.
+     *
      * @return array<string, mixed>
      */
     public function share(Request $request): array
     {
         $locale = app()->getLocale();
-        $user = $request->user();
-
-        $userPayload = null;
-        $currentCompanyPayload = null;
-
-        if ($user !== null) {
-            $permissionCompanyId = $request->attributes->get('current_company')?->getKey();
-
-            $userPayload = array_merge($user->toArray(), [
-                'tenant' => config('app.name'),
-                'branches' => [],
-                'currentBranch' => null,
-                'roles' => [],
-                'permissions' => $user->permissionKeys($permissionCompanyId),
-            ]);
-        }
-
-        if ($request->attributes->has('current_company')) {
-            $company = $request->attributes->get('current_company');
-            $currentCompanyPayload = [
-                'id' => $company->id,
-                'name' => $company->name,
-                'name_ar' => $company->name_ar,
-                'name_en' => $company->name_en,
-                'display_name' => $company->localized('name'),
-                'slug' => $company->slug,
-                'ulid' => $company->ulid,
-            ];
-        }
-
         $dashboardTranslations = trans('dashboard');
 
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $userPayload,
+                'user' => fn () => $this->resolveUserPayload($request),
             ],
-            'currentCompany' => $currentCompanyPayload,
+            'userType' => fn () => $this->resolveUserType($request),
+            'currentCompany' => fn () => $this->resolveCurrentCompanyPayload($request),
             'locale' => $locale,
             'direction' => $locale === 'ar' ? 'rtl' : 'ltr',
             't' => is_array($dashboardTranslations) ? $dashboardTranslations : [],
@@ -102,9 +80,75 @@ class HandleInertiaRequests extends Middleware
             'settings' => [
                 'sidebar_bg' => 'sidebar-dark-primary',
             ],
-            'tenant_support_unread_count' => 0,
-            'tenant_notifications_unread_count' => 0,
-            'tenant_latest_unread_notification' => null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveUserPayload(Request $request): ?array
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return null;
+        }
+
+        $permissionCompanyId = $request->attributes->get('current_company')?->getKey();
+
+        return [
+            'id' => $user->id,
+            'ulid' => $user->ulid,
+            'name' => $user->name,
+            'name_ar' => $user->name_ar,
+            'name_en' => $user->name_en,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'type' => $user->type instanceof UserType ? $user->type->value : null,
+            'tenant' => config('app.name'),
+            'permissions' => $user->permissionKeys($permissionCompanyId),
+        ];
+    }
+
+    private function resolveUserType(Request $request): ?string
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return null;
+        }
+
+        return $user->type instanceof UserType ? $user->type->value : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveCurrentCompanyPayload(Request $request): ?array
+    {
+        if (! $request->attributes->has('current_company')) {
+            return null;
+        }
+
+        $company = $request->attributes->get('current_company');
+        if ($company === null) {
+            return null;
+        }
+
+        $logoUrl = null;
+        if (! empty($company->logo_path)) {
+            try {
+                $logoUrl = Storage::disk('public')->url($company->logo_path);
+            } catch (\Throwable) {
+                $logoUrl = null;
+            }
+        }
+
+        return [
+            'id' => $company->id,
+            'ulid' => $company->ulid,
+            'display_name' => $company->localized('name'),
+            'logo_url' => $logoUrl,
+            'status' => $company->status?->value,
+            'subscription_status' => $company->subscription_status?->value,
         ];
     }
 }

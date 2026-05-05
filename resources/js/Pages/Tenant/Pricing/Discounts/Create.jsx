@@ -1,4 +1,4 @@
-import MainLayout from '@/Layouts/Tenant/MainLayout.jsx';
+import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -42,7 +42,7 @@ export default function TenantDiscountsCreate({ categories, priceItems }) {
     const scope = data.discount_scope;
 
     return (
-        <MainLayout title="tenant.add_discount" name="tenant.add_discount">
+        <CompanyDashboardLayout breadcrumbKey="dashboard.nav.company_discounts">
             <Head title={__('tenant.add_discount')} />
 
             <section className="content">
@@ -282,6 +282,6 @@ export default function TenantDiscountsCreate({ categories, priceItems }) {
                     </div>
                 </div>
             </section>
-        </MainLayout>
+        </CompanyDashboardLayout>
     );
 }

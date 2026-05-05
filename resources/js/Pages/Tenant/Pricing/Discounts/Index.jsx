@@ -1,4 +1,4 @@
-import MainLayout from '@/Layouts/Tenant/MainLayout.jsx';
+import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import DataTable from '@/Components/ui/DataTable';
 import TableCard from '@/Components/ui/TableCard';
 import StatusBadge from '@/Components/ui/StatusBadge';
@@ -12,7 +12,7 @@ export default function TenantDiscountsIndex({ discounts, filters }) {
     };
 
     return (
-        <MainLayout title="tenant.discounts" name="tenant.discounts">
+        <CompanyDashboardLayout breadcrumbKey="dashboard.nav.company_discounts">
             <Head title={__('tenant.discounts')} />
 
             <section className="content">
@@ -123,6 +123,6 @@ export default function TenantDiscountsIndex({ discounts, filters }) {
                     </TableCard>
                 </div>
             </section>
-        </MainLayout>
+        </CompanyDashboardLayout>
     );
 }
