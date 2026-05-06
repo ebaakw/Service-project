@@ -11,6 +11,8 @@ const GroupMenu = ({menu, index}) => {
 
     const {locale} = usePage().props
     const {hasFeature} = usePlanFeatures();
+    const badgeCount = menu.badgeCount || 0;
+    const badgeSpacingClass = locale === 'ar' ? 'mr-2' : 'ml-2';
 
     if (menu?.requiredFeature && !hasFeature(menu.requiredFeature)) {
         return null;
@@ -57,6 +59,11 @@ const GroupMenu = ({menu, index}) => {
                         <i className={'ok nav-icon fas ' + menu.icon + ' mr-2'}></i>
                         <p className="ok mb-0">
                             {__(menu.name)}
+                            {badgeCount > 0 && (
+                                <span className={classNames('right badge badge-warning', badgeSpacingClass)}>
+                                    {badgeCount}
+                                </span>
+                            )}
                             <i
                                 className={classNames('right fas', {
                                     'fa-angle-right': locale === 'en',
@@ -75,12 +82,19 @@ const GroupMenu = ({menu, index}) => {
                                       || hasAnyPermissions(child.permissions || [])) && (
                                       <li key={index + 'children'} className="nav-item">
                                           <Link
-                                              href={routeUrl(child.route)}
+                                              href={routeUrl(child.route, child.params || {})}
                                               onMouseEnter={() => prefetchInertiaPageForRoute(child.route)}
                                               className={isChildActive(child) ? 'active nav-link' : 'nav-link'}
                                           >
                                               <i className="far fa-circle nav-icon mr-2"></i>
-                                              <p className="mb-0">{__(child.name)}</p>
+                                              <p className="mb-0">
+                                                  {__(child.name)}
+                                                  {(child.badgeCount || 0) > 0 && (
+                                                      <span className={classNames('right badge badge-warning', badgeSpacingClass)}>
+                                                          {child.badgeCount}
+                                                      </span>
+                                                  )}
+                                              </p>
                                           </Link>
                                       </li>
                                   )

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1\Technician;
 
+use App\Enums\TechnicianReviewStatus;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Technician\LoginRequest;
 use App\Http\Resources\Api\V1\TechnicianResource;
@@ -31,11 +33,23 @@ class AuthController extends Controller
         $user = Auth::user();
         abort_unless($user->isTechnician(), 403);
 
+        $user->load('technician.company');
+
+        $technician = $user->technician;
+        if (
+            $user->status !== UserStatus::Active
+            || $technician === null
+            || $technician->review_status !== TechnicianReviewStatus::Approved
+            || ! $technician->is_active
+        ) {
+            throw ValidationException::withMessages([
+                'email' => [__('auth.technician_not_approved')],
+            ]);
+        }
+
         $user->tokens()->delete();
 
         $token = $user->createToken('mobile-technician', ['technician'])->plainTextToken;
-
-        $user->load('technician.company');
 
         return response()->json([
             'token' => $token,
@@ -51,6 +65,15 @@ class AuthController extends Controller
         abort_unless($user !== null && $user->isTechnician(), 403);
 
         $user->load('technician.company');
+
+        $technician = $user->technician;
+        abort_unless(
+            $user->status === UserStatus::Active
+            && $technician !== null
+            && $technician->review_status === TechnicianReviewStatus::Approved
+            && $technician->is_active,
+            403
+        );
 
         return response()->json([
             'user' => new UserResource($user),

@@ -15,6 +15,20 @@ import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import ScrollUpButton from "@/Layouts/Tenant/components/scrollUp/ScrollUpButton.jsx";
 import { filterMenuByPermissions } from "@/Support/permissions.js";
 
+const applyBadges = (items, badges) => {
+    if (!Array.isArray(items)) return [];
+    return items.map((item) => {
+        const next = { ...item };
+        if (next.badge && badges && typeof badges[next.badge] === 'number') {
+            next.badgeCount = badges[next.badge];
+        }
+        if (Array.isArray(next.children)) {
+            next.children = applyBadges(next.children, badges);
+        }
+        return next;
+    });
+};
+
 const MainLayout = ({
     children,
     title = 'page',
@@ -36,7 +50,7 @@ const MainLayout = ({
         return [];
     }, [menuListProp, shellVariant]);
 
-    const { flash, locale, auth } = usePage().props;
+    const { flash, locale, auth, sidebarBadges } = usePage().props;
     const isRtl = locale === 'ar';
 
     const position = isRtl ? 'top-left' : 'top-right'
@@ -44,8 +58,9 @@ const MainLayout = ({
     const userPermissions = auth?.user?.permissions ?? [];
 
     const visibleMenuList = useMemo(() => {
-        return filterMenuByPermissions(resolvedMenuList, userPermissions);
-    }, [resolvedMenuList, userPermissions]);
+        const filtered = filterMenuByPermissions(resolvedMenuList, userPermissions);
+        return applyBadges(filtered, sidebarBadges || {});
+    }, [resolvedMenuList, userPermissions, sidebarBadges]);
 
     useEffect(() => {
         if (!flash?.type) return;

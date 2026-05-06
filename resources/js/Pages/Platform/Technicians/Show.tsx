@@ -1,5 +1,10 @@
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
+import StatusBadge from '@/Components/ui/StatusBadge';
+import TableCard from '@/Components/ui/TableCard';
+import { __ } from '@/Utility/Hooks/useTranslate.jsx';
+import type { PageProps } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 
 type CompanyRow = { id: number; name: string; slug: string };
 
@@ -10,88 +15,128 @@ type TechnicianDetail = {
     employee_code: string | null;
     bio: string | null;
     job_title: string | null;
-    availability_status: string;
+    availability_status: string | null;
+    availability_status_label?: string | null;
     is_active: boolean;
     company: CompanyRow;
-    user: { name: string; email: string | null; phone: string | null };
+    user: { name: string; email: string | null; phone: string | null; avatar_url: string | null };
     service_categories: ServiceCategory[];
+    can_update?: boolean;
 };
 
 export default function PlatformTechniciansShow({ technician }: { technician: TechnicianDetail }) {
+    const { direction } = usePage<PageProps>().props;
+    const isRtl = direction === 'rtl';
+
     return (
-        <PlatformAdminLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Technician</h2>}>
-            <Head title="Technician" />
+        <PlatformAdminLayout
+            breadcrumbKey="dashboard.nav.all_technicians"
+            header={<h4 className="m-0 font-weight-bold text-dark">{__('tenant.technicians.viewTitle')}</h4>}
+        >
+            <Head title={__('tenant.technicians.viewTitle')} />
 
-            <div className="py-10">
-                <div className="mx-auto max-w-5xl space-y-8 sm:px-6 lg:px-8">
-                    <div>
-                        <Link href={route('platform.technicians.index')} className="text-sm text-indigo-600 hover:text-indigo-800">
-                            ← Technicians
-                        </Link>
-                    </div>
+            <div className="mb-3 d-flex align-items-center justify-content-between">
+                <Link href={route('platform.technicians.index')} className="btn btn-outline-secondary btn-sm">
+                    <i className={isRtl ? 'fas fa-arrow-right ms-1' : 'fas fa-arrow-left me-1'} />
+                    {__('tenant.technicians.back')}
+                </Link>
+                {technician.can_update ? (
+                    <Link href={route('platform.technicians.edit', technician.id)} className="btn btn-primary btn-sm">
+                        <i className="fas fa-edit mr-1" />
+                        {__('tenant.technicians.edit')}
+                    </Link>
+                ) : null}
+            </div>
 
-                    <div className="rounded-lg bg-white p-6 shadow">
-                        <h3 className="text-lg font-semibold text-gray-900">Company</h3>
-                        <p className="mt-2 text-sm text-gray-700">{technician.company.name}</p>
-                        <p className="text-xs text-gray-500">{technician.company.slug}</p>
-                    </div>
+            <div className="row">
+                <div className="col-lg-4">
+                    <TableCard title={__('tenant.technicians.userSection')}>
+                        <div className="d-flex align-items-center">
+                            {technician.user.avatar_url ? (
+                                <img
+                                    src={technician.user.avatar_url}
+                                    alt=""
+                                    className="rounded border bg-white"
+                                    style={{ width: 80, height: 80, objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <div
+                                    className="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
+                                    style={{ width: 80, height: 80 }}
+                                >
+                                    <i className="fas fa-user" />
+                                </div>
+                            )}
+                            <div className="mx-3">
+                                <div className="h5 mb-1">{technician.user.name}</div>
+                                <div className="text-muted small" dir="ltr">
+                                    {technician.user.email ?? '—'}
+                                </div>
+                                <div className="text-muted small" dir="ltr">
+                                    {technician.user.phone ?? '—'}
+                                </div>
+                            </div>
+                        </div>
+                    </TableCard>
 
-                    <div className="rounded-lg bg-white p-6 shadow">
-                        <h3 className="text-lg font-semibold text-gray-900">User</h3>
-                        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Name</dt>
-                                <dd className="text-sm text-gray-900">{technician.user.name}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Email</dt>
-                                <dd className="text-sm text-gray-900">{technician.user.email ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Phone</dt>
-                                <dd className="text-sm text-gray-900">{technician.user.phone ?? '—'}</dd>
-                            </div>
-                        </dl>
-                    </div>
+                    <TableCard title={__('tenant.technicians.companySection')}>
+                        <div className="mb-1">
+                            <strong>{technician.company.name}</strong>
+                        </div>
+                        <div className="text-muted small" dir="ltr">
+                            {technician.company.slug ?? '—'}
+                        </div>
+                    </TableCard>
+                </div>
 
-                    <div className="rounded-lg bg-white p-6 shadow">
-                        <h3 className="text-lg font-semibold text-gray-900">Profile</h3>
-                        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Job title</dt>
-                                <dd className="text-sm text-gray-900">{technician.job_title ?? '—'}</dd>
+                <div className="col-lg-8">
+                    <TableCard title={__('tenant.technicians.profileSection')}>
+                        <div className="row">
+                            <div className="col-md-6">
+                                <div className="text-muted small">{__('tenant.technicians.jobTitle')}</div>
+                                <div className="mb-3">{technician.job_title ?? '—'}</div>
                             </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Employee code</dt>
-                                <dd className="text-sm text-gray-900">{technician.employee_code ?? '—'}</dd>
+                            <div className="col-md-6">
+                                <div className="text-muted small">{__('tenant.technicians.employeeCode')}</div>
+                                <div className="mb-3" dir="ltr">
+                                    {technician.employee_code ?? '—'}
+                                </div>
                             </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Availability</dt>
-                                <dd className="text-sm text-gray-900">{technician.availability_status}</dd>
+                            <div className="col-md-6">
+                                <div className="text-muted small">{__('tenant.technicians.availability')}</div>
+                                <div className="mb-3">{technician.availability_status_label ?? technician.availability_status ?? '—'}</div>
                             </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Active</dt>
-                                <dd className="text-sm text-gray-900">{technician.is_active ? 'Yes' : 'No'}</dd>
+                            <div className="col-md-6">
+                                <div className="text-muted small">{__('tenant.technicians.active')}</div>
+                                <div className="mb-3">
+                                    {technician.is_active ? (
+                                        <StatusBadge variant="success">{__('tenant.yes')}</StatusBadge>
+                                    ) : (
+                                        <StatusBadge variant="secondary">{__('tenant.no')}</StatusBadge>
+                                    )}
+                                </div>
                             </div>
-                            <div className="sm:col-span-2">
-                                <dt className="text-xs font-medium uppercase text-gray-500">Bio</dt>
-                                <dd className="text-sm text-gray-900">{technician.bio ?? '—'}</dd>
+                            <div className="col-12">
+                                <div className="text-muted small">{__('tenant.technicians.bio')}</div>
+                                <div>{technician.bio ?? '—'}</div>
                             </div>
-                        </dl>
-                    </div>
+                        </div>
+                    </TableCard>
 
-                    <div className="rounded-lg bg-white p-6 shadow">
-                        <h3 className="text-lg font-semibold text-gray-900">Service categories</h3>
-                        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-800">
-                            {technician.service_categories.length === 0 && <li className="list-none text-gray-500">None</li>}
-                            {technician.service_categories.map((c) => (
-                                <li key={c.id}>
-                                    {c.name_ar}
-                                    {c.name_en ? ` (${c.name_en})` : ''}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    <TableCard title={__('tenant.technicians.categories')}>
+                        {technician.service_categories.length === 0 ? (
+                            <div className="text-muted">{__('tenant.technicians.noCategories')}</div>
+                        ) : (
+                            <ul className="mb-0 pl-3">
+                                {technician.service_categories.map((c) => (
+                                    <li key={c.id}>
+                                        {c.name_ar}
+                                        {c.name_en ? <span className="text-muted"> ({c.name_en})</span> : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </TableCard>
                 </div>
             </div>
         </PlatformAdminLayout>

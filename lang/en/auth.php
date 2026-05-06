@@ -5,6 +5,7 @@ return array_merge(
     [
         'web_login_forbidden' => 'This account type cannot sign in to the web dashboard.',
         'company_not_active' => 'Your account is not linked to an active company. Please contact platform administration.',
+        'technician_not_approved' => 'Your technician account is pending review or not approved.',
         'login_title' => 'Sign in',
         'login_hint' => 'Enter your credentials to access the dashboard.',
         'hero_title' => 'Operations, simplified.',

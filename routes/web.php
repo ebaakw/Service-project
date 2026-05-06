@@ -26,6 +26,7 @@ use App\Http\Controllers\Platform\PlatformPortfolioProjectController;
 use App\Http\Controllers\Platform\RoleController as PlatformRoleController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\TechnicianController as PlatformTechnicianController;
+use App\Http\Controllers\Platform\TechnicianReviewController as PlatformTechnicianReviewController;
 use App\Http\Controllers\Platform\UserController as PlatformUserController;
 use App\Http\Controllers\PlatformDashboardController;
 use App\Http\Controllers\ProfileController;
@@ -98,6 +99,13 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::get('/customers/{customer}', [PlatformCustomerController::class, 'show'])->name('customers.show');
     Route::get('/technicians', [PlatformTechnicianController::class, 'index'])->name('technicians.index');
     Route::get('/technicians/{technician}', [PlatformTechnicianController::class, 'show'])->name('technicians.show');
+    Route::get('/technicians/{technician}/edit', [PlatformTechnicianController::class, 'edit'])->name('technicians.edit');
+    Route::match(['put', 'patch'], '/technicians/{technician}', [PlatformTechnicianController::class, 'update'])->name('technicians.update');
+
+    Route::get('/technician-reviews', [PlatformTechnicianReviewController::class, 'index'])->name('technician-reviews.index');
+    Route::get('/technician-reviews/{technician}', [PlatformTechnicianReviewController::class, 'show'])->name('technician-reviews.show');
+    Route::match(['post', 'patch'], '/technician-reviews/{technician}/approve', [PlatformTechnicianReviewController::class, 'approve'])->name('technician-reviews.approve');
+    Route::match(['post', 'patch'], '/technician-reviews/{technician}/reject', [PlatformTechnicianReviewController::class, 'reject'])->name('technician-reviews.reject');
 
     Route::resource('service-categories', ServiceCategoryController::class);
     Route::resource('service-categories.problems', ServiceProblemController::class)

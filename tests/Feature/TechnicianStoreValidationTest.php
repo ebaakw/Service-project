@@ -39,6 +39,7 @@ class TechnicianStoreValidationTest extends TestCase
             'name_ar' => 'Technician One',
             'name_en' => 'Technician One',
             'email' => 'tech-active-cat@example.test',
+            'phone' => '12345678',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'service_category_ids' => [$inactive->getKey()],

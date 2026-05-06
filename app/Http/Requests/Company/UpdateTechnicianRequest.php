@@ -41,20 +41,19 @@ class UpdateTechnicianRequest extends FormRequest
         return [
             'name_ar' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'display_name_ar' => ['nullable', 'string', 'max:255'],
             'display_name_en' => ['nullable', 'string', 'max:255'],
             'email' => [
-                'required_without:phone',
                 'nullable',
                 'email',
                 'max:255',
                 Rule::unique('users', 'email')->ignore($userId),
             ],
             'phone' => [
-                'required_without:email',
-                'nullable',
+                'required',
                 'string',
-                'max:32',
+                'regex:/^\d{8}$/',
                 Rule::unique('users', 'phone')->ignore($userId),
             ],
             'password' => ['nullable', 'string', 'confirmed', 'min:8'],

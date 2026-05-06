@@ -17,8 +17,16 @@ class ServiceCategoryController extends Controller
     {
         $this->authorize('viewAny', ServiceCategory::class);
 
+        $actor = $request->user();
+
         $search = $request->string('search')->trim()->value();
         $status = $request->input('status', 'all');
+
+        $perPage = (int) $request->input('per_page', 10);
+        $allowedPerPage = [10, 25, 50, 100];
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
 
         $query = ServiceCategory::query()->orderBy('sort_order')->orderBy('id');
 
@@ -36,11 +44,30 @@ class ServiceCategoryController extends Controller
             $query->where('is_active', false);
         }
 
+        $categories = $query->paginate($perPage)->withQueryString();
+
+        $categories->through(function (ServiceCategory $category) use ($actor): array {
+            return [
+                'id' => $category->id,
+                'name_ar' => $category->name_ar,
+                'name_en' => $category->name_en,
+                'slug' => $category->slug,
+                'is_active' => (bool) $category->is_active,
+                'sort_order' => $category->sort_order,
+                'can_update' => $actor !== null && $actor->can('update', $category),
+                'can_delete' => $actor !== null && $actor->can('delete', $category),
+            ];
+        });
+
         return Inertia::render('Platform/ServiceCatalog/Categories/Index', [
-            'categories' => $query->paginate(15)->withQueryString(),
+            'categories' => $categories,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
+                'per_page' => $perPage,
+            ],
+            'can' => [
+                'create' => $actor !== null && $actor->can('create', ServiceCategory::class),
             ],
         ]);
     }

@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Enums\UserType;
+use App\Enums\TechnicianReviewStatus;
+use App\Models\Technician;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Storage;
@@ -64,12 +66,14 @@ class HandleInertiaRequests extends Middleware
             'enumLabels' => [
                 'order_status' => Lang::get('enums.order_status'),
                 'technician_availability' => Lang::get('enums.technician_availability'),
+                'technician_review_status' => Lang::get('enums.technician_review_status'),
                 'invoice_status' => Lang::get('enums.invoice_status'),
                 'payment_status' => Lang::get('enums.payment_status'),
                 'company_status' => Lang::get('enums.company_status'),
                 'subscription_status' => Lang::get('enums.subscription_status'),
                 'price_type' => Lang::get('enums.price_type'),
             ],
+            'sidebarBadges' => fn () => $this->resolveSidebarBadges($request),
             'today' => now()->timezone(config('app.timezone'))->format('d-m-Y'),
             'timezone' => config('app.timezone'),
             'flash' => [
@@ -80,6 +84,29 @@ class HandleInertiaRequests extends Middleware
             'settings' => [
                 'sidebar_bg' => 'sidebar-dark-primary',
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function resolveSidebarBadges(Request $request): array
+    {
+        $user = $request->user();
+        if ($user === null) {
+            return [];
+        }
+
+        if ($user->isPlatformAdmin() && $user->hasPermission('technician_reviews.view')) {
+            return [
+                'pendingTechnicianReviews' => Technician::query()
+                    ->where('review_status', TechnicianReviewStatus::Pending)
+                    ->count(),
+            ];
+        }
+
+        return [
+            'pendingTechnicianReviews' => 0,
         ];
     }
 

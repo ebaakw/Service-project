@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TechnicianReviewStatus;
 use App\Enums\TechnicianAvailabilityStatus;
 use App\Models\Concerns\HasLocalizedFields;
 use Database\Factories\TechnicianFactory;
@@ -37,6 +38,10 @@ class Technician extends Model
         'rating_count',
         'completed_orders_count',
         'is_active',
+        'review_status',
+        'reviewed_by_user_id',
+        'reviewed_at',
+        'rejection_reason',
     ];
 
     protected static function booted(): void
@@ -75,6 +80,8 @@ class Technician extends Model
             'rating_count' => 'integer',
             'completed_orders_count' => 'integer',
             'is_active' => 'boolean',
+            'review_status' => TechnicianReviewStatus::class,
+            'reviewed_at' => 'datetime',
         ];
     }
 
@@ -86,6 +93,11 @@ class Technician extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function reviewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by_user_id');
     }
 
     public function serviceCategories(): BelongsToMany

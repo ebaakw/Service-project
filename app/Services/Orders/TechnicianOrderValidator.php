@@ -2,6 +2,8 @@
 
 namespace App\Services\Orders;
 
+use App\Enums\TechnicianReviewStatus;
+use App\Enums\UserStatus;
 use App\Models\Order;
 use App\Models\ServiceCategory;
 use App\Models\Technician;
@@ -27,9 +29,25 @@ class TechnicianOrderValidator
         }
     }
 
+    public function assertApprovedActive(Technician $technician): void
+    {
+        $technician->loadMissing('user');
+
+        if (
+            $technician->review_status !== TechnicianReviewStatus::Approved
+            || ! $technician->is_active
+            || $technician->user?->status !== UserStatus::Active
+        ) {
+            throw ValidationException::withMessages([
+                'technician_id' => __('The selected technician is not approved or active.'),
+            ]);
+        }
+    }
+
     public function assertEligibleForOrder(Technician $technician, Order $order): void
     {
         $this->assertMatchesCompany($technician, $order);
+        $this->assertApprovedActive($technician);
 
         $category = $order->serviceCategory;
         if ($category === null) {

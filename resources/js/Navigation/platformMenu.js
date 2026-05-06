@@ -61,11 +61,26 @@ export const platformMenu = [
         activePatterns: ['platform.customers.*'],
     },
     {
-        name: 'dashboard.nav.all_technicians',
-        route: 'platform.technicians.index',
+        name: 'dashboard.nav.technicians',
         icon: 'fa-user-cog',
-        permissions: ['technicians.view', 'technicians.manage'],
-        activePatterns: ['platform.technicians.*'],
+        permissions: ['technicians.view', 'technicians.manage', 'technician_reviews.view'],
+        badge: 'pendingTechnicianReviews',
+        children: [
+            {
+                name: 'dashboard.nav.all_technicians',
+                route: 'platform.technicians.index',
+                permissions: ['technicians.view', 'technicians.manage'],
+                activePatterns: ['platform.technicians.*'],
+            },
+            {
+                name: 'dashboard.nav.pending_technicians',
+                route: 'platform.technician-reviews.index',
+                params: { review_status: 'pending' },
+                permission: 'technician_reviews.view',
+                badge: 'pendingTechnicianReviews',
+                activePatterns: ['platform.technician-reviews.*'],
+            },
+        ],
     },
     {
         name: 'dashboard.nav.global_service_catalog',

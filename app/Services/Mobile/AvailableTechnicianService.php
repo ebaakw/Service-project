@@ -4,6 +4,7 @@ namespace App\Services\Mobile;
 
 use App\Enums\CompanyStatus;
 use App\Enums\TechnicianAvailabilityStatus;
+use App\Enums\UserStatus;
 use App\Models\Technician;
 use Illuminate\Support\Collection;
 
@@ -20,9 +21,12 @@ class AvailableTechnicianService
         $query = Technician::query()
             ->select('technicians.*')
             ->join('companies', 'companies.id', '=', 'technicians.company_id')
+            ->join('users', 'users.id', '=', 'technicians.user_id')
             ->join('technician_service_categories', 'technician_service_categories.technician_id', '=', 'technicians.id')
             ->where('companies.status', CompanyStatus::Active)
+            ->where('users.status', UserStatus::Active)
             ->where('technicians.is_active', true)
+            ->where('technicians.review_status', 'approved')
             ->where('technicians.availability_status', TechnicianAvailabilityStatus::Available)
             ->where('technician_service_categories.service_category_id', $serviceCategoryId)
             ->whereNotNull('technicians.current_lat')

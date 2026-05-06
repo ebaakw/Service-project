@@ -1,5 +1,5 @@
 import handleMouseEnter from "@/Layouts/Tenant/components/sidebar/helper.js";
-import {Link} from "@inertiajs/react";
+import {Link, usePage} from "@inertiajs/react";
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import { hasAnyPermissions, hasPermission } from "@/Utility/Hooks/usePermission.jsx";
 import {routeUrl} from "@/Utility/routeUrl.js";
@@ -8,12 +8,14 @@ import { prefetchInertiaPageForRoute } from "@/Utility/inertiaPrefetch.js";
 
 const SingleMenu = ({menu, index}) => {
     const {hasFeature} = usePlanFeatures();
+    const { locale } = usePage().props;
 
     if (menu?.requiredFeature && !hasFeature(menu.requiredFeature)) {
         return null;
     }
 
     const badgeCount = menu.badgeCount || 0;
+    const badgeSpacingClass = locale === 'ar' ? 'mr-2' : 'ml-2';
 
     const isRouteActive = () => {
         if (typeof route !== 'function') {
@@ -49,7 +51,7 @@ const SingleMenu = ({menu, index}) => {
                     onClick={handleMouseEnter}
                 >
                     <Link
-                        href={routeUrl(menu.route)}
+                        href={routeUrl(menu.route, menu.params || {})}
                         id={menu.name}
                         onMouseEnter={() => prefetchInertiaPageForRoute(menu.route)}
                         className={isRouteActive() ? 'ok nav-link active' : 'ok nav-link'}
@@ -58,7 +60,7 @@ const SingleMenu = ({menu, index}) => {
                         <p className="ok mb-0">
                             {__(menu.name)}
                             {badgeCount > 0 && (
-                                <span className="right badge badge-warning ml-2">
+                                <span className={`right badge badge-warning ${badgeSpacingClass}`}>
                                     {badgeCount}
                                 </span>
                             )}

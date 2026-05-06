@@ -25,6 +25,7 @@ export type DashboardT = {
 export type EnumLabels = {
     order_status?: Record<string, string>;
     technician_availability?: Record<string, string>;
+    technician_review_status?: Record<string, string>;
     invoice_status?: Record<string, string>;
     payment_status?: Record<string, string>;
     company_status?: Record<string, string>;

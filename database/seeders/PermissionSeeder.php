@@ -40,6 +40,10 @@ class PermissionSeeder extends Seeder
             ['key' => 'technicians.reset_password', 'name' => 'Reset technician password', 'group' => 'technicians'],
             ['key' => 'technicians.manage', 'name' => 'Manage technicians', 'group' => 'technicians'], // legacy umbrella
 
+            ['key' => 'technician_reviews.view', 'name' => 'View technician reviews', 'group' => 'technician_reviews'],
+            ['key' => 'technician_reviews.approve', 'name' => 'Approve technician reviews', 'group' => 'technician_reviews'],
+            ['key' => 'technician_reviews.reject', 'name' => 'Reject technician reviews', 'group' => 'technician_reviews'],
+
             ['key' => 'services.manage', 'name' => 'Manage services', 'group' => 'services'],
 
             ['key' => 'orders.view', 'name' => 'View orders', 'group' => 'orders'],

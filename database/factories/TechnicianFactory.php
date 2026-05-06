@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\TechnicianAvailabilityStatus;
+use App\Enums\TechnicianReviewStatus;
 use App\Enums\UserStatus;
 use App\Enums\UserType;
 use App\Models\Company;
@@ -44,6 +45,32 @@ class TechnicianFactory extends Factory
             'rating_count' => 0,
             'completed_orders_count' => 0,
             'is_active' => true,
+            'review_status' => TechnicianReviewStatus::Approved,
+            'reviewed_by_user_id' => null,
+            'reviewed_at' => null,
+            'rejection_reason' => null,
         ];
+    }
+
+    public function pendingReview(): static
+    {
+        return $this->state([
+            'review_status' => TechnicianReviewStatus::Pending,
+            'is_active' => false,
+            'reviewed_by_user_id' => null,
+            'reviewed_at' => null,
+            'rejection_reason' => null,
+        ]);
+    }
+
+    public function rejected(string $reason = 'Rejected by platform'): static
+    {
+        return $this->state([
+            'review_status' => TechnicianReviewStatus::Rejected,
+            'is_active' => false,
+            'reviewed_by_user_id' => null,
+            'reviewed_at' => now(),
+            'rejection_reason' => $reason,
+        ]);
     }
 }

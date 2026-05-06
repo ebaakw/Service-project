@@ -34,10 +34,11 @@ class StoreTechnicianRequest extends FormRequest
         return [
             'name_ar' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'display_name_ar' => ['nullable', 'string', 'max:255'],
             'display_name_en' => ['nullable', 'string', 'max:255'],
-            'email' => ['required_without:phone', 'nullable', 'email', 'max:255', Rule::unique('users', 'email')],
-            'phone' => ['required_without:email', 'nullable', 'string', 'max:32', Rule::unique('users', 'phone')],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')],
+            'phone' => ['required', 'string', 'regex:/^\d{8}$/', Rule::unique('users', 'phone')],
             'password' => ['required', 'string', 'confirmed', 'min:8'],
             'employee_code' => ['nullable', 'string', 'max:64'],
             'bio_ar' => ['nullable', 'string'],

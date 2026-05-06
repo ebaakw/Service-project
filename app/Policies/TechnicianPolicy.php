@@ -10,7 +10,7 @@ class TechnicianPolicy
     public function viewAny(User $user): bool
     {
         if ($user->isPlatformAdmin()) {
-            return $user->hasAnyPermission(['technicians.view', 'technicians.manage']);
+            return true;
         }
 
         if ($user->isCompanyUser()) {
@@ -26,7 +26,7 @@ class TechnicianPolicy
     public function view(User $user, Technician $technician): bool
     {
         if ($user->isPlatformAdmin()) {
-            return $user->hasAnyPermission(['technicians.view', 'technicians.manage']);
+            return true;
         }
 
         return $this->managesInCurrentCompany($user, $technician, ['technicians.view', 'technicians.manage']);
@@ -43,22 +43,56 @@ class TechnicianPolicy
 
     public function update(User $user, Technician $technician): bool
     {
+        if ($user->isPlatformAdmin()) {
+            return true;
+        }
+
         return $this->managesInCurrentCompany($user, $technician, ['technicians.update', 'technicians.manage']);
     }
 
     public function delete(User $user, Technician $technician): bool
     {
+        if ($user->isPlatformAdmin()) {
+            return true;
+        }
+
         return $this->managesInCurrentCompany($user, $technician, ['technicians.delete', 'technicians.manage']);
     }
 
     public function restore(User $user, Technician $technician): bool
     {
+        if ($user->isPlatformAdmin()) {
+            return true;
+        }
+
         return $this->managesInCurrentCompany($user, $technician, ['technicians.update', 'technicians.manage']);
     }
 
     public function resetPassword(User $user, Technician $technician): bool
     {
+        if ($user->isPlatformAdmin()) {
+            return true;
+        }
+
         return $this->managesInCurrentCompany($user, $technician, ['technicians.reset_password', 'technicians.manage']);
+    }
+
+    public function viewReviews(User $user): bool
+    {
+        return $user->isPlatformAdmin()
+            && $user->hasPermission('technician_reviews.view');
+    }
+
+    public function approveReview(User $user, Technician $technician): bool
+    {
+        return $user->isPlatformAdmin()
+            && $user->hasPermission('technician_reviews.approve');
+    }
+
+    public function rejectReview(User $user, Technician $technician): bool
+    {
+        return $user->isPlatformAdmin()
+            && $user->hasPermission('technician_reviews.reject');
     }
 
     /**

@@ -26,9 +26,18 @@ class ServiceCatalogAndPricingTest extends TestCase
     {
         $user = User::factory()->platformAdmin()->create();
 
-        $response = $this->actingAs($user)->get(route('platform.service-categories.index', absolute: false));
-
-        $response->assertOk();
+        $this->actingAs($user)
+            ->get(route('platform.service-categories.index', absolute: false))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Platform/ServiceCatalog/Categories/Index')
+                ->has('filters', fn ($f) => $f
+                    ->where('per_page', 10)
+                    ->where('search', '')
+                    ->where('status', 'all')
+                )
+                ->has('can', fn ($c) => $c->has('create'))
+            );
     }
 
     public function test_company_user_cannot_access_platform_service_catalog(): void

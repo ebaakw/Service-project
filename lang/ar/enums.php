@@ -21,6 +21,11 @@ return [
         'busy' => 'مشغول',
         'on_break' => 'في استراحة',
     ],
+    'technician_review_status' => [
+        'pending' => 'قيد المراجعة',
+        'approved' => 'مقبول',
+        'rejected' => 'مرفوض',
+    ],
     'invoice_status' => [
         'draft' => 'مسودة',
         'sent' => 'مرسل',

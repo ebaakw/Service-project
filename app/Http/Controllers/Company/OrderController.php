@@ -65,6 +65,9 @@ class OrderController extends Controller
 
         $technicians = Technician::query()
             ->where('company_id', $order->company_id)
+            ->where('review_status', 'approved')
+            ->where('is_active', true)
+            ->whereHas('user', fn ($q) => $q->where('status', \App\Enums\UserStatus::Active))
             ->with(['user:id,name'])
             ->orderBy('id')
             ->get(['id', 'user_id']);

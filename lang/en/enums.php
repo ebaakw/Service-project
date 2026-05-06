@@ -21,6 +21,11 @@ return [
         'busy' => 'Busy',
         'on_break' => 'On break',
     ],
+    'technician_review_status' => [
+        'pending' => 'Pending Review',
+        'approved' => 'Approved',
+        'rejected' => 'Rejected',
+    ],
     'invoice_status' => [
         'draft' => 'Draft',
         'sent' => 'Sent',
