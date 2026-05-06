@@ -11,14 +11,19 @@ use App\Models\Media;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderOffer;
+use App\Models\Role;
+use App\Models\User;
 use App\Models\UserDevice;
 use App\Models\PortfolioProject;
 use App\Models\Technician;
 use App\Observers\OrderItemObserver;
 use App\Observers\OrderOfferObserver;
+use App\Policies\RolePolicy;
+use App\Policies\UserPolicy;
 use App\Services\Payments\FakePaymentGateway;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -50,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
         }
 
         JsonResource::withoutWrapping();
+
+        Gate::policy(Role::class, RolePolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
 
         if (! $this->app->environment('testing')) {
             Vite::prefetch(concurrency: 3);

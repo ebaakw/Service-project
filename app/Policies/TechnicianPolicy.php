@@ -9,44 +9,62 @@ class TechnicianPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isPlatformAdmin() || $user->isCompanyUser();
+        if ($user->isPlatformAdmin()) {
+            return $user->hasAnyPermission(['technicians.view', 'technicians.manage']);
+        }
+
+        if ($user->isCompanyUser()) {
+            $company = current_company();
+
+            return $company !== null
+                && $user->hasAnyPermission(['technicians.view', 'technicians.manage'], $company->getKey());
+        }
+
+        return false;
     }
 
     public function view(User $user, Technician $technician): bool
     {
         if ($user->isPlatformAdmin()) {
-            return true;
+            return $user->hasAnyPermission(['technicians.view', 'technicians.manage']);
         }
 
-        return $this->managesInCurrentCompany($user, $technician);
+        return $this->managesInCurrentCompany($user, $technician, ['technicians.view', 'technicians.manage']);
     }
 
     public function create(User $user): bool
     {
-        return $user->isCompanyUser() && current_company() !== null;
+        $company = current_company();
+
+        return $user->isCompanyUser()
+            && $company !== null
+            && $user->hasAnyPermission(['technicians.create', 'technicians.manage'], $company->getKey());
     }
 
     public function update(User $user, Technician $technician): bool
     {
-        return $this->managesInCurrentCompany($user, $technician);
+        return $this->managesInCurrentCompany($user, $technician, ['technicians.update', 'technicians.manage']);
     }
 
     public function delete(User $user, Technician $technician): bool
     {
-        return $this->managesInCurrentCompany($user, $technician);
+        return $this->managesInCurrentCompany($user, $technician, ['technicians.delete', 'technicians.manage']);
     }
 
     public function restore(User $user, Technician $technician): bool
     {
-        return $this->managesInCurrentCompany($user, $technician);
+        return $this->managesInCurrentCompany($user, $technician, ['technicians.update', 'technicians.manage']);
     }
 
     public function resetPassword(User $user, Technician $technician): bool
     {
-        return $this->managesInCurrentCompany($user, $technician);
+        return $this->managesInCurrentCompany($user, $technician, ['technicians.reset_password', 'technicians.manage']);
     }
 
-    private function managesInCurrentCompany(User $user, Technician $technician): bool
+    /**
+     * @param  list<string>  $permissionKeys
+     */
+    private function managesInCurrentCompany(User $user, Technician $technician, array $permissionKeys): bool
     {
         if (! $user->isCompanyUser()) {
             return false;
@@ -54,6 +72,8 @@ class TechnicianPolicy
 
         $company = current_company();
 
-        return $company !== null && (int) $technician->company_id === (int) $company->getKey();
+        return $company !== null
+            && (int) $technician->company_id === (int) $company->getKey()
+            && $user->hasAnyPermission($permissionKeys, $company->getKey());
     }
 }

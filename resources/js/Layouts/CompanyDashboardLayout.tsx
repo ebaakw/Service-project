@@ -14,7 +14,13 @@ export default function CompanyDashboardLayout({
     const user = usePage<PageProps>().props.auth.user;
 
     if (!user) {
-        return null;
+        return (
+            <div className="container py-5">
+                <div className="alert alert-warning mb-0">
+                    Session is missing. Please <a href="/login">sign in</a> again.
+                </div>
+            </div>
+        );
     }
 
     return (

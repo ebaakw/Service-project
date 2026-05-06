@@ -34,6 +34,16 @@ return [
         'platform_feedback' => 'شكاوى المنصة',
         'platform_settings' => 'إعدادات المنصة',
 
+        'users_and_roles' => 'المستخدمين والأدوار',
+        'platform_users_create' => 'إضافة مستخدم',
+        'platform_users' => 'المستخدمين',
+        'platform_roles_create' => 'إضافة دور',
+        'platform_roles' => 'الأدوار',
+        'company_users_create' => 'إضافة مستخدم',
+        'company_users' => 'المستخدمين',
+        'company_roles_create' => 'إضافة دور',
+        'company_roles' => 'الأدوار',
+
         'company_orders' => 'طلبات الشركة',
         'company_technicians' => 'فنيو الشركة',
         'company_price_lists' => 'قوائم أسعار الشركة',

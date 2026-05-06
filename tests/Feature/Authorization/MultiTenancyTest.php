@@ -9,7 +9,9 @@ use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\CompanyMember;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class MultiTenancyTest extends TestCase
@@ -18,7 +20,9 @@ class MultiTenancyTest extends TestCase
 
     public function test_platform_admin_can_access_platform_dashboard(): void
     {
+        $this->seed(PermissionSeeder::class);
         $user = User::factory()->platformAdmin()->create();
+        Artisan::call('permissions:repair-dashboard-access');
 
         $response = $this->actingAs($user)->get('/platform/dashboard');
 
@@ -27,7 +31,9 @@ class MultiTenancyTest extends TestCase
 
     public function test_platform_admin_can_access_platform_companies_placeholder(): void
     {
+        $this->seed(PermissionSeeder::class);
         $user = User::factory()->platformAdmin()->create();
+        Artisan::call('permissions:repair-dashboard-access');
 
         $response = $this->actingAs($user)->get('/platform/companies');
 

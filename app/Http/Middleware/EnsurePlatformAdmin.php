@@ -13,7 +13,19 @@ class EnsurePlatformAdmin
     {
         $user = $request->user();
 
-        if ($user === null || $user->type !== UserType::PlatformAdmin) {
+        if ($user === null) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);
+            }
+
+            return redirect()->route('login');
+        }
+
+        if ($user->type !== UserType::PlatformAdmin) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Forbidden.'], Response::HTTP_FORBIDDEN);
+            }
+
             abort(Response::HTTP_FORBIDDEN);
         }
 

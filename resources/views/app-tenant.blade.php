@@ -6,14 +6,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
     @include('layouts.tenant-dashboard-head')
+    @routes
+    <x-translations />
     @viteReactRefresh
     @vite(['resources/css/tenant-app.css', 'resources/js/app.jsx'])
-    @routes
     @inertiaHead
 </head>
 <body class="hold-transition layout-fixed sidebar-mini">
     @inertia
-    <x-translations />
     @include('layouts.tenant-dashboard-footer')
     <script>
         document.body.addEventListener('click', function () {

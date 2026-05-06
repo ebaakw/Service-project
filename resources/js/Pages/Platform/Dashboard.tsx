@@ -1,4 +1,5 @@
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
+import StatCard from '@/Components/Dashboard/StatCard';
 import type { PageProps } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 
@@ -48,6 +49,7 @@ function fmt(n: number | null | undefined): string {
 export default function PlatformDashboard() {
     const { t, locale, stats } = usePage<DashboardProps>().props;
     const s: PlatformStats = stats ?? {};
+    const isRtl = locale === 'ar';
 
     const cards: ReadonlyArray<{
         key: keyof PlatformStats;
@@ -62,6 +64,13 @@ export default function PlatformDashboard() {
             labelFallback: 'All Companies',
             color: 'bg-info',
             icon: 'fa-building',
+        },
+        {
+            key: 'companies_active',
+            labelKey: 'nav.all_companies',
+            labelFallback: locale === 'ar' ? 'الشركات النشطة' : 'Active Companies',
+            color: 'bg-success',
+            icon: 'fa-check-circle',
         },
         {
             key: 'customers',
@@ -83,6 +92,13 @@ export default function PlatformDashboard() {
             labelFallback: 'All Orders',
             color: 'bg-warning',
             icon: 'fa-shopping-bag',
+        },
+        {
+            key: 'orders_pending',
+            labelKey: 'nav.all_orders',
+            labelFallback: locale === 'ar' ? 'الطلبات قيد المعالجة' : 'Orders In Progress',
+            color: 'bg-secondary',
+            icon: 'fa-hourglass-half',
         },
         {
             key: 'invoices',
@@ -120,48 +136,15 @@ export default function PlatformDashboard() {
             <div className="row">
                 {cards.map((c) => (
                     <div className="col-lg-4 col-md-6 col-12 mb-3" key={c.key}>
-                        <div className={`small-box ${c.color}`}>
-                            <div className="inner">
-                                <h3 className="m-0">{fmt(s[c.key])}</h3>
-                                <p className="m-0 text-sm">
-                                    {tr(t, c.labelKey, c.labelFallback)}
-                                </p>
-                            </div>
-                            <div className="icon">
-                                <i className={`fas ${c.icon}`} />
-                            </div>
-                        </div>
+                        <StatCard
+                            label={tr(t, c.labelKey, c.labelFallback)}
+                            value={fmt(s[c.key])}
+                            icon={c.icon}
+                            color={c.color}
+                            isRtl={isRtl}
+                        />
                     </div>
                 ))}
-            </div>
-
-            <div className="row">
-                <div className="col-md-6 col-12 mb-3">
-                    <div className="small-box bg-light">
-                        <div className="inner text-dark">
-                            <h3 className="m-0">{fmt(s.companies_active)}</h3>
-                            <p className="m-0 text-sm">
-                                {locale === 'ar' ? 'الشركات النشطة' : 'Active Companies'}
-                            </p>
-                        </div>
-                        <div className="icon">
-                            <i className="fas fa-check-circle" />
-                        </div>
-                    </div>
-                </div>
-                <div className="col-md-6 col-12 mb-3">
-                    <div className="small-box bg-light">
-                        <div className="inner text-dark">
-                            <h3 className="m-0">{fmt(s.orders_pending)}</h3>
-                            <p className="m-0 text-sm">
-                                {locale === 'ar' ? 'الطلبات قيد المعالجة' : 'Orders In Progress'}
-                            </p>
-                        </div>
-                        <div className="icon">
-                            <i className="fas fa-hourglass-half" />
-                        </div>
-                    </div>
-                </div>
             </div>
         </PlatformAdminLayout>
     );

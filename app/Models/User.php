@@ -149,6 +149,22 @@ class User extends Authenticatable
         return in_array($key, $this->permissionKeys($companyId), true);
     }
 
+    /**
+     * @param  list<string>  $keys
+     */
+    public function hasAnyPermission(array $keys, ?int $companyId = null): bool
+    {
+        $granted = $this->permissionKeys($companyId);
+
+        foreach ($keys as $key) {
+            if (in_array($key, $granted, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function assignedFeedbackTickets(): HasMany
     {
         return $this->hasMany(FeedbackTicket::class, 'assigned_to_user_id');

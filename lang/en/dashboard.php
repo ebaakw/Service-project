@@ -34,6 +34,16 @@ return [
         'platform_feedback' => 'Platform Feedback',
         'platform_settings' => 'Platform Settings',
 
+        'users_and_roles' => 'Users & Roles',
+        'platform_users_create' => 'Add User',
+        'platform_users' => 'Users',
+        'platform_roles_create' => 'Add Role',
+        'platform_roles' => 'Roles',
+        'company_users_create' => 'Add User',
+        'company_users' => 'Users',
+        'company_roles_create' => 'Add Role',
+        'company_roles' => 'Roles',
+
         'company_orders' => 'Company Orders',
         'company_technicians' => 'Company Technicians',
         'company_price_lists' => 'Company Price Lists',

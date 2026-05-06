@@ -22,6 +22,37 @@ export const companyMenu = [
         activePatterns: ['company.dashboard'],
     },
     {
+        name: 'dashboard.nav.users_and_roles',
+        icon: 'fa-users-cog',
+        bypassPermissionCheck: true,
+        children: [
+            {
+                name: 'dashboard.nav.company_users_create',
+                route: 'company.users.create',
+                bypassPermissionCheck: true,
+                activePatterns: ['company.users.create'],
+            },
+            {
+                name: 'dashboard.nav.company_users',
+                route: 'company.users.index',
+                bypassPermissionCheck: true,
+                activePatterns: ['company.users.*'],
+            },
+            {
+                name: 'dashboard.nav.company_roles_create',
+                route: 'company.roles.create',
+                bypassPermissionCheck: true,
+                activePatterns: ['company.roles.create'],
+            },
+            {
+                name: 'dashboard.nav.company_roles',
+                route: 'company.roles.index',
+                bypassPermissionCheck: true,
+                activePatterns: ['company.roles.*'],
+            },
+        ],
+    },
+    {
         name: 'dashboard.nav.company_orders',
         route: 'company.orders.index',
         icon: 'fa-shopping-bag',

@@ -17,6 +17,37 @@ export const platformMenu = [
         activePatterns: ['platform.dashboard'],
     },
     {
+        name: 'dashboard.nav.users_and_roles',
+        icon: 'fa-user-shield',
+        bypassPermissionCheck: true,
+        children: [
+            {
+                name: 'dashboard.nav.platform_users_create',
+                route: 'platform.users.create',
+                bypassPermissionCheck: true,
+                activePatterns: ['platform.users.create'],
+            },
+            {
+                name: 'dashboard.nav.platform_users',
+                route: 'platform.users.index',
+                bypassPermissionCheck: true,
+                activePatterns: ['platform.users.*'],
+            },
+            {
+                name: 'dashboard.nav.platform_roles_create',
+                route: 'platform.roles.create',
+                bypassPermissionCheck: true,
+                activePatterns: ['platform.roles.create'],
+            },
+            {
+                name: 'dashboard.nav.platform_roles',
+                route: 'platform.roles.index',
+                bypassPermissionCheck: true,
+                activePatterns: ['platform.roles.*'],
+            },
+        ],
+    },
+    {
         name: 'dashboard.nav.all_companies',
         route: 'platform.companies.index',
         icon: 'fa-building',

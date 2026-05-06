@@ -4,6 +4,7 @@ return array_merge(
     require base_path('vendor/laravel/framework/src/Illuminate/Translation/lang/en/auth.php'),
     [
         'web_login_forbidden' => 'This account type cannot sign in to the web dashboard.',
+        'company_not_active' => 'Your account is not linked to an active company. Please contact platform administration.',
         'login_title' => 'Sign in',
         'login_hint' => 'Enter your credentials to access the dashboard.',
         'hero_title' => 'Operations, simplified.',

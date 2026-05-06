@@ -1,4 +1,5 @@
 import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
+import StatCard from '@/Components/Dashboard/StatCard';
 import type { PageProps } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 
@@ -46,6 +47,7 @@ function fmt(n: number | null | undefined): string {
 export default function CompanyDashboard() {
     const { t, locale, stats, currentCompany } = usePage<DashboardProps>().props;
     const s: CompanyStats = stats ?? {};
+    const isRtl = locale === 'ar';
 
     const cards: ReadonlyArray<{
         key: keyof CompanyStats;
@@ -65,7 +67,7 @@ export default function CompanyDashboard() {
             key: 'orders_pending',
             labelKey: 'nav.company_orders',
             labelFallback: 'Pending Orders',
-            color: 'bg-light',
+            color: 'bg-secondary',
             icon: 'fa-hourglass-half',
         },
         {
@@ -120,17 +122,13 @@ export default function CompanyDashboard() {
             <div className="row">
                 {cards.map((c) => (
                     <div className="col-lg-4 col-md-6 col-12 mb-3" key={c.key}>
-                        <div className={`small-box ${c.color}`}>
-                            <div className={`inner ${c.color === 'bg-light' ? 'text-dark' : ''}`}>
-                                <h3 className="m-0">{fmt(s[c.key])}</h3>
-                                <p className="m-0 text-sm">
-                                    {tr(t, c.labelKey, c.labelFallback)}
-                                </p>
-                            </div>
-                            <div className="icon">
-                                <i className={`fas ${c.icon}`} />
-                            </div>
-                        </div>
+                        <StatCard
+                            label={tr(t, c.labelKey, c.labelFallback)}
+                            value={fmt(s[c.key])}
+                            icon={c.icon}
+                            color={c.color}
+                            isRtl={isRtl}
+                        />
                     </div>
                 ))}
             </div>

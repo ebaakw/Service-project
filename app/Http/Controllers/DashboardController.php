@@ -13,10 +13,6 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        return match ($user->type) {
-            UserType::PlatformAdmin => redirect()->route('platform.dashboard'),
-            UserType::CompanyUser => redirect(UserHomeRedirect::url($user)),
-            default => redirect('/'),
-        };
+        return UserHomeRedirect::redirectAfterLogin($request, $user);
     }
 }

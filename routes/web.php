@@ -6,7 +6,9 @@ use App\Http\Controllers\Company\OrderController as CompanyOrderController;
 use App\Http\Controllers\Company\OrderItemController as CompanyOrderItemController;
 use App\Http\Controllers\Company\PortfolioMediaController;
 use App\Http\Controllers\Company\PortfolioProjectController;
+use App\Http\Controllers\Company\RoleController as CompanyRoleController;
 use App\Http\Controllers\Company\TechnicianController;
+use App\Http\Controllers\Company\UserController as CompanyUserController;
 use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\CompanyProbeController;
 use App\Http\Controllers\DashboardController;
@@ -21,8 +23,10 @@ use App\Http\Controllers\Platform\OrderController as PlatformOrderController;
 use App\Http\Controllers\Platform\PlatformFeedbackTicketController;
 use App\Http\Controllers\Platform\PlatformPortfolioMediaController;
 use App\Http\Controllers\Platform\PlatformPortfolioProjectController;
+use App\Http\Controllers\Platform\RoleController as PlatformRoleController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\TechnicianController as PlatformTechnicianController;
+use App\Http\Controllers\Platform\UserController as PlatformUserController;
 use App\Http\Controllers\PlatformDashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WelcomeController;
@@ -84,6 +88,12 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::get('/feedback-tickets/{feedback_ticket}', [PlatformFeedbackTicketController::class, 'show'])->name('feedback-tickets.show');
     Route::patch('/feedback-tickets/{feedback_ticket}', [PlatformFeedbackTicketController::class, 'update'])->name('feedback-tickets.update');
     Route::post('/feedback-tickets/{feedback_ticket}/replies', [PlatformFeedbackTicketController::class, 'storeReply'])->name('feedback-tickets.replies.store');
+
+    Route::resource('roles', PlatformRoleController::class)->except(['show']);
+    Route::resource('users', PlatformUserController::class)->except(['show']);
+    Route::post('/users/{user}/restore', [PlatformUserController::class, 'restore'])
+        ->withTrashed()
+        ->name('users.restore');
 });
 
 Route::middleware(['auth', 'verified', 'company.user', 'company.resolve'])->prefix('company')->name('company.')->group(function () {
@@ -120,6 +130,12 @@ Route::middleware(['auth', 'verified', 'company.user', 'company.resolve'])->pref
         ->name('orders.send-invoice');
     Route::post('orders/{order}/force-complete', [CompanyOrderController::class, 'forceComplete'])
         ->name('orders.force-complete');
+
+    Route::resource('roles', CompanyRoleController::class)->except(['show']);
+    Route::resource('users', CompanyUserController::class)->except(['show']);
+    Route::post('/users/{user}/restore', [CompanyUserController::class, 'restore'])
+        ->withTrashed()
+        ->name('users.restore');
 });
 
 Route::middleware('auth')->group(function () {

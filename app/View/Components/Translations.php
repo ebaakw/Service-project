@@ -11,7 +11,7 @@ use Illuminate\View\View;
 class Translations extends Component
 {
     /**
-     * Flatten lang files into keys prefixed for window._translations (tenant.*, dashboard.*).
+     * Flatten lang files into keys prefixed for window._translations (tenant.*, dashboard.*, role.*).
      *
      * @return array<string, string>
      */
@@ -20,6 +20,7 @@ class Translations extends Component
         return array_merge(
             $this->flattenLangFile('tenant', 'tenant'),
             $this->flattenLangFile('dashboard', 'dashboard'),
+            $this->flattenLangFile('role', 'role'),
         );
     }
 

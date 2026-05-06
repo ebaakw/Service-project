@@ -7,7 +7,9 @@ use App\Models\Company;
 use App\Models\CompanyMember;
 use App\Models\ServiceCategory;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class TechnicianStoreValidationTest extends TestCase
@@ -16,6 +18,8 @@ class TechnicianStoreValidationTest extends TestCase
 
     public function test_store_rejects_inactive_service_category(): void
     {
+        $this->seed(PermissionSeeder::class);
+
         $company = Company::factory()->create();
 
         $companyUser = User::factory()->companyUser()->create();
@@ -26,6 +30,8 @@ class TechnicianStoreValidationTest extends TestCase
             'status' => CompanyMemberStatus::Active,
             'joined_at' => now(),
         ]);
+
+        Artisan::call('permissions:repair-dashboard-access');
 
         $inactive = ServiceCategory::factory()->create(['is_active' => false]);
 
