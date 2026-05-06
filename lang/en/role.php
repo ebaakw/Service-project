@@ -17,6 +17,7 @@ return [
     'portfolio' => 'Portfolio',
     'feedback' => 'Feedback',
     'complaints' => 'Complaints',
+    'customers' => 'Customers',
 
     // Permission keys
     'platform.dashboard.view' => 'View platform dashboard',

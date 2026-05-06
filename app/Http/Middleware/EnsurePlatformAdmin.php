@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\UserType;
+use App\Support\UserHomeRedirect;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,7 +27,7 @@ class EnsurePlatformAdmin
                 return response()->json(['message' => 'Forbidden.'], Response::HTTP_FORBIDDEN);
             }
 
-            abort(Response::HTTP_FORBIDDEN);
+            return UserHomeRedirect::redirectToRoleHome($request, $user);
         }
 
         return $next($request);

@@ -13,6 +13,7 @@ import './css/progress.css'
 import {useEffect, useMemo} from 'react';
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import ScrollUpButton from "@/Layouts/Tenant/components/scrollUp/ScrollUpButton.jsx";
+import { filterMenuByPermissions } from "@/Support/permissions.js";
 
 const MainLayout = ({
     children,
@@ -35,10 +36,16 @@ const MainLayout = ({
         return [];
     }, [menuListProp, shellVariant]);
 
-    const {flash, locale} = usePage().props;
+    const { flash, locale, auth } = usePage().props;
     const isRtl = locale === 'ar';
 
     const position = isRtl ? 'top-left' : 'top-right'
+
+    const userPermissions = auth?.user?.permissions ?? [];
+
+    const visibleMenuList = useMemo(() => {
+        return filterMenuByPermissions(resolvedMenuList, userPermissions);
+    }, [resolvedMenuList, userPermissions]);
 
     useEffect(() => {
         if (!flash?.type) return;
@@ -65,7 +72,7 @@ const MainLayout = ({
 
                 <Navbar shellVariant={shellVariant}/>
 
-                <Sidebar menuList={resolvedMenuList} shellVariant={shellVariant}/>
+                <Sidebar menuList={visibleMenuList} shellVariant={shellVariant}/>
 
                 <ToastContainer position={position} rtl={locale === 'ar'}/>
 

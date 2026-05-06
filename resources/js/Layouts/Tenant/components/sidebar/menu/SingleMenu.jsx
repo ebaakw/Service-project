@@ -1,7 +1,7 @@
 import handleMouseEnter from "@/Layouts/Tenant/components/sidebar/helper.js";
 import {Link} from "@inertiajs/react";
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
-import {hasAnyPermissions} from "@/Utility/Hooks/usePermission.jsx";
+import { hasAnyPermissions, hasPermission } from "@/Utility/Hooks/usePermission.jsx";
 import {routeUrl} from "@/Utility/routeUrl.js";
 import {usePlanFeatures} from "@/Utility/Hooks/usePlanFeatures.jsx";
 import { prefetchInertiaPageForRoute } from "@/Utility/inertiaPrefetch.js";
@@ -36,8 +36,9 @@ const SingleMenu = ({menu, index}) => {
     };
 
     const canSee =
-        menu.bypassPermissionCheck === true ||
-        hasAnyPermissions(menu.permissions || []);
+        menu.bypassPermissionCheck === true
+        || (menu.permission ? hasPermission(menu.permission) : true)
+        || hasAnyPermissions(menu.permissions || []);
 
     return (
         <>

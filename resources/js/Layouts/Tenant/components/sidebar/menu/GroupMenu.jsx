@@ -2,7 +2,7 @@ import handleMouseEnter from "@/Layouts/Tenant/components/sidebar/helper.js";
 import {Link, usePage} from "@inertiajs/react";
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import classNames from "classnames";
-import {hasAnyPermissions} from "@/Utility/Hooks/usePermission.jsx";
+import { hasAnyPermissions, hasPermission } from "@/Utility/Hooks/usePermission.jsx";
 import {routeUrl} from "@/Utility/routeUrl.js";
 import {usePlanFeatures} from "@/Utility/Hooks/usePlanFeatures.jsx";
 import { prefetchInertiaPageForRoute } from "@/Utility/inertiaPrefetch.js";
@@ -37,8 +37,9 @@ const GroupMenu = ({menu, index}) => {
 
     const isChildActive = (child) => childRouteMatches(child);
     const canSee =
-        menu.bypassPermissionCheck === true ||
-        hasAnyPermissions(menu.permissions || []);
+        menu.bypassPermissionCheck === true
+        || (menu.permission ? hasPermission(menu.permission) : true)
+        || hasAnyPermissions(menu.permissions || []);
 
     return (
         <>
@@ -69,8 +70,9 @@ const GroupMenu = ({menu, index}) => {
                         {menu.children.map((child, index) =>
                             child?.requiredFeature && !hasFeature(child.requiredFeature)
                                 ? null
-                                : (child.bypassPermissionCheck === true ||
-                                      hasAnyPermissions(child.permissions || [])) && (
+                                : (child.bypassPermissionCheck === true
+                                      || (child.permission ? hasPermission(child.permission) : true)
+                                      || hasAnyPermissions(child.permissions || [])) && (
                                       <li key={index + 'children'} className="nav-item">
                                           <Link
                                               href={routeUrl(child.route)}

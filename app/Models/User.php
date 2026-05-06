@@ -122,22 +122,47 @@ class User extends Authenticatable
     }
 
     /**
-     * Permission keys for platform scope (company_id null on pivot) and current company (when provided).
+     * Permission keys for the current authenticated scope.
+     *
+     * - Platform admins: platform scope only (pivot company_id NULL).
+     * - Company users: current company scope only (pivot company_id = $companyId).
      *
      * @return list<string>
      */
     public function permissionKeys(?int $companyId = null): array
     {
-        $query = $this->roles()->with('permissions');
+        // Platform admins never use per-company permissions.
+        if ($this->isPlatformAdmin()) {
+            return $this->roles()
+                ->with('permissions')
+                ->whereNull('user_roles.company_id')
+                ->get()
+                ->flatMap(fn (Role $role) => $role->permissions->pluck('key'))
+                ->unique()
+                ->values()
+                ->all();
+        }
 
-        $query->where(function ($q) use ($companyId): void {
-            $q->whereNull('user_roles.company_id');
-            if ($companyId !== null) {
-                $q->orWhere('user_roles.company_id', $companyId);
+        // Company users must be scoped to the current company only.
+        if ($this->isCompanyUser()) {
+            if ($companyId === null) {
+                return [];
             }
-        });
 
-        return $query->get()
+            return $this->roles()
+                ->with('permissions')
+                ->where('user_roles.company_id', $companyId)
+                ->get()
+                ->flatMap(fn (Role $role) => $role->permissions->pluck('key'))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        return $this->roles()
+            ->with('permissions')
+            ->whereNull('user_roles.company_id')
+            ->get()
             ->flatMap(fn (Role $role) => $role->permissions->pluck('key'))
             ->unique()
             ->values()

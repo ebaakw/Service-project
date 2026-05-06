@@ -6,9 +6,11 @@ use App\Actions\Platform\CreateCompanyAction;
 use App\Actions\Platform\UpdateCompanyAction;
 use App\Enums\CompanyStatus;
 use App\Enums\SubscriptionStatus;
+use App\Enums\UserStatus;
 use App\Http\Requests\Platform\StorePlatformCompanyRequest;
 use App\Http\Requests\Platform\UpdatePlatformCompanyRequest;
 use App\Models\Company;
+use App\Services\CompanyPrimaryUserService;
 use App\Services\Media\MediaUploadService;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\RedirectResponse;
@@ -123,6 +125,7 @@ class PlatformCompaniesController extends Controller
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', Company::class);
+        $actor = $request->user();
 
         $search = $request->string('search')->trim()->value();
         $status = $request->string('status')->trim()->value();
@@ -161,7 +164,7 @@ class PlatformCompaniesController extends Controller
         $locale = app()->getLocale();
         /** @var FilesystemAdapter $publicDisk */
         $publicDisk = Storage::disk('public');
-        $companies->through(function (Company $company) use ($locale, $publicDisk): array {
+        $companies->through(function (Company $company) use ($locale, $publicDisk, $actor): array {
             $displayName = $locale === 'ar'
                 ? ($company->name_ar ?: $company->name_en ?: $company->name)
                 : ($company->name_en ?: $company->name_ar ?: $company->name);
@@ -191,6 +194,8 @@ class PlatformCompaniesController extends Controller
                 'technicians_count' => $company->technicians_count,
                 'orders_count' => $company->orders_count,
                 'created_at' => optional($company->created_at)->toDateTimeString(),
+                'can_update' => $actor !== null && $actor->can('update', $company),
+                'can_delete' => $actor !== null && $actor->can('delete', $company),
             ];
         });
 
@@ -205,6 +210,9 @@ class PlatformCompaniesController extends Controller
             'enums' => [
                 'company_status' => array_map(fn (CompanyStatus $e) => ['value' => $e->value, 'label' => $e->label()], CompanyStatus::cases()),
                 'subscription_status' => array_map(fn (SubscriptionStatus $e) => ['value' => $e->value, 'label' => $e->label()], SubscriptionStatus::cases()),
+            ],
+            'can' => [
+                'create' => $actor !== null && $actor->can('create', Company::class),
             ],
         ]);
     }
@@ -239,6 +247,8 @@ class PlatformCompaniesController extends Controller
         /** @var FilesystemAdapter $publicDisk */
         $publicDisk = Storage::disk('public');
 
+        $primaryUser = app(CompanyPrimaryUserService::class)->getPrimaryUser($company);
+
         return Inertia::render('Platform/Companies/Edit', [
             'company' => [
                 'id' => $company->id,
@@ -262,10 +272,20 @@ class PlatformCompaniesController extends Controller
                 'default_inspection_fee' => $company->default_inspection_fee,
                 'allow_final_invoice_without_items' => (bool) $company->allow_final_invoice_without_items,
             ],
+            'primaryUser' => $primaryUser ? [
+                'id' => $primaryUser->id,
+                'name' => $primaryUser->name,
+                'name_ar' => $primaryUser->name_ar,
+                'name_en' => $primaryUser->name_en,
+                'email' => $primaryUser->email,
+                'phone' => $primaryUser->phone,
+                'status' => $primaryUser->status?->value,
+            ] : null,
             'enums' => [
                 'company_status' => array_map(fn (CompanyStatus $e) => ['value' => $e->value, 'label' => $e->label()], CompanyStatus::cases()),
                 'subscription_status' => array_map(fn (SubscriptionStatus $e) => ['value' => $e->value, 'label' => $e->label()], SubscriptionStatus::cases()),
             ],
+            'userStatuses' => array_map(fn (UserStatus $e) => ['value' => $e->value, 'label' => $e->value], UserStatus::cases()),
         ]);
     }
 

@@ -2,12 +2,12 @@
 
 return [
     'shell' => [
-        'platform_badge' => 'المنصة',
+        'platform_badge' => 'الأدمن',
         'company_badge' => 'الشركة',
     ],
     'nav' => [
-        'platform_admin' => 'إدارة المنصة',
-        'platform_dashboard' => 'لوحة تحكم المنصة',
+        'platform_admin' => 'إدارة الأدمن',
+        'platform_dashboard' => 'لوحة تحكم الأدمن',
         'company_dashboard' => 'لوحة تحكم الشركة',
         'overview' => 'نظرة عامة',
         'orders' => 'الطلبات',
@@ -30,9 +30,9 @@ return [
         'all_orders' => 'جميع الطلبات',
         'all_invoices' => 'جميع الفواتير',
         'global_service_catalog' => 'كتالوج الخدمات العام',
-        'platform_portfolio' => 'معرض أعمال المنصة',
-        'platform_feedback' => 'شكاوى المنصة',
-        'platform_settings' => 'إعدادات المنصة',
+        'platform_portfolio' => 'معرض أعمال الأدمن',
+        'platform_feedback' => 'شكاوى الأدمن',
+        'platform_settings' => 'إعدادات الأدمن',
 
         'users_and_roles' => 'المستخدمين والأدوار',
         'platform_users_create' => 'إضافة مستخدم',

@@ -35,20 +35,25 @@ class StorePlatformCompanyRequest extends FormRequest
             'default_inspection_fee' => ['nullable', 'numeric', 'min:0', 'max:999999'],
             'allow_final_invoice_without_items' => ['boolean'],
 
-            // Optional owner creation (web login is email-based in this project).
-            'owner_name_ar' => ['nullable', 'string', 'max:255'],
+            // Primary company user (optional)
+            'create_owner' => ['nullable', 'boolean'],
+            'owner_name_ar' => ['required_if:create_owner,1', 'nullable', 'string', 'max:255'],
             'owner_name_en' => ['nullable', 'string', 'max:255'],
-            'owner_email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
+            'owner_email' => ['required_if:create_owner,1', 'nullable', 'email', 'max:255', 'unique:users,email'],
             'owner_phone' => ['nullable', 'string', 'max:30', 'unique:users,phone'],
-            'owner_password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'owner_password' => ['required_if:create_owner,1', 'nullable', 'string', 'min:8', 'confirmed'],
+            'owner_password_confirmation' => ['required_if:create_owner,1', 'nullable', 'string', 'min:8'],
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $v): void {
+            $createOwner = (bool) $this->boolean('create_owner');
+
             $anyOwnerFieldFilled = false;
             foreach ([
+                'create_owner',
                 'owner_name_ar',
                 'owner_name_en',
                 'owner_email',
@@ -57,6 +62,10 @@ class StorePlatformCompanyRequest extends FormRequest
                 'owner_password_confirmation',
             ] as $key) {
                 $val = $this->input($key);
+                if ($key === 'create_owner' && $createOwner) {
+                    $anyOwnerFieldFilled = true;
+                    break;
+                }
                 if (is_string($val) && trim($val) !== '') {
                     $anyOwnerFieldFilled = true;
                     break;
@@ -67,16 +76,22 @@ class StorePlatformCompanyRequest extends FormRequest
                 return;
             }
 
-            if (trim((string) $this->input('owner_name_ar')) === '') {
+            // If checkbox is not used, treat "any owner field filled" as intent to create primary user.
+            // This keeps back-compat with existing tests/API clients.
+            if (! $createOwner) {
+                $createOwner = true;
+            }
+
+            if ($createOwner && trim((string) $this->input('owner_name_ar')) === '') {
                 $v->errors()->add('owner_name_ar', __('validation.required'));
             }
 
             // Login is email-based; require email if creating owner credentials.
-            if (trim((string) $this->input('owner_email')) === '') {
+            if ($createOwner && trim((string) $this->input('owner_email')) === '') {
                 $v->errors()->add('owner_email', __('validation.required'));
             }
 
-            if (trim((string) $this->input('owner_password')) === '') {
+            if ($createOwner && trim((string) $this->input('owner_password')) === '') {
                 $v->errors()->add('owner_password', __('validation.required'));
             }
         });

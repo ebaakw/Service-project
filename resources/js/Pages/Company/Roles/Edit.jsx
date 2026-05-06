@@ -2,42 +2,38 @@ import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import Button from '@/Components/Core/Button.jsx';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { useForm } from '@inertiajs/react';
-import { useState } from 'react';
 
 export default function CompanyRolesEdit({ role, permissions, permissionIds }) {
-    const [selectedIds, setSelectedIds] = useState(Array.isArray(permissionIds) ? permissionIds : []);
-
     const { data, setData, put, processing, errors } = useForm({
         id: role.id,
         name: role.name || '',
         display_name: role.display_name || '',
-        permissions: selectedIds,
+        permissions: Array.isArray(permissionIds) ? permissionIds : [],
     });
 
     const toggle = (id, checked) => {
-        setSelectedIds((prev) => {
-            const next = new Set(prev);
+        setData((prev) => {
+            const next = new Set(prev.permissions ?? []);
             if (checked) next.add(id);
             else next.delete(id);
-            return Array.from(next);
+            return { ...prev, permissions: Array.from(next) };
         });
     };
 
     const toggleGroup = (groupItems, checked) => {
         const ids = groupItems.map((p) => p.id);
-        setSelectedIds((prev) => {
-            const next = new Set(prev);
+        setData((prev) => {
+            const next = new Set(prev.permissions ?? []);
             ids.forEach((id) => {
                 if (checked) next.add(id);
                 else next.delete(id);
             });
-            return Array.from(next);
+            return { ...prev, permissions: Array.from(next) };
         });
     };
 
     const submit = (e) => {
         e.preventDefault();
-        setData('permissions', selectedIds);
         put(route('company.roles.update', role.id));
     };
 
@@ -81,7 +77,9 @@ export default function CompanyRolesEdit({ role, permissions, permissionIds }) {
 
                             <div className="col-12">
                                 {Object.entries(permissions || {}).map(([group, items]) => {
-                                    const allChecked = items.every((p) => selectedIds.includes(p.id));
+                                    const allChecked = items.every((p) =>
+                                        (data.permissions ?? []).includes(p.id),
+                                    );
                                     return (
                                         <div key={group} className="card card-outline card-gray">
                                             <div className="card-header text-danger text-bold">
@@ -103,7 +101,9 @@ export default function CompanyRolesEdit({ role, permissions, permissionIds }) {
                                                                 <input
                                                                     className="mx-1"
                                                                     type="checkbox"
-                                                                    checked={selectedIds.includes(p.id)}
+                                                                    checked={(data.permissions ?? []).includes(
+                                                                        p.id,
+                                                                    )}
                                                                     onChange={(e) => toggle(p.id, e.target.checked)}
                                                                     disabled={role.is_system}
                                                                 />

@@ -30,6 +30,7 @@ use App\Http\Controllers\Platform\UserController as PlatformUserController;
 use App\Http\Controllers\PlatformDashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WelcomeController;
+use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [WelcomeController::class, 'index']);
@@ -44,6 +45,43 @@ Route::post('/locale', [LocaleController::class, 'update'])
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+/*
+|--------------------------------------------------------------------------
+| Legacy roles routes
+|--------------------------------------------------------------------------
+| Older links used /roles/* directly. The app now separates Platform and Company
+| dashboards, so we redirect based on the authenticated user's scope.
+*/
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/roles', function () {
+        $user = request()->user();
+        abort_if($user === null, 403);
+
+        return redirect()->route(
+            $user->isPlatformAdmin() ? 'platform.roles.index' : 'company.roles.index'
+        );
+    })->name('roles.index');
+
+    Route::get('/roles/create', function () {
+        $user = request()->user();
+        abort_if($user === null, 403);
+
+        return redirect()->route(
+            $user->isPlatformAdmin() ? 'platform.roles.create' : 'company.roles.create'
+        );
+    })->name('roles.create');
+
+    Route::get('/roles/{role}/edit', function (Role $role) {
+        $user = request()->user();
+        abort_if($user === null, 403);
+
+        return redirect()->route(
+            $user->isPlatformAdmin() ? 'platform.roles.edit' : 'company.roles.edit',
+            $role
+        );
+    })->name('roles.edit');
+});
 
 Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->name('platform.')->group(function () {
     Route::get('/dashboard', PlatformDashboardController::class)->name('dashboard');

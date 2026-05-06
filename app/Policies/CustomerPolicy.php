@@ -9,11 +9,13 @@ class CustomerPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isPlatformAdmin();
+        return $user->isPlatformAdmin()
+            && $user->hasAnyPermission(['customers.view'], null);
     }
 
     public function view(User $user, Customer $customer): bool
     {
-        return $user->isPlatformAdmin();
+        return $user->isPlatformAdmin()
+            && $user->hasAnyPermission(['customers.view'], null);
     }
 }

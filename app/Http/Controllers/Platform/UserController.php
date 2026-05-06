@@ -120,7 +120,7 @@ class UserController extends Controller
         $roleId = $user->roles()
             ->wherePivotNull('company_id')
             ->where('scope', RoleScope::Platform->value)
-            ->whereNull('company_id')
+            ->whereNull('roles.company_id')
             ->value('roles.id');
 
         return Inertia::render('Platform/Users/Edit', [

@@ -34,6 +34,8 @@ type CompanyRow = {
     technicians_count: number;
     orders_count: number;
     created_at: string | null;
+    can_update?: boolean;
+    can_delete?: boolean;
 };
 
 type LinkItem = { url: string | null; label: string; active: boolean };
@@ -55,10 +57,12 @@ export default function PlatformCompaniesIndex({
     companies,
     filters,
     enums,
+    can,
 }: {
     companies: Paginator<CompanyRow>;
     filters: { search: string; status: string; subscription_status: string; per_page?: number };
     enums: { company_status: Option[]; subscription_status: Option[] };
+    can: { create?: boolean };
 }) {
     const { locale, direction } = usePage<PageProps>().props;
     const isRtl = direction === 'rtl';
@@ -242,16 +246,21 @@ export default function PlatformCompaniesIndex({
                     label: __('tenant.companies.actions'),
                     header: <span className="d-block text-end">{__('tenant.companies.actions')}</span>,
                     className: 'text-end',
-                    render: (r) => (
-                        <div className="btn-group">
-                            <Link href={route('platform.companies.edit', r.id)} className="btn btn-outline-primary btn-sm">
-                                {__('tenant.companies.edit')}
-                            </Link>
-                            <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => destroy(r.id)}>
-                                {__('tenant.companies.delete')}
-                            </button>
-                        </div>
-                    ),
+                    render: (r) =>
+                        r.can_update || r.can_delete ? (
+                            <div className="btn-group">
+                                {r.can_update ? (
+                                    <Link href={route('platform.companies.edit', r.id)} className="btn btn-outline-primary btn-sm">
+                                        {__('tenant.companies.edit')}
+                                    </Link>
+                                ) : null}
+                                {r.can_delete ? (
+                                    <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => destroy(r.id)}>
+                                        {__('tenant.companies.delete')}
+                                    </button>
+                                ) : null}
+                            </div>
+                        ) : null,
                 },
             ],
             [destroy, statusVariant, subVariant, __],
@@ -359,10 +368,12 @@ export default function PlatformCompaniesIndex({
             <TableCard
                 title={__('tenant.companies.list')}
                 actions={
-                    <Link href={route('platform.companies.create')} className="btn btn-success btn-sm">
-                        <i className="fas fa-plus mr-1" />
-                        {__('tenant.companies.create')}
-                    </Link>
+                    can?.create ? (
+                        <Link href={route('platform.companies.create')} className="btn btn-success btn-sm">
+                            <i className="fas fa-plus mr-1" />
+                            {__('tenant.companies.create')}
+                        </Link>
+                    ) : null
                 }
                 actionsVariant="card-tools"
                 bodyPadding={false}

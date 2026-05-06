@@ -2,7 +2,7 @@
 
 return [
     // Groups
-    'platform' => 'المنصة',
+    'platform' => 'الأدمن',
     'companies' => 'الشركات',
     'company' => 'الشركة',
     'users' => 'المستخدمين',
@@ -17,9 +17,10 @@ return [
     'portfolio' => 'معرض الأعمال',
     'feedback' => 'التذاكر/الملاحظات',
     'complaints' => 'الشكاوى',
+    'customers' => 'العملاء',
 
     // Permission keys
-    'platform.dashboard.view' => 'عرض لوحة تحكم المنصة',
+    'platform.dashboard.view' => 'عرض لوحة تحكم الأدمن',
 
     'companies.view' => 'عرض الشركات',
     'companies.create' => 'إضافة شركة',

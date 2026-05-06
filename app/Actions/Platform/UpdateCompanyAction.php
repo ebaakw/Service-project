@@ -4,13 +4,16 @@ namespace App\Actions\Platform;
 
 use App\Http\Requests\Platform\UpdatePlatformCompanyRequest;
 use App\Models\Company;
+use App\Models\User;
+use App\Services\CompanyPrimaryUserService;
 use App\Services\Media\MediaUploadService;
 use Illuminate\Support\Facades\DB;
 
 class UpdateCompanyAction
 {
     public function __construct(
-        private readonly MediaUploadService $media
+        private readonly MediaUploadService $media,
+        private readonly CompanyPrimaryUserService $primaryUsers,
     ) {}
 
     public function execute(UpdatePlatformCompanyRequest $request, Company $company): Company
@@ -40,6 +43,27 @@ class UpdateCompanyAction
 
             if ($request->hasFile('logo')) {
                 $this->media->storeCompanyLogo($company, $request->file('logo'));
+            }
+
+            $createOwner = (bool) ($data['create_owner'] ?? false);
+            $ownerUserId = isset($data['owner_user_id']) ? (int) $data['owner_user_id'] : null;
+
+            if ($ownerUserId) {
+                /** @var User $owner */
+                $owner = User::query()->findOrFail($ownerUserId);
+                $this->primaryUsers->updatePrimaryUser($company, $owner, $data);
+                $this->primaryUsers->ensureCompanyOwnerRoleAndPermissions($company);
+            } elseif ($createOwner) {
+                $existing = $this->primaryUsers->getPrimaryUser($company);
+                if ($existing === null) {
+                    $this->primaryUsers->createPrimaryUser($company, [
+                        'owner_name_ar' => (string) ($data['owner_name_ar'] ?? ''),
+                        'owner_name_en' => $data['owner_name_en'] ?? null,
+                        'owner_email' => (string) ($data['owner_email'] ?? ''),
+                        'owner_phone' => $data['owner_phone'] ?? null,
+                        'owner_password' => (string) ($data['owner_password'] ?? ''),
+                    ]);
+                }
             }
 
             return $company->fresh();

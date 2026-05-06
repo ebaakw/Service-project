@@ -2,13 +2,9 @@
 
 namespace App\Actions\Platform;
 
-use App\Enums\UserStatus;
-use App\Enums\UserType;
 use App\Http\Requests\Platform\StorePlatformCompanyRequest;
 use App\Models\Company;
-use App\Models\CompanyMember;
-use App\Models\User;
-use App\Services\Company\CompanyRoleService;
+use App\Services\CompanyPrimaryUserService;
 use App\Services\Media\MediaUploadService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,7 +13,7 @@ class CreateCompanyAction
 {
     public function __construct(
         private readonly MediaUploadService $media,
-        private readonly CompanyRoleService $companyRoles,
+        private readonly CompanyPrimaryUserService $primaryUsers,
     ) {}
 
     public function execute(StorePlatformCompanyRequest $request): Company
@@ -54,38 +50,19 @@ class CreateCompanyAction
                 $this->media->storeCompanyLogo($company, $request->file('logo'));
             }
 
+            $createOwner = (bool) ($data['create_owner'] ?? false);
             $ownerEmail = isset($data['owner_email']) && is_string($data['owner_email']) ? trim($data['owner_email']) : '';
             $ownerPassword = isset($data['owner_password']) && is_string($data['owner_password']) ? $data['owner_password'] : '';
             $ownerNameAr = isset($data['owner_name_ar']) && is_string($data['owner_name_ar']) ? trim($data['owner_name_ar']) : '';
 
-            // Owner creation is optional; when present, StorePlatformCompanyRequest guarantees required fields.
-            if ($ownerEmail !== '' || $ownerPassword !== '' || $ownerNameAr !== '') {
-                $ownerPhone = isset($data['owner_phone']) && is_string($data['owner_phone']) ? trim($data['owner_phone']) : null;
-                if ($ownerPhone === '') {
-                    $ownerPhone = null;
-                }
-
-                $user = User::query()->create([
-                    'type' => UserType::CompanyUser,
-                    'status' => UserStatus::Active,
-                    'name_ar' => $ownerNameAr,
-                    'name_en' => $data['owner_name_en'] ?? null,
-                    'email' => $ownerEmail,
-                    'phone' => $ownerPhone,
-                    'password' => $ownerPassword,
-                    'email_verified_at' => now(),
-                    'phone_verified_at' => $ownerPhone ? now() : null,
+            if ($createOwner || $ownerEmail !== '' || $ownerPassword !== '' || $ownerNameAr !== '') {
+                $this->primaryUsers->createPrimaryUser($company, [
+                    'owner_name_ar' => $ownerNameAr,
+                    'owner_name_en' => $data['owner_name_en'] ?? null,
+                    'owner_email' => $ownerEmail,
+                    'owner_phone' => $data['owner_phone'] ?? null,
+                    'owner_password' => $ownerPassword,
                 ]);
-
-                $this->companyRoles->assignCompanyOwner($user, $company);
-
-                // Keep job title as an optional display field (contact only).
-                CompanyMember::query()
-                    ->where('company_id', $company->getKey())
-                    ->where('user_id', $user->getKey())
-                    ->update([
-                        'job_title' => app()->getLocale() === 'ar' ? 'مالك الشركة' : 'Owner',
-                    ]);
             }
 
             return $company->fresh();

@@ -9,26 +9,31 @@ class ServiceProblemPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isPlatformAdmin();
+        return $user->isPlatformAdmin()
+            && $user->hasAnyPermission(['services.manage'], null);
     }
 
     public function view(User $user, ServiceProblem $serviceProblem): bool
     {
-        return $user->isPlatformAdmin();
+        return $user->isPlatformAdmin()
+            && $user->hasAnyPermission(['services.manage'], null);
     }
 
     public function create(User $user): bool
     {
-        return $user->isPlatformAdmin();
+        return $user->isPlatformAdmin()
+            && $user->hasAnyPermission(['services.manage'], null);
     }
 
     public function update(User $user, ServiceProblem $serviceProblem): bool
     {
-        return $user->isPlatformAdmin();
+        return $user->isPlatformAdmin()
+            && $user->hasAnyPermission(['services.manage'], null);
     }
 
     public function delete(User $user, ServiceProblem $serviceProblem): bool
     {
-        return $user->isPlatformAdmin();
+        return $user->isPlatformAdmin()
+            && $user->hasAnyPermission(['services.manage'], null);
     }
 }

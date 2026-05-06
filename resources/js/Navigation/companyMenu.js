@@ -6,9 +6,8 @@
  * company shell visually (CompanyDashboardLayout). Move to company.* later.
  *
  * Each entry's `name` is a flat translation key under `dashboard.nav.*`.
- * `bypassPermissionCheck: true` is intentional: company.user + company.resolve
- * middleware already gate the routes; sidebar permission filtering happens at
- * the policy level (per request, not per-link visibility).
+ * Menu visibility is filtered client-side using `auth.user.permissions`,
+ * but backend authorization still protects all routes.
  *
  * Only include an item if its route is implemented in routes/web.php or
  * routes/tenant.php.
@@ -18,36 +17,36 @@ export const companyMenu = [
         name: 'dashboard.nav.company_dashboard',
         route: 'company.dashboard',
         icon: 'fa-tachometer-alt',
-        bypassPermissionCheck: true,
+        permission: 'company.dashboard.view',
         activePatterns: ['company.dashboard'],
     },
     {
         name: 'dashboard.nav.users_and_roles',
         icon: 'fa-users-cog',
-        bypassPermissionCheck: true,
+        permissions: ['company.users.view', 'company.users.create', 'company.roles.view', 'company.roles.create', 'company.roles.manage'],
         children: [
             {
                 name: 'dashboard.nav.company_users_create',
                 route: 'company.users.create',
-                bypassPermissionCheck: true,
+                permission: 'company.users.create',
                 activePatterns: ['company.users.create'],
             },
             {
                 name: 'dashboard.nav.company_users',
                 route: 'company.users.index',
-                bypassPermissionCheck: true,
+                permission: 'company.users.view',
                 activePatterns: ['company.users.*'],
             },
             {
                 name: 'dashboard.nav.company_roles_create',
                 route: 'company.roles.create',
-                bypassPermissionCheck: true,
+                permissions: ['company.roles.create', 'company.roles.manage'],
                 activePatterns: ['company.roles.create'],
             },
             {
                 name: 'dashboard.nav.company_roles',
                 route: 'company.roles.index',
-                bypassPermissionCheck: true,
+                permissions: ['company.roles.view', 'company.roles.manage'],
                 activePatterns: ['company.roles.*'],
             },
         ],
@@ -56,56 +55,56 @@ export const companyMenu = [
         name: 'dashboard.nav.company_orders',
         route: 'company.orders.index',
         icon: 'fa-shopping-bag',
-        bypassPermissionCheck: true,
+        permissions: ['orders.view', 'orders.manage'],
         activePatterns: ['company.orders.*'],
     },
     {
         name: 'dashboard.nav.company_technicians',
         route: 'company.technicians.index',
         icon: 'fa-user-cog',
-        bypassPermissionCheck: true,
+        permissions: ['technicians.view', 'technicians.manage'],
         activePatterns: ['company.technicians.*'],
     },
     {
         name: 'dashboard.nav.company_price_lists',
         route: 'price-lists.index',
         icon: 'fa-list-alt',
-        bypassPermissionCheck: true,
+        permissions: ['price_lists.view', 'pricing.manage'],
         activePatterns: ['price-lists.*'],
     },
     {
         name: 'dashboard.nav.company_price_items',
         route: 'price-items.index',
         icon: 'fa-tags',
-        bypassPermissionCheck: true,
+        permissions: ['price_items.view', 'pricing.manage'],
         activePatterns: ['price-items.*'],
     },
     {
         name: 'dashboard.nav.company_discounts',
         route: 'discounts.index',
         icon: 'fa-percent',
-        bypassPermissionCheck: true,
+        permissions: ['discounts.view', 'pricing.manage'],
         activePatterns: ['discounts.*'],
     },
     {
         name: 'dashboard.nav.company_portfolio',
         route: 'company.portfolio-projects.index',
         icon: 'fa-briefcase',
-        bypassPermissionCheck: true,
+        permissions: ['portfolio.view', 'portfolio.manage'],
         activePatterns: ['company.portfolio-projects.*'],
     },
     {
         name: 'dashboard.nav.company_feedback',
         route: 'company.feedback-tickets.index',
         icon: 'fa-comment-dots',
-        bypassPermissionCheck: true,
+        permissions: ['feedback.view', 'complaints.manage'],
         activePatterns: ['company.feedback-tickets.*'],
     },
     {
         name: 'dashboard.nav.company_settings',
         route: 'company.settings.edit',
         icon: 'fa-cog',
-        bypassPermissionCheck: true,
+        permissions: ['company.settings.view', 'company.settings.update'],
         activePatterns: ['company.settings.*'],
     },
 ];

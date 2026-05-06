@@ -1,5 +1,9 @@
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
-import { Head, Link } from '@inertiajs/react';
+import DataTable from '@/Components/ui/DataTable';
+import TableCard from '@/Components/ui/TableCard';
+import { __ } from '@/Utility/Hooks/useTranslate.jsx';
+import type { PageProps } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 type AddressRow = {
     id: number;
@@ -23,84 +27,96 @@ type CustomerDetail = {
 };
 
 export default function PlatformCustomersShow({ customer }: { customer: CustomerDetail }) {
+    const { direction } = usePage<PageProps>().props;
+    const isRtl = direction === 'rtl';
+
     return (
-        <PlatformAdminLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Customer</h2>}>
-            <Head title="Customer" />
+        <PlatformAdminLayout header={<h4 className="m-0 font-weight-bold text-dark">{__('tenant.customers.title')}</h4>}>
+            <Head title={__('tenant.customers.title')} />
 
-            <div className="py-10">
-                <div className="mx-auto max-w-5xl space-y-8 sm:px-6 lg:px-8">
-                    <div>
-                        <Link href={route('platform.customers.index')} className="text-sm text-indigo-600 hover:text-indigo-800">
-                            ← Customers
-                        </Link>
-                    </div>
+            <div className="mb-3">
+                <Link href={route('platform.customers.index')} className="btn btn-default btn-sm">
+                    <i className={isRtl ? 'fas fa-arrow-right ms-1' : 'fas fa-arrow-left me-1'} />
+                    {__('tenant.customers.backToList')}
+                </Link>
+            </div>
 
-                    <div className="rounded-lg bg-white p-6 shadow">
-                        <h3 className="text-lg font-semibold text-gray-900">Profile</h3>
-                        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Name</dt>
-                                <dd className="text-sm text-gray-900">{customer.user.name}</dd>
+            <div className="card">
+                <div className="card-header">
+                    <h3 className="card-title">{__('tenant.customers.profile')}</h3>
+                </div>
+                <div className="card-body">
+                    <div className="row">
+                        <div className="col-sm-12 col-md-6">
+                            <div className="mb-3">
+                                <div className="text-muted small">{__('tenant.customers.name')}</div>
+                                <div>
+                                    <strong>{customer.user.name}</strong>
+                                </div>
                             </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Email</dt>
-                                <dd className="text-sm text-gray-900">{customer.user.email ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Phone</dt>
-                                <dd className="text-sm text-gray-900">{customer.user.phone ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Date of birth</dt>
-                                <dd className="text-sm text-gray-900">{customer.date_of_birth ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-xs font-medium uppercase text-gray-500">Gender</dt>
-                                <dd className="text-sm text-gray-900">{customer.gender ?? '—'}</dd>
-                            </div>
-                            <div className="sm:col-span-2">
-                                <dt className="text-xs font-medium uppercase text-gray-500">Notes</dt>
-                                <dd className="text-sm text-gray-900">{customer.notes ?? '—'}</dd>
-                            </div>
-                        </dl>
-                    </div>
+                        </div>
 
-                    <div className="rounded-lg bg-white p-6 shadow">
-                        <h3 className="text-lg font-semibold text-gray-900">Addresses</h3>
-                        <div className="mt-4 overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-3 py-2 text-start text-xs font-medium uppercase text-gray-500">Label</th>
-                                        <th className="px-3 py-2 text-start text-xs font-medium uppercase text-gray-500">Address</th>
-                                        <th className="px-3 py-2 text-start text-xs font-medium uppercase text-gray-500">Lat</th>
-                                        <th className="px-3 py-2 text-start text-xs font-medium uppercase text-gray-500">Lng</th>
-                                        <th className="px-3 py-2 text-start text-xs font-medium uppercase text-gray-500">Default</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 bg-white">
-                                    {customer.addresses.length === 0 && (
-                                        <tr>
-                                            <td colSpan={5} className="px-3 py-6 text-center text-sm text-gray-500">
-                                                No addresses.
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {customer.addresses.map((a) => (
-                                        <tr key={a.id}>
-                                            <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-900">{a.label ?? '—'}</td>
-                                            <td className="max-w-md px-3 py-2 text-sm text-gray-700">{a.full_address ?? '—'}</td>
-                                            <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-700">{a.lat}</td>
-                                            <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-700">{a.lng}</td>
-                                            <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-700">{a.is_default ? 'Yes' : 'No'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="col-sm-12 col-md-6">
+                            <div className="mb-3">
+                                <div className="text-muted small">{__('tenant.customers.email')}</div>
+                                <div dir="ltr">{customer.user.email ?? '—'}</div>
+                            </div>
+                        </div>
+
+                        <div className="col-sm-12 col-md-6">
+                            <div className="mb-3">
+                                <div className="text-muted small">{__('tenant.customers.phone')}</div>
+                                <div dir="ltr">{customer.user.phone ?? '—'}</div>
+                            </div>
+                        </div>
+
+                        <div className="col-sm-12 col-md-6">
+                            <div className="mb-3">
+                                <div className="text-muted small">{__('tenant.customers.dateOfBirth')}</div>
+                                <div>{customer.date_of_birth ?? '—'}</div>
+                            </div>
+                        </div>
+
+                        <div className="col-sm-12 col-md-6">
+                            <div className="mb-3">
+                                <div className="text-muted small">{__('tenant.customers.gender')}</div>
+                                <div>{customer.gender ?? '—'}</div>
+                            </div>
+                        </div>
+
+                        <div className="col-sm-12">
+                            <div className="mb-0">
+                                <div className="text-muted small">{__('tenant.customers.notes')}</div>
+                                <div>{customer.notes ?? '—'}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <TableCard title={__('tenant.customers.addresses')} bodyPadding={false}>
+                <DataTable<AddressRow>
+                    columns={[
+                        { key: 'label', header: __('tenant.customers.addressLabel'), render: (a) => a.label ?? '—' },
+                        {
+                            key: 'contact_phone',
+                            header: __('tenant.customers.addressContactPhone'),
+                            render: (a) => <span dir="ltr">{a.contact_phone ?? '—'}</span>,
+                        },
+                        { key: 'full_address', header: __('tenant.customers.fullAddress'), render: (a) => a.full_address ?? '—' },
+                        { key: 'lat', header: __('tenant.customers.lat'), render: (a) => <span dir="ltr">{a.lat}</span> },
+                        { key: 'lng', header: __('tenant.customers.lng'), render: (a) => <span dir="ltr">{a.lng}</span> },
+                        {
+                            key: 'is_default',
+                            header: __('tenant.customers.isDefault'),
+                            render: (a) => (a.is_default ? __('tenant.yes') : __('tenant.no')),
+                        },
+                    ]}
+                    rows={customer.addresses}
+                    rowKey={(a) => a.id}
+                    emptyTitle={__('tenant.customers.addressesEmpty')}
+                />
+            </TableCard>
         </PlatformAdminLayout>
     );
 }
