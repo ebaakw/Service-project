@@ -1,4 +1,5 @@
 import TableCard from '@/Components/ui/TableCard';
+import StatusBadge from '@/Components/ui/StatusBadge';
 import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import type { PageProps } from '@/types';
@@ -25,8 +26,12 @@ type TechnicianPayload = {
     job_title_ar: string | null;
     job_title_en: string | null;
     is_active: boolean;
+    availability_status?: string | null;
+    availability_status_label?: string | null;
     review_status?: string | null;
     rejection_reason?: string | null;
+    created_at?: string | null;
+    company?: { id: number; name: string | null; slug: string | null } | null;
     user: { name: string; name_ar?: string | null; name_en?: string | null; email: string | null; phone: string | null; avatar_url?: string | null };
     service_category_ids: number[];
 };
@@ -38,10 +43,11 @@ export default function CompanyTechniciansEdit({
     technician: TechnicianPayload;
     serviceCategories: ServiceCategoryOption[];
 }) {
-    const { direction } = usePage<PageProps>().props;
+    const { direction, enumLabels } = usePage<PageProps>().props;
     const isRtl = direction === 'rtl';
+    const statusLabels = enumLabels?.technician_review_status ?? {};
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name_ar: technician.user.name_ar ?? technician.user.name,
         name_en: technician.user.name_en ?? '',
         avatar: null as File | null,
@@ -100,11 +106,23 @@ export default function CompanyTechniciansEdit({
     const localInvalid = useMemo(() => {
         if (!attemptedSubmit) return {};
         const invalid: Record<string, boolean> = {};
+        const phone = String(data.phone ?? '').trim();
+
         invalid.name_ar = !String(data.name_ar ?? '').trim();
-        invalid.email = !String(data.email ?? '').trim() && !String(data.phone ?? '').trim();
-        invalid.phone = !String(data.email ?? '').trim() && !String(data.phone ?? '').trim();
+        invalid.phone = !phone || !/^\d{8}$/.test(phone);
+
         return invalid;
-    }, [attemptedSubmit, data]);
+    }, [attemptedSubmit, data.name_ar, data.phone]);
+
+    const localPhoneError = useMemo(() => {
+        if (!attemptedSubmit) return null;
+
+        const phone = String(data.phone ?? '').trim();
+        if (!phone) return __('tenant.technicians.validation_phone_required');
+        if (!/^\d{8}$/.test(phone)) return __('tenant.technicians.phone_must_be_8_digits');
+
+        return null;
+    }, [attemptedSubmit, data.phone]);
 
     const avatarPreviewUrl = useMemo(() => safeObjectUrl(data.avatar), [data.avatar]);
     useEffect(() => {
@@ -143,6 +161,11 @@ export default function CompanyTechniciansEdit({
         return selectedServiceIds.map((id) => map.get(id)).filter(Boolean) as ServiceCategoryOption[];
     }, [selectedServiceIds, serviceCategories]);
 
+    const currentDisplayName = data.display_name_ar || data.display_name_en || data.name_ar || data.name_en || technician.user.name;
+    const currentJobTitle = data.job_title_ar || data.job_title_en || '—';
+    const currentAvatarUrl = avatarPreviewUrl ?? technician.user.avatar_url ?? null;
+    const reviewStatus = String(technician.review_status ?? '').toLowerCase();
+
     const filteredServices = useMemo(() => {
         const q = servicesQuery.trim().toLowerCase();
         if (!q) return serviceCategories;
@@ -165,17 +188,19 @@ export default function CompanyTechniciansEdit({
             focusField('name_ar');
             return;
         }
-        if (!String(data.email ?? '').trim() && !String(data.phone ?? '').trim()) {
-            focusField('email');
+        const phone = String(data.phone ?? '').trim();
+        if (!phone || !/^\d{8}$/.test(phone)) {
+            focusField('phone');
             return;
         }
 
-        // Use POST + method spoofing for file uploads (PHP doesn't reliably parse multipart PATCH).
-        setData('_method' as any, 'patch');
+        transform((payload) => ({
+            ...payload,
+            _method: 'patch',
+        }));
         post(route('company.technicians.update', technician.id), {
             forceFormData: true,
             onError: (errs) => focusFirstError(errs as any),
-            onFinish: () => setData('_method' as any, undefined),
         });
     };
 
@@ -215,6 +240,94 @@ export default function CompanyTechniciansEdit({
                     ) : null}
                 </div>
             ) : null}
+
+            <TableCard title={__('tenant.technicians.profileSection')} bodyPadding>
+                <div className="row align-items-center">
+                    <div className="col-lg-4 mb-3 mb-lg-0">
+                        <div className="d-flex align-items-center">
+                            {currentAvatarUrl ? (
+                                <img
+                                    src={currentAvatarUrl}
+                                    alt={currentDisplayName}
+                                    className="rounded border bg-white"
+                                    style={{ width: 84, height: 84, objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <div
+                                    className="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
+                                    style={{ width: 84, height: 84 }}
+                                    aria-label={__('tenant.technicians.avatar')}
+                                >
+                                    <i className="fas fa-user" />
+                                </div>
+                            )}
+                            <div className="mx-3">
+                                <div className="h5 mb-1">{currentDisplayName}</div>
+                                <div className="text-muted small">{currentJobTitle}</div>
+                                <div className="text-muted small" dir="ltr">
+                                    {data.email || '—'} {data.phone ? ` • ${data.phone}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="col-lg-8">
+                        <div className="row">
+                            <div className="col-md-4 mb-3">
+                                <div className="text-muted small">{__('tenant.technicians.review_status')}</div>
+                                <div>
+                                    {reviewStatus === 'approved' ? (
+                                        <StatusBadge variant="success">{statusLabels.approved ?? __('tenant.technicians.approved_notice')}</StatusBadge>
+                                    ) : reviewStatus === 'pending' ? (
+                                        <StatusBadge variant="warning">{statusLabels.pending ?? __('tenant.technicians.pending_review_notice')}</StatusBadge>
+                                    ) : reviewStatus === 'rejected' ? (
+                                        <StatusBadge variant="danger">{statusLabels.rejected ?? __('tenant.technicians.rejected_notice')}</StatusBadge>
+                                    ) : (
+                                        <span className="text-muted">—</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="col-md-4 mb-3">
+                                <div className="text-muted small">{__('tenant.technicians.active')}</div>
+                                <div>
+                                    {technician.is_active ? (
+                                        <StatusBadge variant="success">{__('tenant.yes')}</StatusBadge>
+                                    ) : (
+                                        <StatusBadge variant="secondary">{__('tenant.no')}</StatusBadge>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="col-md-4 mb-3">
+                                <div className="text-muted small">{__('tenant.technicians.availability')}</div>
+                                <div>{technician.availability_status_label ?? technician.availability_status ?? '—'}</div>
+                            </div>
+                            <div className="col-md-4 mb-3">
+                                <div className="text-muted small">{__('tenant.technicians.companySection')}</div>
+                                <div>{technician.company?.name ?? '—'}</div>
+                                {technician.company?.slug ? (
+                                    <div className="text-muted small" dir="ltr">
+                                        {technician.company.slug}
+                                    </div>
+                                ) : null}
+                            </div>
+                            <div className="col-md-4 mb-3">
+                                <div className="text-muted small">{__('tenant.technicians.employeeCode')}</div>
+                                <div dir="ltr">{data.employee_code || '—'}</div>
+                            </div>
+                            <div className="col-md-4 mb-3">
+                                <div className="text-muted small">{__('tenant.technicians.created_at')}</div>
+                                <div dir="ltr">{technician.created_at ? new Date(technician.created_at).toLocaleString() : '—'}</div>
+                            </div>
+                            <div className="col-12">
+                                <div className="text-muted small">{__('tenant.technicians.categories')}</div>
+                                <div>
+                                    {selectedServices.length > 0 ? selectedServices.map((service) => service.name_ar).join('، ') : '—'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </TableCard>
 
             <TableCard title={__('tenant.technicians.editTitle')} bodyPadding>
                 <form onSubmit={submit}>
@@ -280,10 +393,7 @@ export default function CompanyTechniciansEdit({
 
                         <div className="col-md-6">
                             <div className="form-group">
-                                <label>
-                                    {__('tenant.technicians.email')}
-                                    <span className="text-danger"> *</span>
-                                </label>
+                                <label>{__('tenant.technicians.email')}</label>
                                 <input
                                     ref={refs.email}
                                     className={`form-control ${(errors.email || localInvalid.email) ? 'is-invalid' : ''}`}
@@ -308,11 +418,13 @@ export default function CompanyTechniciansEdit({
                                     value={data.phone}
                                     onChange={(e) => setData('phone', e.target.value)}
                                 />
-                                {errors.phone ? <div className="text-danger small mt-1">{errors.phone}</div> : null}
+                                {errors.phone || localPhoneError ? <div className="text-danger small mt-1">{errors.phone ?? localPhoneError}</div> : null}
                             </div>
                         </div>
                         <div className="col-12">
-                            <div className="text-muted small mb-3">{__('tenant.technicians.emailOrPhoneHint')}</div>
+                            <div className="text-muted small mb-3">
+                                {__('tenant.technicians.validation_phone_required')} {__('tenant.technicians.phone_must_be_8_digits')}
+                            </div>
                         </div>
 
                         <div className="col-md-6">

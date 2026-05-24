@@ -31,6 +31,8 @@ class CompanyPriceItemFactory extends Factory
             'price_type' => PriceType::Fixed,
             'price' => fake()->randomFloat(3, 10, 500),
             'minimum_price' => null,
+            'discount_type' => null,
+            'discount_value' => null,
             'inspection_fee' => null,
             'warranty_days' => null,
             'warranty_description_ar' => null,

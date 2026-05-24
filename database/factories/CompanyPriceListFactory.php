@@ -28,6 +28,8 @@ class CompanyPriceListFactory extends Factory
             'is_default' => false,
             'starts_at' => null,
             'ends_at' => null,
+            'discount_type' => null,
+            'discount_value' => null,
             'is_active' => true,
         ];
     }

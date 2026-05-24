@@ -97,6 +97,9 @@ class PermissionSeeder extends Seeder
             ['key' => 'portfolio.update', 'name' => 'Update portfolio projects', 'group' => 'portfolio'],
             ['key' => 'portfolio.delete', 'name' => 'Delete portfolio projects', 'group' => 'portfolio'],
             ['key' => 'portfolio.media.manage', 'name' => 'Manage portfolio media', 'group' => 'portfolio'],
+            ['key' => 'portfolio_reviews.view', 'name' => 'View portfolio reviews', 'group' => 'portfolio_reviews'],
+            ['key' => 'portfolio_reviews.approve', 'name' => 'Approve portfolio reviews', 'group' => 'portfolio_reviews'],
+            ['key' => 'portfolio_reviews.reject', 'name' => 'Reject portfolio reviews', 'group' => 'portfolio_reviews'],
 
             ['key' => 'feedback.view', 'name' => 'View feedback tickets', 'group' => 'feedback'],
             ['key' => 'feedback.reply', 'name' => 'Reply to feedback tickets', 'group' => 'feedback'],

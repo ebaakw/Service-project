@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PortfolioProjectReviewStatus;
 use App\Models\Company;
 use App\Models\PortfolioProject;
 use App\Models\ServiceCategory;
@@ -29,6 +30,10 @@ class PortfolioProjectFactory extends Factory
             'completed_at' => fake()->optional()->dateTimeBetween('-1 year'),
             'is_featured' => false,
             'is_active' => true,
+            'review_status' => PortfolioProjectReviewStatus::Approved,
+            'reviewed_by_user_id' => null,
+            'reviewed_at' => null,
+            'rejection_reason' => null,
         ];
     }
 
@@ -51,6 +56,43 @@ class PortfolioProjectFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'technician_id' => $technician->getKey(),
             'company_id' => $technician->company_id,
+        ])->afterCreating(function (PortfolioProject $project) use ($technician): void {
+            $project->technicians()->syncWithoutDetaching([$technician->getKey()]);
+        });
+    }
+
+    /**
+     * @param  iterable<int, Technician>  $technicians
+     */
+    public function withTechnicians(iterable $technicians): static
+    {
+        return $this->afterCreating(function (PortfolioProject $project) use ($technicians): void {
+            $ids = collect($technicians)
+                ->map(fn (Technician $technician): int => (int) $technician->getKey())
+                ->values()
+                ->all();
+
+            $project->technicians()->sync($ids);
+        });
+    }
+
+    public function pendingReview(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+            'review_status' => PortfolioProjectReviewStatus::Pending,
+            'reviewed_by_user_id' => null,
+            'reviewed_at' => null,
+            'rejection_reason' => null,
+        ]);
+    }
+
+    public function rejected(?string $reason = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+            'review_status' => PortfolioProjectReviewStatus::Rejected,
+            'rejection_reason' => $reason ?? 'Needs a clearer project image.',
         ]);
     }
 }

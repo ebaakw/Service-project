@@ -25,6 +25,19 @@ class PlatformFeedbackTicketController extends Controller
             ->with(['customer:id,user_id', 'customer.user:id,name', 'company:id,name', 'order:id,order_number', 'assignedTo:id,name'])
             ->orderByDesc('id');
 
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $search).'%';
+
+                $q->where('subject', 'like', $like)
+                    ->orWhere('message', 'like', $like)
+                    ->orWhereHas('company', fn ($company) => $company->where('name', 'like', $like))
+                    ->orWhereHas('order', fn ($order) => $order->where('order_number', 'like', $like))
+                    ->orWhereHas('customer.user', fn ($user) => $user->where('name', 'like', $like));
+            });
+        }
+
         $status = $request->input('status', 'all');
         if ($status !== 'all') {
             $query->where('status', $status);
@@ -35,11 +48,15 @@ class PlatformFeedbackTicketController extends Controller
             $query->where('type', $type);
         }
 
+        $perPage = min(100, max(10, (int) $request->integer('per_page', 15)));
+
         return Inertia::render('Platform/Feedback/Index', [
-            'tickets' => $query->paginate(15)->withQueryString(),
+            'tickets' => $query->paginate($perPage)->withQueryString(),
             'filters' => [
+                'search' => $search,
                 'status' => $status,
                 'type' => $type,
+                'per_page' => $perPage,
             ],
         ]);
     }
@@ -120,7 +137,7 @@ class PlatformFeedbackTicketController extends Controller
 
         return redirect()
             ->route('platform.feedback-tickets.show', $feedbackTicket)
-            ->with('message', 'Ticket updated.');
+            ->with('message', __('dashboard.feedback_tickets.ticket_updated'));
     }
 
     public function storeReply(StorePlatformFeedbackReplyRequest $request, FeedbackTicket $feedbackTicket): RedirectResponse
@@ -140,6 +157,6 @@ class PlatformFeedbackTicketController extends Controller
 
         return redirect()
             ->route('platform.feedback-tickets.show', $feedbackTicket)
-            ->with('message', 'Reply added.');
+            ->with('message', __('dashboard.feedback_tickets.reply_added'));
     }
 }

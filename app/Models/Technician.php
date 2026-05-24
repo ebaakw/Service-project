@@ -106,6 +106,12 @@ class Technician extends Model
             ->withTimestamps();
     }
 
+    public function portfolioProjects(): BelongsToMany
+    {
+        return $this->belongsToMany(PortfolioProject::class, 'portfolio_project_technician')
+            ->withTimestamps();
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);

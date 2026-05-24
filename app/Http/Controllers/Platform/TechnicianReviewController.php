@@ -70,17 +70,22 @@ class TechnicianReviewController extends Controller
             return [
                 'id' => $t->id,
                 'employee_code' => $t->employee_code,
+                'display_name' => $t->localizedDisplayName(),
+                'job_title' => $t->job_title,
                 'review_status' => $t->review_status?->value,
                 'reviewed_at' => $t->reviewed_at?->toISOString(),
                 'rejection_reason' => $t->rejection_reason,
+                'created_at' => $t->created_at?->toISOString(),
                 'company' => [
                     'id' => $t->company?->id,
                     'name' => $t->company?->display_name,
+                    'slug' => $t->company?->slug,
                 ],
                 'user' => [
                     'name' => $t->user?->name,
                     'email' => $t->user?->email,
                     'phone' => $t->user?->phone,
+                    'avatar_url' => $this->userAvatarUrl($t->user?->avatar_path),
                 ],
                 'service_categories' => $t->serviceCategories->map(fn ($c) => [
                     'id' => $c->id,
@@ -147,6 +152,7 @@ class TechnicianReviewController extends Controller
                     'email' => $technician->user?->email,
                     'phone' => $technician->user?->phone,
                     'status' => $technician->user?->status?->value,
+                    'avatar_url' => $this->userAvatarUrl($technician->user?->avatar_path),
                 ],
                 'service_categories' => $technician->serviceCategories->map(fn ($c) => [
                     'id' => $c->id,
@@ -213,6 +219,26 @@ class TechnicianReviewController extends Controller
         });
 
         return redirect()->back()->with('type', 'success')->with('message', 'technician_reviews.rejected_successfully');
+    }
+
+    private function userAvatarUrl(?string $avatarPath): ?string
+    {
+        $avatarPath = trim((string) $avatarPath);
+
+        if ($avatarPath === '') {
+            return null;
+        }
+
+        if (str_starts_with($avatarPath, 'http://') || str_starts_with($avatarPath, 'https://')) {
+            return $avatarPath;
+        }
+
+        $avatarPath = ltrim($avatarPath, '/');
+        if (str_starts_with($avatarPath, 'storage/')) {
+            $avatarPath = substr($avatarPath, strlen('storage/'));
+        }
+
+        return asset('storage/'.$avatarPath);
     }
 }
 

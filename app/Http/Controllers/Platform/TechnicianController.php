@@ -9,7 +9,6 @@ use App\Models\Technician;
 use App\Enums\TechnicianReviewStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,11 +56,6 @@ class TechnicianController extends Controller
         $technicians = $query->paginate($perPage)->withQueryString();
 
         $technicians->through(function (Technician $t) use ($request): array {
-            $avatarUrl = null;
-            if (! empty($t->user?->avatar_path)) {
-                $avatarUrl = Storage::disk('public')->url($t->user->avatar_path);
-            }
-
             return [
                 'id' => $t->id,
                 'is_active' => (bool) $t->is_active,
@@ -80,7 +74,7 @@ class TechnicianController extends Controller
                     'name' => $t->user->name,
                     'email' => $t->user->email,
                     'phone' => $t->user->phone,
-                    'avatar_url' => $avatarUrl,
+                    'avatar_url' => $this->userAvatarUrl($t->user?->avatar_path),
                 ],
                 'service_categories' => $t->serviceCategories->map(fn ($c) => [
                     'id' => $c->id,
@@ -106,10 +100,6 @@ class TechnicianController extends Controller
         $this->authorize('view', $technician);
 
         $technician->load(['user', 'company', 'serviceCategories']);
-        $avatarUrl = null;
-        if (! empty($technician->user?->avatar_path)) {
-            $avatarUrl = Storage::disk('public')->url($technician->user->avatar_path);
-        }
 
         return Inertia::render('Platform/Technicians/Show', [
             'technician' => [
@@ -129,7 +119,7 @@ class TechnicianController extends Controller
                     'name' => $technician->user->name,
                     'email' => $technician->user->email,
                     'phone' => $technician->user->phone,
-                    'avatar_url' => $avatarUrl,
+                    'avatar_url' => $this->userAvatarUrl($technician->user?->avatar_path),
                 ],
                 'service_categories' => $technician->serviceCategories->map(fn ($c) => [
                     'id' => $c->id,
@@ -218,6 +208,26 @@ class TechnicianController extends Controller
 
         return redirect()->route('platform.technicians.show', $technician)
             ->with('success', true);
+    }
+
+    private function userAvatarUrl(?string $avatarPath): ?string
+    {
+        $avatarPath = trim((string) $avatarPath);
+
+        if ($avatarPath === '') {
+            return null;
+        }
+
+        if (str_starts_with($avatarPath, 'http://') || str_starts_with($avatarPath, 'https://')) {
+            return $avatarPath;
+        }
+
+        $avatarPath = ltrim($avatarPath, '/');
+        if (str_starts_with($avatarPath, 'storage/')) {
+            $avatarPath = substr($avatarPath, strlen('storage/'));
+        }
+
+        return asset('storage/'.$avatarPath);
     }
 
     /**

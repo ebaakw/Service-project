@@ -38,8 +38,6 @@ class TechnicianController extends Controller
         $query = Technician::query()
             ->with(['user', 'serviceCategories'])
             ->where('company_id', $companyId)
-            // Company dashboard should not show technicians pending platform review.
-            ->where('review_status', '!=', TechnicianReviewStatus::Pending->value)
             ->orderByDesc('id');
 
         if ($search !== '') {
@@ -153,7 +151,7 @@ class TechnicianController extends Controller
     {
         $this->authorize('update', $technician);
 
-        $technician->load(['user', 'serviceCategories']);
+        $technician->load(['user', 'serviceCategories', 'company']);
         $avatarUrl = null;
         if (! empty($technician->user?->avatar_path)) {
             $avatarUrl = Storage::disk('public')->url($technician->user->avatar_path);
@@ -170,8 +168,16 @@ class TechnicianController extends Controller
                 'job_title_ar' => $technician->job_title_ar,
                 'job_title_en' => $technician->job_title_en,
                 'is_active' => $technician->is_active,
+                'availability_status' => $technician->availability_status?->value,
+                'availability_status_label' => $technician->availability_status?->label(),
                 'review_status' => $technician->review_status?->value,
                 'rejection_reason' => $technician->rejection_reason,
+                'created_at' => $technician->created_at?->toISOString(),
+                'company' => [
+                    'id' => $technician->company?->id,
+                    'name' => $technician->company?->display_name,
+                    'slug' => $technician->company?->slug,
+                ],
                 'user' => [
                     'name' => $technician->user->name,
                     'name_ar' => $technician->user->name_ar,

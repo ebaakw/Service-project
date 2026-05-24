@@ -21,6 +21,11 @@ class ServiceIntakeFieldController extends Controller
         $search = $request->string('search')->trim()->value();
         $status = $request->input('status', 'all');
         $problemId = $request->query('problem_id');
+        $perPage = (int) $request->input('per_page', 10);
+        $allowedPerPage = [10, 25, 50, 100];
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
 
         $query = $service_category->intakeFields()
             ->with('problem')
@@ -47,11 +52,12 @@ class ServiceIntakeFieldController extends Controller
         return Inertia::render('Platform/ServiceCatalog/IntakeFields/Index', [
             'category' => $service_category,
             'problems' => $service_category->problems()->orderBy('sort_order')->get(['id', 'title_ar']),
-            'fields' => $query->paginate(15)->withQueryString(),
+            'fields' => $query->paginate($perPage)->withQueryString(),
             'filters' => [
                 'search' => $search,
                 'status' => $status,
                 'problem_id' => $problemId,
+                'per_page' => $perPage,
             ],
         ]);
     }

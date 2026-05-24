@@ -4,6 +4,8 @@ import TableCard from '@/Components/ui/TableCard';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import type { PageProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import RejectTechnicianModal from './RejectTechnicianModal';
 
 type ServiceCategory = { id: number; name_ar: string; name_en: string | null };
 
@@ -21,7 +23,7 @@ type TechnicianDetail = {
     rejection_reason: string | null;
     reviewed_by: { id: number; name: string; email: string | null } | null;
     company: { id: number; name: string; slug: string | null };
-    user: { id: number; name: string; email: string | null; phone: string | null; status: string | null };
+    user: { id: number; name: string; email: string | null; phone: string | null; status: string | null; avatar_url: string | null };
     service_categories: ServiceCategory[];
     can: { approve: boolean; reject: boolean };
 };
@@ -31,6 +33,8 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
     const { direction } = page;
     const isRtl = direction === 'rtl';
     const statusLabels = page.enumLabels?.technician_review_status ?? {};
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [isRejecting, setIsRejecting] = useState(false);
 
     const statusBadge = (status: string | null) => {
         const s = (status ?? '').toLowerCase();
@@ -38,6 +42,19 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
         if (s === 'pending') return <StatusBadge variant="warning">{statusLabels.pending ?? __('dashboard.nav.pending_technicians')}</StatusBadge>;
         if (s === 'rejected') return <StatusBadge variant="danger">{statusLabels.rejected ?? __('dashboard.technician_reviews.reject')}</StatusBadge>;
         return <span className="text-muted">—</span>;
+    };
+
+    const submitRejection = (reason: string) => {
+        router.post(
+            route('platform.technician-reviews.reject', technician.id),
+            { rejection_reason: reason },
+            {
+                preserveScroll: true,
+                onStart: () => setIsRejecting(true),
+                onSuccess: () => setShowRejectModal(false),
+                onFinish: () => setIsRejecting(false),
+            },
+        );
     };
 
     return (
@@ -63,11 +80,7 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                         <button
                             type="button"
                             className="btn btn-danger"
-                            onClick={() => {
-                                const reason = window.prompt(__('dashboard.technician_reviews.rejection_reason')) || '';
-                                if (reason.trim().length < 3) return;
-                                router.post(route('platform.technician-reviews.reject', technician.id), { rejection_reason: reason });
-                            }}
+                            onClick={() => setShowRejectModal(true)}
                         >
                             <i className="fas fa-times mr-1" />
                             {__('dashboard.technician_reviews.reject')}
@@ -79,16 +92,35 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
             <div className="row">
                 <div className="col-lg-4">
                     <TableCard title={__('tenant.technicians.userSection')}>
-                        <div className="mb-2">
-                            <div className="h5 mb-1">{technician.user.name}</div>
-                            <div className="text-muted small" dir="ltr">
-                                {technician.user.email ?? '—'}
-                            </div>
-                            <div className="text-muted small" dir="ltr">
-                                {technician.user.phone ?? '—'}
-                            </div>
-                            <div className="text-muted small" dir="ltr">
-                                {technician.user.status ?? '—'}
+                        <div className="d-flex align-items-center">
+                            {technician.user.avatar_url ? (
+                                <img
+                                    src={technician.user.avatar_url}
+                                    alt={technician.user.name}
+                                    className="rounded border bg-white"
+                                    style={{ width: 80, height: 80, objectFit: 'cover' }}
+                                />
+                            ) : (
+                                <div
+                                    className="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
+                                    style={{ width: 80, height: 80 }}
+                                    aria-label={__('tenant.technicians.avatar')}
+                                >
+                                    <i className="fas fa-user" />
+                                </div>
+                            )}
+                            <div className="mx-3">
+                                <div className="h5 mb-1">{technician.display_name_ar ?? technician.display_name_en ?? technician.user.name}</div>
+                                <div className="text-muted small">{technician.job_title_ar ?? technician.job_title_en ?? '—'}</div>
+                                <div className="text-muted small" dir="ltr">
+                                    {technician.user.email ?? '—'}
+                                </div>
+                                <div className="text-muted small" dir="ltr">
+                                    {technician.user.phone ?? '—'}
+                                </div>
+                                <div className="text-muted small" dir="ltr">
+                                    {technician.user.status ?? '—'}
+                                </div>
                             </div>
                         </div>
                     </TableCard>
@@ -162,6 +194,16 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                     </TableCard>
                 </div>
             </div>
+
+            <RejectTechnicianModal
+                show={showRejectModal}
+                technicianName={technician.display_name_ar ?? technician.display_name_en ?? technician.user.name}
+                processing={isRejecting}
+                onClose={() => {
+                    if (!isRejecting) setShowRejectModal(false);
+                }}
+                onConfirm={submitRejection}
+            />
         </PlatformAdminLayout>
     );
 }

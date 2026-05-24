@@ -13,21 +13,22 @@ use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\CompanyProbeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocaleController;
-use App\Http\Controllers\PlatformCompaniesController;
 use App\Http\Controllers\Platform\CustomerController as PlatformCustomerController;
-use App\Http\Controllers\Platform\ServiceCategoryController;
-use App\Http\Controllers\Platform\ServiceIntakeFieldController;
-use App\Http\Controllers\Platform\ServiceProblemController;
 use App\Http\Controllers\Platform\InvoiceController as PlatformInvoiceController;
 use App\Http\Controllers\Platform\OrderController as PlatformOrderController;
 use App\Http\Controllers\Platform\PlatformFeedbackTicketController;
 use App\Http\Controllers\Platform\PlatformPortfolioMediaController;
 use App\Http\Controllers\Platform\PlatformPortfolioProjectController;
-use App\Http\Controllers\Platform\RoleController as PlatformRoleController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
+use App\Http\Controllers\Platform\PortfolioProjectReviewController as PlatformPortfolioProjectReviewController;
+use App\Http\Controllers\Platform\RoleController as PlatformRoleController;
+use App\Http\Controllers\Platform\ServiceCategoryController;
+use App\Http\Controllers\Platform\ServiceIntakeFieldController;
+use App\Http\Controllers\Platform\ServiceProblemController;
 use App\Http\Controllers\Platform\TechnicianController as PlatformTechnicianController;
 use App\Http\Controllers\Platform\TechnicianReviewController as PlatformTechnicianReviewController;
 use App\Http\Controllers\Platform\UserController as PlatformUserController;
+use App\Http\Controllers\PlatformCompaniesController;
 use App\Http\Controllers\PlatformDashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WelcomeController;
@@ -107,12 +108,16 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::match(['post', 'patch'], '/technician-reviews/{technician}/approve', [PlatformTechnicianReviewController::class, 'approve'])->name('technician-reviews.approve');
     Route::match(['post', 'patch'], '/technician-reviews/{technician}/reject', [PlatformTechnicianReviewController::class, 'reject'])->name('technician-reviews.reject');
 
+    Route::get('/portfolio-reviews', [PlatformPortfolioProjectReviewController::class, 'index'])->name('portfolio-reviews.index');
+    Route::match(['post', 'patch'], '/portfolio-reviews/{portfolio_project}/approve', [PlatformPortfolioProjectReviewController::class, 'approve'])->name('portfolio-reviews.approve');
+    Route::match(['post', 'patch'], '/portfolio-reviews/{portfolio_project}/reject', [PlatformPortfolioProjectReviewController::class, 'reject'])->name('portfolio-reviews.reject');
+
     Route::resource('service-categories', ServiceCategoryController::class);
     Route::resource('service-categories.problems', ServiceProblemController::class)
-        ->scoped(['problem' => 'service_category'])
+        ->scoped()
         ->except(['show']);
     Route::resource('service-categories.intake-fields', ServiceIntakeFieldController::class)
-        ->scoped(['intake_field' => 'service_category'])
+        ->scoped()
         ->except(['show']);
 
     Route::get('/orders', [PlatformOrderController::class, 'index'])->name('orders.index');
@@ -122,8 +127,6 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::put('/settings', [PlatformSettingsController::class, 'update'])->name('settings.update');
 
     Route::get('/portfolio-projects', [PlatformPortfolioProjectController::class, 'index'])->name('portfolio-projects.index');
-    Route::get('/portfolio-projects/create', [PlatformPortfolioProjectController::class, 'create'])->name('portfolio-projects.create');
-    Route::post('/portfolio-projects', [PlatformPortfolioProjectController::class, 'store'])->name('portfolio-projects.store');
     Route::get('/portfolio-projects/{portfolio_project}/edit', [PlatformPortfolioProjectController::class, 'edit'])->name('portfolio-projects.edit');
     Route::put('/portfolio-projects/{portfolio_project}', [PlatformPortfolioProjectController::class, 'update'])->name('portfolio-projects.update');
     Route::delete('/portfolio-projects/{portfolio_project}', [PlatformPortfolioProjectController::class, 'destroy'])->name('portfolio-projects.destroy');

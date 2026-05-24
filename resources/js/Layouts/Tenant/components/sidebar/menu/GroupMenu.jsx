@@ -6,13 +6,13 @@ import { hasAnyPermissions, hasPermission } from "@/Utility/Hooks/usePermission.
 import {routeUrl} from "@/Utility/routeUrl.js";
 import {usePlanFeatures} from "@/Utility/Hooks/usePlanFeatures.jsx";
 import { prefetchInertiaPageForRoute } from "@/Utility/inertiaPrefetch.js";
+import SidebarBadge from "@/Layouts/Tenant/components/sidebar/menu/SidebarBadge.jsx";
 
 const GroupMenu = ({menu, index}) => {
 
     const {locale} = usePage().props
     const {hasFeature} = usePlanFeatures();
     const badgeCount = menu.badgeCount || 0;
-    const badgeSpacingClass = locale === 'ar' ? 'mr-2' : 'ml-2';
 
     if (menu?.requiredFeature && !hasFeature(menu.requiredFeature)) {
         return null;
@@ -59,17 +59,13 @@ const GroupMenu = ({menu, index}) => {
                         <i className={'ok nav-icon fas ' + menu.icon + ' mr-2'}></i>
                         <p className="ok mb-0">
                             {__(menu.name)}
-                            {badgeCount > 0 && (
-                                <span className={classNames('right badge badge-warning', badgeSpacingClass)}>
-                                    {badgeCount}
-                                </span>
-                            )}
                             <i
                                 className={classNames('right fas', {
                                     'fa-angle-right': locale === 'en',
                                     'fa-angle-left': locale !== 'en'
                                 })}
                             ></i>
+                            <SidebarBadge count={badgeCount} />
                         </p>
                     </a>
 
@@ -89,11 +85,7 @@ const GroupMenu = ({menu, index}) => {
                                               <i className="far fa-circle nav-icon mr-2"></i>
                                               <p className="mb-0">
                                                   {__(child.name)}
-                                                  {(child.badgeCount || 0) > 0 && (
-                                                      <span className={classNames('right badge badge-warning', badgeSpacingClass)}>
-                                                          {child.badgeCount}
-                                                      </span>
-                                                  )}
+                                                  <SidebarBadge count={child.badgeCount || 0} />
                                               </p>
                                           </Link>
                                       </li>

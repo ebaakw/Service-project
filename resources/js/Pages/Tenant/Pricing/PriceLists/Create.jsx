@@ -1,8 +1,11 @@
 import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, useForm } from '@inertiajs/react';
+import '@/Components/Core/css/switch.css';
 
-export default function TenantPriceListsCreate() {
+const DISCOUNT_TYPES = ['percentage', 'fixed_amount'];
+
+export default function TenantPriceListsCreate({ categories }) {
     const { data, setData, post, processing, errors } = useForm({
         name_ar: '',
         name_en: '',
@@ -11,7 +14,10 @@ export default function TenantPriceListsCreate() {
         is_default: false,
         starts_at: '',
         ends_at: '',
+        discount_type: '',
+        discount_value: '',
         is_active: true,
+        category_ids: [],
     });
 
     const submit = (e) => {
@@ -115,27 +121,87 @@ export default function TenantPriceListsCreate() {
                                     )}
                                 </div>
                             </div>
-                            <div className="form-group form-check">
+                            <div className="form-row">
+                                <div className="form-group col-md-6">
+                                    <label>{__('tenant.price_list_discount')}</label>
+                                    <select
+                                        className="custom-select"
+                                        value={data.discount_type}
+                                        onChange={(e) => {
+                                            setData('discount_type', e.target.value);
+                                            if (!e.target.value) {
+                                                setData('discount_value', '');
+                                            }
+                                        }}
+                                    >
+                                        <option value="">{__('tenant.no_discount')}</option>
+                                        {DISCOUNT_TYPES.map((type) => (
+                                            <option key={type} value={type}>
+                                                {__(`tenant.discount_type_${type}`)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.discount_type && (
+                                        <span className="text-danger small d-block">{errors.discount_type}</span>
+                                    )}
+                                </div>
+                                <div className="form-group col-md-6">
+                                    <label>{__('tenant.discount_value')}</label>
+                                    <input
+                                        type="number"
+                                        step="0.001"
+                                        className="form-control"
+                                        value={data.discount_value}
+                                        disabled={!data.discount_type}
+                                        onChange={(e) => setData('discount_value', e.target.value)}
+                                    />
+                                    {errors.discount_value && (
+                                        <span className="text-danger small d-block">{errors.discount_value}</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>{__('tenant.price_list_categories')}</label>
+                                <select
+                                    multiple
+                                    className="form-control"
+                                    size={Math.min(10, Math.max(4, categories.length))}
+                                    value={data.category_ids.map(String)}
+                                    onChange={(e) => {
+                                        const selected = Array.from(e.target.selectedOptions).map((option) => Number(option.value));
+                                        setData('category_ids', selected);
+                                    }}
+                                >
+                                    {categories.map((category) => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name_ar}
+                                        </option>
+                                    ))}
+                                </select>
+                                <small className="form-text text-muted">{__('tenant.price_list_categories_help')}</small>
+                                {errors.category_ids && <span className="text-danger small d-block">{errors.category_ids}</span>}
+                            </div>
+                            <div className="form-group custom-control custom-switch custom-switch-md">
                                 <input
                                     id="is_default"
                                     type="checkbox"
-                                    className="form-check-input"
+                                    className="custom-control-input"
                                     checked={data.is_default}
                                     onChange={(e) => setData('is_default', e.target.checked)}
                                 />
-                                <label className="form-check-label" htmlFor="is_default">
+                                <label className="custom-control-label pt-1 pl-3" htmlFor="is_default">
                                     {__('tenant.is_default_list')}
                                 </label>
                             </div>
-                            <div className="form-group form-check">
+                            <div className="form-group custom-control custom-switch custom-switch-md">
                                 <input
                                     id="is_active"
                                     type="checkbox"
-                                    className="form-check-input"
+                                    className="custom-control-input"
                                     checked={data.is_active}
                                     onChange={(e) => setData('is_active', e.target.checked)}
                                 />
-                                <label className="form-check-label" htmlFor="is_active">
+                                <label className="custom-control-label pt-1 pl-3" htmlFor="is_active">
                                     {__('tenant.active')}
                                 </label>
                             </div>

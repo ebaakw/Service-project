@@ -13,16 +13,16 @@ class UpdateCompanySettingsRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $settings = $this->input('settings', []);
-        if (! is_array($settings)) {
+        $company = $this->input('company', []);
+        if (! is_array($company)) {
             return;
         }
-        foreach (array_keys($settings) as $key) {
-            if (isset($settings[$key]) && $settings[$key] === '') {
-                $settings[$key] = null;
+        foreach (array_keys($company) as $key) {
+            if (isset($company[$key]) && $company[$key] === '') {
+                $company[$key] = null;
             }
         }
-        $this->merge(['settings' => $settings]);
+        $this->merge(['company' => $company]);
     }
 
     /**
@@ -31,10 +31,11 @@ class UpdateCompanySettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'settings' => ['required', 'array'],
-            'settings.inspection_fee' => ['nullable', 'numeric', 'min:0'],
-            'settings.currency' => ['nullable', 'string', 'max:10'],
-            'settings.order_offer_expiry_minutes' => ['nullable', 'integer', 'min:1'],
+            'company' => ['required', 'array'],
+            'company.name_ar' => ['required', 'string', 'max:255'],
+            'company.name_en' => ['nullable', 'string', 'max:255'],
+            'company.short_description_ar' => ['nullable', 'string', 'max:500'],
+            'company.short_description_en' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

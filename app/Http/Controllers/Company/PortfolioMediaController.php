@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Company;
 
+use App\Enums\PortfolioProjectReviewStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Company\StorePortfolioImageRequest;
 use App\Models\Media;
@@ -21,15 +22,31 @@ class PortfolioMediaController extends Controller
     ): RedirectResponse {
         $this->authorize('uploadImages', $portfolioProject);
 
-        $this->mediaUploadService->storePortfolioImage(
-            $portfolioProject,
-            $request->file('image'),
-            $request->input('sort_order') !== null ? (int) $request->input('sort_order') : null
-        );
+        $sortOrder = $request->input('sort_order') !== null ? (int) $request->input('sort_order') : null;
+        $images = $request->file('images', []);
+        $images = is_array($images) ? $images : [$images];
+        if ($request->hasFile('image')) {
+            $images[] = $request->file('image');
+        }
+        $images = array_values(array_filter($images));
+
+        foreach ($images as $image) {
+            $this->mediaUploadService->storePortfolioImage($portfolioProject, $image, $sortOrder);
+            $sortOrder = null;
+        }
+
+        $portfolioProject->forceFill([
+            'is_active' => false,
+            'review_status' => PortfolioProjectReviewStatus::Pending,
+            'reviewed_by_user_id' => null,
+            'reviewed_at' => null,
+            'rejection_reason' => null,
+        ])->save();
 
         return redirect()
             ->route('company.portfolio-projects.edit', $portfolioProject)
-            ->with('message', 'Image uploaded.');
+            ->with('type', 'success')
+            ->with('message', __('tenant.portfolio_projects.image_uploaded_for_review'));
     }
 
     public function destroy(PortfolioProject $portfolioProject, Media $portfolio_media): RedirectResponse
@@ -45,8 +62,17 @@ class PortfolioMediaController extends Controller
 
         $this->mediaUploadService->deleteMedia($portfolio_media);
 
+        $portfolioProject->forceFill([
+            'is_active' => false,
+            'review_status' => PortfolioProjectReviewStatus::Pending,
+            'reviewed_by_user_id' => null,
+            'reviewed_at' => null,
+            'rejection_reason' => null,
+        ])->save();
+
         return redirect()
             ->route('company.portfolio-projects.edit', $portfolioProject)
-            ->with('message', 'Image removed.');
+            ->with('type', 'success')
+            ->with('message', __('tenant.portfolio_projects.image_removed_for_review'));
     }
 }

@@ -74,6 +74,11 @@ class Company extends Model
         ];
     }
 
+    public function getDisplayNameAttribute(): ?string
+    {
+        return $this->localized('name');
+    }
+
     public function members(): HasMany
     {
         return $this->hasMany(CompanyMember::class);

@@ -38,6 +38,7 @@ class AuthenticatedSessionController extends Controller
                 'need_language_help' => __('auth.need_language_help'),
                 'email_placeholder' => __('auth.email_placeholder_short'),
                 'password_placeholder' => __('auth.password_placeholder_short'),
+                'invalid_credentials' => __('auth.failed'),
                 'forgot_password' => __('auth.forgot_password'),
             ],
         ]);

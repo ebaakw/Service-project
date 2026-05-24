@@ -17,7 +17,24 @@ type LoginStrings = {
     need_language_help: string;
     email_placeholder: string;
     password_placeholder: string;
+    invalid_credentials: string;
     forgot_password: string;
+};
+
+type LoginForm = {
+    email: string;
+    password: string;
+    remember: boolean;
+};
+
+type LoginFormErrors = Partial<Record<keyof LoginForm | 'error', string | string[]>>;
+
+const firstError = (error?: string | string[]) => {
+    if (Array.isArray(error)) {
+        return error[0];
+    }
+
+    return error;
 };
 
 export default function Login({
@@ -40,15 +57,27 @@ export default function Login({
 
     const oppositeLocale = locale === 'ar' ? 'en' : 'ar';
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
         email: '',
         password: '',
-        remember: false as boolean,
+        remember: false,
     });
 
     const [showPassword, setShowPassword] = useState(false);
 
     const s = loginStrings;
+    const formErrors = errors as LoginFormErrors;
+    const emailError = firstError(formErrors.email);
+    const passwordError = firstError(formErrors.password);
+    const genericError = firstError(formErrors.error);
+    const credentialError = emailError === s?.invalid_credentials ? emailError : undefined;
+    const emailFieldError = credentialError ? undefined : emailError;
+    const passwordFieldError = credentialError ? undefined : passwordError;
+    const hasEmailError = Boolean(emailFieldError || credentialError);
+    const hasPasswordError = Boolean(passwordFieldError || credentialError);
+    const alertMessages = [status, credentialError, genericError].filter(
+        (message): message is string => Boolean(message),
+    );
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -98,40 +127,22 @@ export default function Login({
                                     <h1 className="els-auth__headline">{s.title}</h1>
                                     <p className="els-auth__hint">{s.hint}</p>
 
-                                    {(status ||
-                                        errors?.email ||
-                                        errors?.password ||
-                                        (errors as { error?: string }).error) && (
-                                        <div className="els-auth__errors alert alert-danger small mb-3">
-                                            {status ? <div>{status}</div> : null}
-                                            {errors?.email ? (
-                                                <div>{Array.isArray(errors.email) ? errors.email[0] : errors.email}</div>
-                                            ) : null}
-                                            {errors?.password ? (
-                                                <div>
-                                                    {Array.isArray(errors.password)
-                                                        ? errors.password[0]
-                                                        : errors.password}
-                                                </div>
-                                            ) : null}
-                                            {(errors as { error?: string }).error ? (
-                                                <div>
-                                                    {Array.isArray((errors as { error?: string }).error)
-                                                        ? (errors as { error: string[] }).error[0]
-                                                        : (errors as { error?: string }).error}
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                    )}
-
                                     <form onSubmit={submit} method="post" noValidate>
+                                        {alertMessages.length > 0 ? (
+                                            <div className="els-auth__errors alert alert-danger small mb-3">
+                                                {alertMessages.map((message) => (
+                                                    <div key={message}>{message}</div>
+                                                ))}
+                                            </div>
+                                        ) : null}
+
                                         <div className="els-auth__input mb-2">
                                             <div className="input-group">
                                                 <input
                                                     value={data.email}
                                                     type="email"
                                                     name="email"
-                                                    className="form-control"
+                                                    className={`form-control ${hasEmailError ? 'is-invalid' : ''}`}
                                                     placeholder={s.email_placeholder}
                                                     autoComplete="username"
                                                     dir="ltr"
@@ -144,8 +155,8 @@ export default function Login({
                                                 </div>
                                             </div>
                                         </div>
-                                        {errors.email ? (
-                                            <div className="text-danger small mb-2">{errors.email}</div>
+                                        {emailFieldError ? (
+                                            <div className="text-danger small mb-2">{emailFieldError}</div>
                                         ) : null}
 
                                         <div className="els-auth__input mb-2">
@@ -154,7 +165,7 @@ export default function Login({
                                                     type={showPassword ? 'text' : 'password'}
                                                     name="password"
                                                     value={data.password}
-                                                    className="form-control"
+                                                    className={`form-control ${hasPasswordError ? 'is-invalid' : ''}`}
                                                     placeholder={s.password_placeholder}
                                                     autoComplete="current-password"
                                                     dir="ltr"
@@ -175,8 +186,8 @@ export default function Login({
                                                 </div>
                                             </div>
                                         </div>
-                                        {errors.password ? (
-                                            <div className="text-danger small mb-2">{errors.password}</div>
+                                        {passwordFieldError ? (
+                                            <div className="text-danger small mb-2">{passwordFieldError}</div>
                                         ) : null}
 
                                         <div className="row align-items-center mt-3">

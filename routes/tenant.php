@@ -18,6 +18,7 @@ Route::middleware(['web', 'auth', 'verified', 'company.user', 'company.resolve']
     ->prefix('tenant')
     ->group(function (): void {
         Route::resource('price-lists', CompanyPriceListController::class)->except(['show']);
+        Route::post('price-items/import', [CompanyPriceItemController::class, 'import'])->name('price-items.import');
         Route::resource('price-items', CompanyPriceItemController::class)->except(['show']);
         Route::resource('discounts', DiscountController::class)->except(['show']);
     });

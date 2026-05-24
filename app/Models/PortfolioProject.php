@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\PortfolioProjectReviewStatus;
 use App\Models\Concerns\HasLocalizedFields;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -28,6 +30,10 @@ class PortfolioProject extends Model
         'completed_at',
         'is_featured',
         'is_active',
+        'review_status',
+        'reviewed_by_user_id',
+        'reviewed_at',
+        'rejection_reason',
     ];
 
     protected static function booted(): void
@@ -43,6 +49,8 @@ class PortfolioProject extends Model
             'completed_at' => 'datetime',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'review_status' => PortfolioProjectReviewStatus::class,
+            'reviewed_at' => 'datetime',
         ];
     }
 
@@ -59,6 +67,17 @@ class PortfolioProject extends Model
     public function technician(): BelongsTo
     {
         return $this->belongsTo(Technician::class);
+    }
+
+    public function technicians(): BelongsToMany
+    {
+        return $this->belongsToMany(Technician::class, 'portfolio_project_technician')
+            ->withTimestamps();
+    }
+
+    public function reviewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by_user_id');
     }
 
     public function portfolioImages(): MorphMany

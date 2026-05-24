@@ -3,9 +3,11 @@
 namespace App\Http\Middleware;
 
 use App\Enums\FeedbackTicketStatus;
-use App\Enums\UserType;
+use App\Enums\PortfolioProjectReviewStatus;
 use App\Enums\TechnicianReviewStatus;
+use App\Enums\UserType;
 use App\Models\FeedbackTicket;
+use App\Models\PortfolioProject;
 use App\Models\Technician;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
@@ -74,6 +76,10 @@ class HandleInertiaRequests extends Middleware
                 'company_status' => Lang::get('enums.company_status'),
                 'subscription_status' => Lang::get('enums.subscription_status'),
                 'price_type' => Lang::get('enums.price_type'),
+                'feedback_ticket_type' => Lang::get('enums.feedback_ticket_type'),
+                'feedback_ticket_status' => Lang::get('enums.feedback_ticket_status'),
+                'feedback_priority' => Lang::get('enums.feedback_priority'),
+                'portfolio_project_review_status' => Lang::get('enums.portfolio_project_review_status'),
             ],
             'sidebarBadges' => fn () => $this->resolveSidebarBadges($request),
             'today' => now()->timezone(config('app.timezone'))->format('d-m-Y'),
@@ -108,6 +114,12 @@ class HandleInertiaRequests extends Middleware
                     ->count();
             }
 
+            if ($user->hasAnyPermission(['portfolio_reviews.view', 'portfolio.manage'])) {
+                $badges['pendingPortfolioReviews'] = PortfolioProject::query()
+                    ->where('review_status', PortfolioProjectReviewStatus::Pending->value)
+                    ->count();
+            }
+
             if ($user->hasAnyPermission(['feedback.view', 'complaints.manage'])) {
                 $badges['openFeedbackTickets'] = FeedbackTicket::query()
                     ->where('status', FeedbackTicketStatus::Open->value)
@@ -131,12 +143,14 @@ class HandleInertiaRequests extends Middleware
 
             return [
                 'pendingTechnicianReviews' => 0,
+                'pendingPortfolioReviews' => 0,
                 'openFeedbackTickets' => $openFeedbackTickets,
             ];
         }
 
         return [
             'pendingTechnicianReviews' => 0,
+            'pendingPortfolioReviews' => 0,
             'openFeedbackTickets' => 0,
         ];
     }

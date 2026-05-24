@@ -105,12 +105,18 @@ export default function PlatformTechniciansIndex({
                     r.user.avatar_url ? (
                         <img
                             src={r.user.avatar_url}
-                            alt=""
+                            alt={r.user.name}
                             style={{ width: 36, height: 36, objectFit: 'cover' }}
                             className="rounded border bg-white"
                         />
                     ) : (
-                        <span className="text-muted">—</span>
+                        <div
+                            className="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
+                            style={{ width: 36, height: 36 }}
+                            aria-label={__('tenant.technicians.avatar')}
+                        >
+                            <i className="fas fa-user" />
+                        </div>
                     ),
             },
             {
@@ -212,7 +218,8 @@ export default function PlatformTechniciansIndex({
         [],
     );
 
-    const resolvedVisibleColumnIds = visibleColumnIds.length > 0 ? visibleColumnIds : tableColumns.map((c) => c.id);
+    const selectedColumnIds = visibleColumnIds.length > 0 ? visibleColumnIds : tableColumns.map((c) => c.id);
+    const resolvedVisibleColumnIds = selectedColumnIds.includes('avatar') ? selectedColumnIds : ['avatar', ...selectedColumnIds];
     const visibleTableColumns = tableColumns.filter((c) => resolvedVisibleColumnIds.includes(c.id));
 
     return (

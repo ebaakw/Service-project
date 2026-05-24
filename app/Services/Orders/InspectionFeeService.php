@@ -36,8 +36,8 @@ class InspectionFeeService
             return $this->normalizeDecimal($amount);
         }
 
-        // Company-specific global settings (company_settings → settings), then legacy fallbacks.
-        $fromSettings = $this->settingsService->getForCompany('inspection_fee', $company);
+        // Inspection fees are controlled from the platform dashboard only.
+        $fromSettings = $this->settingsService->getGlobal('inspection_fee');
         if ($fromSettings !== null && is_numeric($fromSettings) && (float) $fromSettings > 0) {
             return $this->normalizeDecimal((string) $fromSettings);
         }

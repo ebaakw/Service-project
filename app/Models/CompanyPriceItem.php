@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DiscountType;
 use App\Enums\PriceType;
 use App\Models\Concerns\HasLocalizedFields;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,6 +45,8 @@ class CompanyPriceItem extends Model
         'price_type',
         'price',
         'minimum_price',
+        'discount_type',
+        'discount_value',
         'inspection_fee',
         'warranty_days',
         'warranty_description_ar',
@@ -53,12 +56,20 @@ class CompanyPriceItem extends Model
         'is_active',
     ];
 
+    protected $appends = [
+        'effective_discount_type',
+        'effective_discount_value',
+        'discounted_price',
+    ];
+
     protected function casts(): array
     {
         return [
             'price_type' => PriceType::class,
             'price' => 'decimal:3',
             'minimum_price' => 'decimal:3',
+            'discount_type' => DiscountType::class,
+            'discount_value' => 'decimal:3',
             'inspection_fee' => 'decimal:3',
             'warranty_days' => 'integer',
             'duration_minutes' => 'integer',
@@ -91,5 +102,56 @@ class CompanyPriceItem extends Model
     {
         return $this->belongsToMany(Discount::class, 'discount_price_items')
             ->withTimestamps();
+    }
+
+    public function getEffectiveDiscountTypeAttribute(): ?string
+    {
+        if ($this->discount_type !== null && $this->discount_value !== null) {
+            return $this->discount_type instanceof DiscountType ? $this->discount_type->value : (string) $this->discount_type;
+        }
+
+        $priceList = $this->relationLoaded('priceList') ? $this->priceList : $this->priceList()->first();
+
+        if ($priceList?->discount_type === null || $priceList->discount_value === null) {
+            return null;
+        }
+
+        return $priceList->discount_type instanceof DiscountType
+            ? $priceList->discount_type->value
+            : (string) $priceList->discount_type;
+    }
+
+    public function getEffectiveDiscountValueAttribute(): ?string
+    {
+        if ($this->discount_type !== null && $this->discount_value !== null) {
+            return (string) $this->discount_value;
+        }
+
+        $priceList = $this->relationLoaded('priceList') ? $this->priceList : $this->priceList()->first();
+
+        return $priceList?->discount_value !== null ? (string) $priceList->discount_value : null;
+    }
+
+    public function getDiscountedPriceAttribute(): ?string
+    {
+        if ($this->price === null) {
+            return null;
+        }
+
+        $type = $this->effective_discount_type;
+        $value = $this->effective_discount_value;
+
+        if ($type === null || $value === null) {
+            return (string) $this->price;
+        }
+
+        $price = (float) $this->price;
+        $discountValue = (float) $value;
+
+        $discounted = $type === DiscountType::Percentage->value
+            ? $price * (1 - ($discountValue / 100))
+            : max(0, $price - $discountValue);
+
+        return number_format(round($discounted, 3), 3, '.', '');
     }
 }

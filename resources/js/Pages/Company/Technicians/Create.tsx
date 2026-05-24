@@ -74,16 +74,33 @@ export default function CompanyTechniciansCreate({
         }
     };
 
-    const localInvalid = useMemo(() => {
+    const localErrors = useMemo(() => {
         if (!attemptedSubmit) return {};
-        const invalid: Record<string, boolean> = {};
-        invalid.name_ar = !String(data.name_ar ?? '').trim();
-        invalid.email = !String(data.email ?? '').trim() && !String(data.phone ?? '').trim();
-        invalid.phone = !String(data.email ?? '').trim() && !String(data.phone ?? '').trim();
-        invalid.password = !String(data.password ?? '').trim();
-        invalid.password_confirmation = !String(data.password_confirmation ?? '').trim();
+        const invalid: Record<string, string> = {};
+        const phone = String(data.phone ?? '').trim();
+
+        if (!String(data.name_ar ?? '').trim()) {
+            invalid.name_ar = __('tenant.technicians.validation_name_required');
+        }
+        if (!phone) {
+            invalid.phone = __('tenant.technicians.validation_phone_required');
+        } else if (!/^\d{8}$/.test(phone)) {
+            invalid.phone = __('tenant.technicians.phone_must_be_8_digits');
+        }
+        if (!String(data.password ?? '').trim()) {
+            invalid.password = __('tenant.technicians.validation_password_required');
+        }
+        if (!String(data.password_confirmation ?? '').trim()) {
+            invalid.password_confirmation = __('tenant.technicians.validation_password_confirmation_required');
+        }
+
         return invalid;
-    }, [attemptedSubmit, data]);
+    }, [attemptedSubmit, data.name_ar, data.phone, data.password, data.password_confirmation]);
+
+    const validationMessages = useMemo(() => {
+        const serverMessages = Object.values(errors).filter((message): message is string => typeof message === 'string' && message.trim() !== '');
+        return Array.from(new Set([...Object.values(localErrors), ...serverMessages]));
+    }, [errors, localErrors]);
 
     const avatarPreviewUrl = useMemo(() => safeObjectUrl(data.avatar), [data.avatar]);
     useEffect(() => {
@@ -144,8 +161,9 @@ export default function CompanyTechniciansCreate({
             focusField('name_ar');
             return;
         }
-        if (!String(data.email ?? '').trim() && !String(data.phone ?? '').trim()) {
-            focusField('email');
+        const phone = String(data.phone ?? '').trim();
+        if (!phone || !/^\d{8}$/.test(phone)) {
+            focusField('phone');
             return;
         }
         if (!String(data.password ?? '').trim()) {
@@ -177,6 +195,19 @@ export default function CompanyTechniciansCreate({
             <TableCard title={__('tenant.technicians.createTitle')} bodyPadding>
                 <form onSubmit={submit}>
                     <div className="row">
+                        {validationMessages.length > 0 ? (
+                            <div className="col-12">
+                                <div className="alert alert-danger" role="alert">
+                                    <div className="font-weight-bold mb-1">{__('tenant.technicians.validation_summary_title')}</div>
+                                    <ul className="mb-0 pl-3">
+                                        {validationMessages.map((message) => (
+                                            <li key={message}>{message}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        ) : null}
+
                         <div className="col-md-6">
                             <div className="form-group">
                                 <label>
@@ -185,13 +216,13 @@ export default function CompanyTechniciansCreate({
                                 </label>
                                 <input
                                     ref={refs.name_ar}
-                                    className={`form-control ${(errors.name_ar || localInvalid.name_ar) ? 'is-invalid' : ''}`}
+                                    className={`form-control ${(errors.name_ar || localErrors.name_ar) ? 'is-invalid' : ''}`}
                                     dir="rtl"
                                     value={data.name_ar}
                                     onChange={(e) => setData('name_ar', e.target.value)}
                                     style={{ textAlign: 'right' }}
                                 />
-                                {errors.name_ar ? <div className="text-danger small mt-1">{errors.name_ar}</div> : null}
+                                {errors.name_ar || localErrors.name_ar ? <div className="text-danger small mt-1">{errors.name_ar ?? localErrors.name_ar}</div> : null}
                             </div>
                         </div>
                         <div className="col-md-6">
@@ -240,11 +271,10 @@ export default function CompanyTechniciansCreate({
                             <div className="form-group">
                                 <label>
                                     {__('tenant.technicians.email')}
-                                    <span className="text-danger"> *</span>
                                 </label>
                                 <input
                                     ref={refs.email}
-                                    className={`form-control ${(errors.email || localInvalid.email) ? 'is-invalid' : ''}`}
+                                    className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                                     type="email"
                                     dir="ltr"
                                     value={data.email}
@@ -261,17 +291,17 @@ export default function CompanyTechniciansCreate({
                                 </label>
                                 <input
                                     ref={refs.phone}
-                                    className={`form-control ${(errors.phone || localInvalid.phone) ? 'is-invalid' : ''}`}
+                                    className={`form-control ${(errors.phone || localErrors.phone) ? 'is-invalid' : ''}`}
                                     dir="ltr"
                                     value={data.phone}
                                     onChange={(e) => setData('phone', e.target.value)}
                                 />
-                                {errors.phone ? <div className="text-danger small mt-1">{errors.phone}</div> : null}
+                                {errors.phone || localErrors.phone ? <div className="text-danger small mt-1">{errors.phone ?? localErrors.phone}</div> : null}
                             </div>
                         </div>
                         <div className="col-12">
                             <div className="text-muted small mb-3">
-                                {__('tenant.technicians.emailOrPhoneHint')} · {__('tenant.technicians.phone_must_be_8_digits')}
+                                {__('tenant.technicians.phone_required_hint')} · {__('tenant.technicians.phone_must_be_8_digits')}
                             </div>
                         </div>
 
@@ -285,7 +315,7 @@ export default function CompanyTechniciansCreate({
                                     <input
                                         ref={refs.password}
                                         type={showPassword ? 'text' : 'password'}
-                                        className={`form-control ${(errors.password || localInvalid.password) ? 'is-invalid' : ''}`}
+                                        className={`form-control ${(errors.password || localErrors.password) ? 'is-invalid' : ''}`}
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
                                     />
@@ -300,7 +330,7 @@ export default function CompanyTechniciansCreate({
                                         </button>
                                     </div>
                                 </div>
-                                {errors.password ? <div className="text-danger small mt-1">{errors.password}</div> : null}
+                                {errors.password || localErrors.password ? <div className="text-danger small mt-1">{errors.password ?? localErrors.password}</div> : null}
                             </div>
                         </div>
                         <div className="col-md-6">
@@ -313,7 +343,7 @@ export default function CompanyTechniciansCreate({
                                     <input
                                         ref={refs.password_confirmation}
                                         type={showPasswordConfirmation ? 'text' : 'password'}
-                                        className={`form-control ${(errors.password_confirmation || localInvalid.password_confirmation) ? 'is-invalid' : ''}`}
+                                        className={`form-control ${(errors.password_confirmation || localErrors.password_confirmation) ? 'is-invalid' : ''}`}
                                         value={data.password_confirmation}
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
                                     />
@@ -328,6 +358,7 @@ export default function CompanyTechniciansCreate({
                                         </button>
                                     </div>
                                 </div>
+                                {errors.password_confirmation || localErrors.password_confirmation ? <div className="text-danger small mt-1">{errors.password_confirmation ?? localErrors.password_confirmation}</div> : null}
                             </div>
                         </div>
 

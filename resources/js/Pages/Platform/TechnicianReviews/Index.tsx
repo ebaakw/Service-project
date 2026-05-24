@@ -7,6 +7,7 @@ import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import type { PageProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import RejectTechnicianModal from './RejectTechnicianModal';
 
 type CompanyOption = { id: number; name: string };
 
@@ -15,11 +16,14 @@ type ServiceCategory = { id: number; name_ar: string; name_en: string | null };
 type TechnicianRow = {
     id: number;
     employee_code: string | null;
+    display_name: string | null;
+    job_title: string | null;
     review_status: string | null;
     reviewed_at: string | null;
     rejection_reason: string | null;
-    company: { id: number; name: string };
-    user: { name: string; email: string | null; phone: string | null };
+    created_at: string | null;
+    company: { id: number; name: string; slug: string | null };
+    user: { name: string; email: string | null; phone: string | null; avatar_url: string | null };
     service_categories: ServiceCategory[];
     can: { approve: boolean; reject: boolean };
 };
@@ -62,6 +66,8 @@ export default function TechnicianReviewsIndex({
     const [reviewStatus, setReviewStatus] = useState(filters.review_status ?? 'pending');
     const [companyId, setCompanyId] = useState<string>(filters.company_id ? String(filters.company_id) : '');
     const [isFiltering, setIsFiltering] = useState(false);
+    const [rejectingTechnician, setRejectingTechnician] = useState<TechnicianRow | null>(null);
+    const [isRejecting, setIsRejecting] = useState(false);
 
     const hasActiveFilters = Boolean(search.trim()) || Boolean(companyId) || String(reviewStatus ?? '').toLowerCase() !== 'pending';
 
@@ -91,19 +97,53 @@ export default function TechnicianReviewsIndex({
         router.get(route('platform.technician-reviews.index'), {}, { preserveState: true, preserveScroll: true, replace: true, onFinish: () => setIsFiltering(false) });
     };
 
+    const submitRejection = (reason: string) => {
+        if (!rejectingTechnician) return;
+
+        router.post(
+            route('platform.technician-reviews.reject', rejectingTechnician.id),
+            { rejection_reason: reason },
+            {
+                preserveScroll: true,
+                onStart: () => setIsRejecting(true),
+                onSuccess: () => setRejectingTechnician(null),
+                onFinish: () => setIsRejecting(false),
+            },
+        );
+    };
+
     const columns = useMemo(
         () => [
             {
                 key: 'technician',
                 header: __('tenant.technicians.title'),
                 render: (r: TechnicianRow) => (
-                    <div>
-                        <div className="font-weight-bold">{r.user.name}</div>
-                        <div className="text-muted small" dir="ltr">
-                            {r.user.email ?? '—'} {r.user.phone ? ` • ${r.user.phone}` : ''}
-                        </div>
-                        <div className="text-muted small" dir="ltr">
-                            {r.employee_code ?? '—'}
+                    <div className="d-flex align-items-center">
+                        {r.user.avatar_url ? (
+                            <img
+                                src={r.user.avatar_url}
+                                alt={r.user.name}
+                                className="rounded border bg-white"
+                                style={{ width: 44, height: 44, objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div
+                                className="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
+                                style={{ width: 44, height: 44 }}
+                                aria-label={__('tenant.technicians.avatar')}
+                            >
+                                <i className="fas fa-user" />
+                            </div>
+                        )}
+                        <div className="mx-2">
+                            <div className="font-weight-bold">{r.display_name ?? r.user.name}</div>
+                            <div className="text-muted small">{r.job_title ?? '—'}</div>
+                            <div className="text-muted small" dir="ltr">
+                                {r.user.email ?? '—'} {r.user.phone ? ` • ${r.user.phone}` : ''}
+                            </div>
+                            <div className="text-muted small" dir="ltr">
+                                {__('tenant.technicians.employeeCode')}: {r.employee_code ?? '—'}
+                            </div>
                         </div>
                     </div>
                 ),
@@ -111,7 +151,14 @@ export default function TechnicianReviewsIndex({
             {
                 key: 'company',
                 header: __('tenant.technicians.company'),
-                render: (r: TechnicianRow) => r.company?.name ?? '—',
+                render: (r: TechnicianRow) => (
+                    <div>
+                        <div className="font-weight-bold">{r.company?.name ?? '—'}</div>
+                        <div className="text-muted small" dir="ltr">
+                            {r.company?.slug ?? '—'}
+                        </div>
+                    </div>
+                ),
             },
             {
                 key: 'categories',
@@ -127,6 +174,9 @@ export default function TechnicianReviewsIndex({
                         {String(r.review_status ?? '').toLowerCase() === 'rejected' && r.rejection_reason ? (
                             <div className="text-muted small mt-1">{r.rejection_reason}</div>
                         ) : null}
+                        <div className="text-muted small mt-1" dir="ltr">
+                            {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
+                        </div>
                     </div>
                 ),
             },
@@ -152,11 +202,7 @@ export default function TechnicianReviewsIndex({
                             <button
                                 type="button"
                                 className="btn btn-outline-danger"
-                                onClick={() => {
-                                    const reason = window.prompt(__('dashboard.technician_reviews.rejection_reason')) || '';
-                                    if (reason.trim().length < 3) return;
-                                    router.post(route('platform.technician-reviews.reject', r.id), { rejection_reason: reason });
-                                }}
+                                onClick={() => setRejectingTechnician(r)}
                             >
                                 {__('dashboard.technician_reviews.reject')}
                             </button>
@@ -253,6 +299,16 @@ export default function TechnicianReviewsIndex({
                     />
                 </div>
             </TableCard>
+
+            <RejectTechnicianModal
+                show={rejectingTechnician !== null}
+                technicianName={rejectingTechnician?.display_name ?? rejectingTechnician?.user.name}
+                processing={isRejecting}
+                onClose={() => {
+                    if (!isRejecting) setRejectingTechnician(null);
+                }}
+                onConfirm={submitRejection}
+            />
         </PlatformAdminLayout>
     );
 }

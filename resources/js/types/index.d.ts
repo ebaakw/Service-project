@@ -17,7 +17,10 @@ export type DashboardT = {
     actions?: Record<string, string>;
     forms?: Record<string, string>;
     orders?: Record<string, string>;
+    invoices?: Record<string, string>;
     service_categories?: Record<string, string>;
+    service_problems?: Record<string, string>;
+    service_intake_fields?: Record<string, string>;
     status?: Record<string, string>;
     shell?: Record<string, string>;
 };
@@ -31,6 +34,10 @@ export type EnumLabels = {
     company_status?: Record<string, string>;
     subscription_status?: Record<string, string>;
     price_type?: Record<string, string>;
+    feedback_ticket_type?: Record<string, string>;
+    feedback_ticket_status?: Record<string, string>;
+    feedback_priority?: Record<string, string>;
+    portfolio_project_review_status?: Record<string, string>;
 };
 
 export type CurrentCompany = {

@@ -17,7 +17,9 @@ use App\Models\Technician;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TechnicianReviewWorkflowTest extends TestCase
@@ -84,6 +86,47 @@ class TechnicianReviewWorkflowTest extends TestCase
 
         $user = $technician->user()->firstOrFail();
         $this->assertSame(UserStatus::Inactive, $user->status);
+    }
+
+    public function test_company_update_resubmits_technician_for_review_with_method_spoofing(): void
+    {
+        Storage::fake('public');
+        $this->seed(PermissionSeeder::class);
+
+        $company = $this->activeCompany();
+        $owner = $this->makeCompanyOwner($company);
+        $techUser = User::factory()->technician()->create([
+            'status' => UserStatus::Active,
+            'phone' => '11112222',
+        ]);
+        $technician = Technician::factory()->create([
+            'company_id' => $company->getKey(),
+            'user_id' => $techUser->getKey(),
+            'is_active' => true,
+            'review_status' => TechnicianReviewStatus::Approved,
+        ]);
+
+        $this->actingAs($owner)->post(route('company.technicians.update', $technician), [
+            '_method' => 'patch',
+            'name_ar' => 'Updated Tech',
+            'name_en' => 'Updated Technician',
+            'email' => 'updated-tech@example.test',
+            'phone' => '87654321',
+            'avatar' => UploadedFile::fake()->image('avatar.jpg'),
+            'employee_code' => 'TECH-EDIT',
+            'job_title_en' => 'Updated Technician',
+            'service_category_ids' => [],
+        ])->assertRedirect(route('company.technicians.index'));
+
+        $technician->refresh();
+        $techUser->refresh();
+
+        $this->assertSame(TechnicianReviewStatus::Pending, $technician->review_status);
+        $this->assertFalse((bool) $technician->is_active);
+        $this->assertSame(UserStatus::Inactive, $techUser->status);
+        $this->assertSame('87654321', $techUser->phone);
+        $this->assertNotNull($techUser->avatar_path);
+        Storage::disk('public')->assertExists($techUser->avatar_path);
     }
 
     public function test_platform_admin_can_view_pending_technician_reviews(): void
@@ -272,7 +315,7 @@ class TechnicianReviewWorkflowTest extends TestCase
             );
     }
 
-    public function test_company_pending_technicians_page_shows_only_current_company_pending(): void
+    public function test_company_technicians_page_includes_current_company_pending_technicians(): void
     {
         $this->seed(PermissionSeeder::class);
 
@@ -280,16 +323,20 @@ class TechnicianReviewWorkflowTest extends TestCase
         $companyB = $this->activeCompany();
         $ownerA = $this->makeCompanyOwner($companyA);
 
-        Technician::factory()->pendingReview()->create(['company_id' => $companyA->getKey()]);
+        $pendingA = Technician::factory()->pendingReview()->create(['company_id' => $companyA->getKey()]);
         $approvedA = Technician::factory()->create(['company_id' => $companyA->getKey()]); // approved by default
         Technician::factory()->pendingReview()->create(['company_id' => $companyB->getKey()]);
 
         $this->actingAs($ownerA)
-            ->get(route('company.technicians.index', ['review_status' => 'pending']))
+            ->get(route('company.technicians.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Company/Technicians/Index')
-                ->has('technicians.data', fn ($data) => $data->where('0.id', $approvedA->getKey())->etc())
+                ->where('technicians.total', 2)
+                ->has('technicians.data', 2)
+                ->where('technicians.data.0.id', $approvedA->getKey())
+                ->where('technicians.data.1.id', $pendingA->getKey())
+                ->where('technicians.data.1.review_status', TechnicianReviewStatus::Pending->value)
             );
     }
 
@@ -308,6 +355,74 @@ class TechnicianReviewWorkflowTest extends TestCase
                 ->component('Platform/Technicians/Index')
                 ->where('filters.review_status', 'all')
                 ->where('technicians.total', 3)
+            );
+    }
+
+    public function test_platform_technician_pages_include_public_avatar_url(): void
+    {
+        $admin = $this->makePlatformAdminWithAllPermissions();
+        $avatarPath = 'users/123/avatar/photo.jpg';
+
+        $techUser = User::factory()->technician()->create([
+            'avatar_path' => $avatarPath,
+        ]);
+        $technician = Technician::factory()->create([
+            'user_id' => $techUser->getKey(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('platform.technicians.index', ['review_status' => 'all']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Platform/Technicians/Index')
+                ->where('technicians.data.0.user.avatar_url', asset('storage/'.$avatarPath))
+            );
+
+        $this->actingAs($admin)
+            ->get(route('platform.technicians.show', $technician))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Platform/Technicians/Show')
+                ->where('technician.user.avatar_url', asset('storage/'.$avatarPath))
+            );
+    }
+
+    public function test_platform_technician_review_pages_include_company_details_and_avatar_url(): void
+    {
+        $admin = $this->makePlatformAdminWithAllPermissions();
+        $company = $this->activeCompany();
+        $avatarPath = 'users/456/avatar/pending.jpg';
+
+        $techUser = User::factory()->technician()->create([
+            'avatar_path' => $avatarPath,
+        ]);
+        $technician = Technician::factory()->pendingReview()->create([
+            'company_id' => $company->getKey(),
+            'user_id' => $techUser->getKey(),
+            'employee_code' => 'TECH-456',
+            'job_title_en' => 'Maintenance Technician',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('platform.technician-reviews.index', ['review_status' => 'pending']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Platform/TechnicianReviews/Index')
+                ->where('technicians.data.0.company.name', $company->display_name)
+                ->where('technicians.data.0.company.slug', $company->slug)
+                ->where('technicians.data.0.employee_code', 'TECH-456')
+                ->where('technicians.data.0.job_title', 'Maintenance Technician')
+                ->where('technicians.data.0.user.avatar_url', asset('storage/'.$avatarPath))
+            );
+
+        $this->actingAs($admin)
+            ->get(route('platform.technician-reviews.show', $technician))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Platform/TechnicianReviews/Show')
+                ->where('technician.company.name', $company->display_name)
+                ->where('technician.company.slug', $company->slug)
+                ->where('technician.user.avatar_url', asset('storage/'.$avatarPath))
             );
     }
 

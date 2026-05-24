@@ -26,6 +26,11 @@ return [
         'approved' => 'مقبول',
         'rejected' => 'مرفوض',
     ],
+    'portfolio_project_review_status' => [
+        'pending' => 'قيد المراجعة',
+        'approved' => 'مقبول',
+        'rejected' => 'مرفوض',
+    ],
     'invoice_status' => [
         'draft' => 'مسودة',
         'sent' => 'مرسل',

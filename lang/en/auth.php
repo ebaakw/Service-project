@@ -3,6 +3,7 @@
 return array_merge(
     require base_path('vendor/laravel/framework/src/Illuminate/Translation/lang/en/auth.php'),
     [
+        'failed' => 'The email or password is incorrect.',
         'web_login_forbidden' => 'This account type cannot sign in to the web dashboard.',
         'company_not_active' => 'Your account is not linked to an active company. Please contact platform administration.',
         'technician_not_approved' => 'Your technician account is pending review or not approved.',

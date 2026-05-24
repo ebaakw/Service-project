@@ -26,6 +26,8 @@ class DiscountController extends Controller
 
         $search = $request->string('search')->trim()->value();
         $status = $request->input('status', 'all');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
 
         $query = Discount::query()
             ->where('company_id', $company->getKey())
@@ -49,10 +51,11 @@ class DiscountController extends Controller
         }
 
         return Inertia::render('Tenant/Pricing/Discounts/Index', [
-            'discounts' => $query->paginate(15)->withQueryString(),
+            'discounts' => $query->paginate($perPage)->withQueryString(),
             'filters' => [
                 'search' => $search,
                 'status' => $status,
+                'per_page' => $perPage,
             ],
         ]);
     }

@@ -20,6 +20,11 @@ class ServiceProblemController extends Controller
 
         $search = $request->string('search')->trim()->value();
         $status = $request->input('status', 'all');
+        $perPage = (int) $request->input('per_page', 10);
+        $allowedPerPage = [10, 25, 50, 100];
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
 
         $query = $service_category->problems()->orderBy('sort_order')->orderBy('id');
 
@@ -38,10 +43,11 @@ class ServiceProblemController extends Controller
 
         return Inertia::render('Platform/ServiceCatalog/Problems/Index', [
             'category' => $service_category,
-            'problems' => $query->paginate(15)->withQueryString(),
+            'problems' => $query->paginate($perPage)->withQueryString(),
             'filters' => [
                 'search' => $search,
                 'status' => $status,
+                'per_page' => $perPage,
             ],
         ]);
     }

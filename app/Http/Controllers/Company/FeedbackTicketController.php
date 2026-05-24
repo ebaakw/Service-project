@@ -27,14 +27,39 @@ class FeedbackTicketController extends Controller
             ->with(['customer:id,user_id', 'customer.user:id,name', 'order:id,order_number'])
             ->orderByDesc('id');
 
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $search).'%';
+
+                $q->where('subject', 'like', $like)
+                    ->orWhere('message', 'like', $like)
+                    ->orWhereHas('order', fn ($order) => $order->where('order_number', 'like', $like))
+                    ->orWhereHas('customer.user', fn ($user) => $user->where('name', 'like', $like));
+            });
+        }
+
         $status = $request->input('status', 'all');
         if ($status !== 'all') {
             $query->where('status', $status);
         }
 
+        $type = $request->input('type', 'all');
+        if ($type !== 'all') {
+            $query->where('type', $type);
+        }
+
+        $requestedPerPage = (int) $request->integer('per_page', 15);
+        $perPage = in_array($requestedPerPage, [10, 15, 25, 50, 100], true) ? $requestedPerPage : 15;
+
         return Inertia::render('Company/Feedback/Index', [
-            'tickets' => $query->paginate(15)->withQueryString(),
-            'filters' => ['status' => $status],
+            'tickets' => $query->paginate($perPage)->withQueryString(),
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+                'type' => $type,
+                'per_page' => $perPage,
+            ],
         ]);
     }
 

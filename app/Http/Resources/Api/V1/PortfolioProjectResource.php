@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Media\MediaUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,14 @@ class PortfolioProjectResource extends JsonResource
             'display_location' => $this->localized('location'),
             'service_category_id' => $this->service_category_id,
             'technician_id' => $this->technician_id,
+            'technician_ids' => $this->whenLoaded('technicians', fn () => $this->technicians->pluck('id')->values()),
+            'technicians' => $this->whenLoaded('technicians', fn () => $this->technicians->map(fn ($technician): array => [
+                'id' => $technician->id,
+                'name' => $technician->user?->name,
+            ])->values()),
+            'images' => $this->whenLoaded('portfolioImages', fn () => $this->portfolioImages->map(
+                fn ($media): array => MediaUploadService::publicPayload($media, absolute: true)
+            )->values()),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'is_featured' => (bool) $this->is_featured,
             'is_active' => (bool) $this->is_active,

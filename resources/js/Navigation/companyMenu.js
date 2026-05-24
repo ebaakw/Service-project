@@ -66,18 +66,23 @@ export const companyMenu = [
         activePatterns: ['company.technicians.*'],
     },
     {
-        name: 'dashboard.nav.company_price_lists',
-        route: 'price-lists.index',
-        icon: 'fa-list-alt',
-        permissions: ['price_lists.view', 'pricing.manage'],
-        activePatterns: ['price-lists.*'],
-    },
-    {
-        name: 'dashboard.nav.company_price_items',
-        route: 'price-items.index',
+        name: 'dashboard.nav.company_pricing',
         icon: 'fa-tags',
-        permissions: ['price_items.view', 'pricing.manage'],
-        activePatterns: ['price-items.*'],
+        permissions: ['price_lists.view', 'price_items.view', 'pricing.manage'],
+        children: [
+            {
+                name: 'dashboard.nav.company_price_lists',
+                route: 'price-lists.index',
+                permissions: ['price_lists.view', 'pricing.manage'],
+                activePatterns: ['price-lists.*'],
+            },
+            {
+                name: 'dashboard.nav.company_price_items',
+                route: 'price-items.index',
+                permissions: ['price_items.view', 'pricing.manage'],
+                activePatterns: ['price-items.*'],
+            },
+        ],
     },
     {
         name: 'dashboard.nav.company_discounts',
@@ -90,7 +95,7 @@ export const companyMenu = [
         name: 'dashboard.nav.company_portfolio',
         route: 'company.portfolio-projects.index',
         icon: 'fa-briefcase',
-        permissions: ['portfolio.view', 'portfolio.manage'],
+        permissions: ['portfolio.view', 'portfolio.create', 'portfolio.update', 'portfolio.delete', 'portfolio.media.manage', 'portfolio.manage'],
         activePatterns: ['company.portfolio-projects.*'],
     },
     {

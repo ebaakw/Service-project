@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Platform;
 
+use App\Enums\PortfolioProjectReviewStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Platform\StorePlatformPortfolioProjectRequest;
 use App\Http\Requests\Platform\UpdatePlatformPortfolioProjectRequest;
 use App\Models\Company;
 use App\Models\PortfolioProject;
@@ -12,6 +12,7 @@ use App\Models\Technician;
 use App\Services\Media\MediaUploadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,7 +27,13 @@ class PlatformPortfolioProjectController extends Controller
         $this->authorize('viewAny', PortfolioProject::class);
 
         $query = PortfolioProject::query()
-            ->with(['company:id,name', 'serviceCategory:id,name_ar', 'technician.user:id,name'])
+            ->with([
+                'company:id,name,name_ar,name_en,slug',
+                'serviceCategory:id,name_ar,name_en',
+                'technicians.user:id,name',
+                'reviewedBy:id,name,email',
+                'portfolioImages:id,model_type,model_id,disk,file_path,file_name,mime_type,size,sort_order',
+            ])
             ->orderByDesc('id');
 
         $search = $request->string('search')->trim()->value();
@@ -42,36 +49,69 @@ class PlatformPortfolioProjectController extends Controller
             $query->where('company_id', $companyId);
         }
 
+        $projects = $query->paginate(15)->withQueryString()->through(function (PortfolioProject $project): array {
+            $images = $project->portfolioImages
+                ->map(fn ($media) => MediaUploadService::publicPayload($media))
+                ->values();
+            $technicians = $project->technicians
+                ->map(fn (Technician $technician): array => [
+                    'id' => $technician->id,
+                    'user' => [
+                        'name' => $technician->user?->name,
+                    ],
+                ])
+                ->values();
+
+            return [
+                'id' => $project->id,
+                'title_ar' => $project->title_ar,
+                'title_en' => $project->title_en,
+                'description_ar' => $project->description_ar,
+                'description_en' => $project->description_en,
+                'location' => $project->location,
+                'location_ar' => $project->location_ar,
+                'location_en' => $project->location_en,
+                'completed_at' => $project->completed_at?->format('Y-m-d'),
+                'is_featured' => $project->is_featured,
+                'is_active' => $project->is_active,
+                'review_status' => $project->review_status?->value,
+                'reviewed_at' => $project->reviewed_at?->toISOString(),
+                'rejection_reason' => $project->rejection_reason,
+                'created_at' => $project->created_at?->toISOString(),
+                'thumbnail_url' => $images->first()['url'] ?? null,
+                'images_count' => $images->count(),
+                'images' => $images,
+                'company' => $project->company ? [
+                    'id' => $project->company->id,
+                    'name' => $project->company->display_name,
+                    'slug' => $project->company->slug,
+                ] : null,
+                'service_category' => $project->serviceCategory ? [
+                    'id' => $project->serviceCategory->id,
+                    'name_ar' => $project->serviceCategory->name_ar,
+                    'name_en' => $project->serviceCategory->name_en,
+                ] : null,
+                'technicians' => $technicians,
+                'technician' => $technicians->first(),
+                'reviewed_by' => $project->reviewedBy?->only(['id', 'name', 'email']),
+            ];
+        });
+
         return Inertia::render('Platform/Portfolio/Index', [
-            'projects' => $query->paginate(15)->withQueryString(),
+            'projects' => $projects,
             'filters' => [
                 'search' => $search,
                 'company_id' => $companyId,
             ],
-            'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
+            'companies' => Company::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'name_ar', 'name_en'])
+                ->map(fn (Company $company): array => [
+                    'id' => $company->id,
+                    'name' => $company->display_name,
+                ])
+                ->values(),
         ]);
-    }
-
-    public function create(): Response
-    {
-        $this->authorize('create', PortfolioProject::class);
-
-        return Inertia::render('Platform/Portfolio/Create', [
-            'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
-            'categories' => ServiceCategory::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name_ar', 'name_en']),
-        ]);
-    }
-
-    public function store(StorePlatformPortfolioProjectRequest $request): RedirectResponse
-    {
-        $this->authorize('create', PortfolioProject::class);
-
-        $data = $request->validated();
-        $project = PortfolioProject::query()->create($data);
-
-        return redirect()
-            ->route('platform.portfolio-projects.edit', $project)
-            ->with('message', 'Portfolio project created.');
     }
 
     public function edit(PortfolioProject $portfolioProject): Response
@@ -82,7 +122,7 @@ class PlatformPortfolioProjectController extends Controller
             'portfolioImages',
             'company:id,name',
             'serviceCategory:id,name_ar,name_en',
-            'technician.user:id,name',
+            'technicians.user:id,name',
         ]);
 
         $images = $portfolioProject->portfolioImages->map(fn ($m) => [
@@ -96,19 +136,17 @@ class PlatformPortfolioProjectController extends Controller
                 ...$portfolioProject->only([
                     'id', 'company_id', 'title_ar', 'title_en', 'description_ar', 'description_en',
                     'location', 'completed_at', 'is_featured', 'is_active',
-                    'service_category_id', 'technician_id',
+                    'service_category_id', 'technician_id', 'review_status', 'reviewed_at', 'rejection_reason',
                 ]),
                 'completed_at' => $portfolioProject->completed_at?->format('Y-m-d'),
+                'review_status' => $portfolioProject->review_status?->value,
+                'reviewed_at' => $portfolioProject->reviewed_at?->toISOString(),
+                'technician_ids' => $portfolioProject->technicians->pluck('id')->values(),
                 'images' => $images,
             ],
             'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
             'categories' => ServiceCategory::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name_ar', 'name_en']),
-            'technicians' => Technician::query()
-                ->where('company_id', $portfolioProject->company_id)
-                ->where('is_active', true)
-                ->with('user:id,name')
-                ->orderBy('id')
-                ->get(),
+            'technicians' => $this->technicianOptions(),
         ]);
     }
 
@@ -116,7 +154,20 @@ class PlatformPortfolioProjectController extends Controller
     {
         $this->authorize('update', $portfolioProject);
 
-        $portfolioProject->update($request->validated());
+        $data = $request->validated();
+        $technicianIds = $data['technician_ids'] ?? [];
+        unset($data['technician_ids'], $data['images']);
+
+        DB::transaction(function () use ($request, $portfolioProject, $data, $technicianIds): void {
+            $data['technician_id'] = $technicianIds[0] ?? null;
+            $data['review_status'] = PortfolioProjectReviewStatus::Approved;
+            $data['reviewed_by_user_id'] = $request->user()?->getKey();
+            $data['reviewed_at'] = now();
+            $data['rejection_reason'] = null;
+
+            $portfolioProject->update($data);
+            $portfolioProject->technicians()->sync($technicianIds);
+        });
 
         return redirect()
             ->route('platform.portfolio-projects.edit', $portfolioProject)
@@ -136,5 +187,22 @@ class PlatformPortfolioProjectController extends Controller
         return redirect()
             ->route('platform.portfolio-projects.index')
             ->with('message', 'Deleted.');
+    }
+
+    private function technicianOptions()
+    {
+        return Technician::query()
+            ->with('user:id,name')
+            ->orderBy('company_id')
+            ->orderBy('id')
+            ->get(['id', 'company_id', 'user_id'])
+            ->map(fn (Technician $technician): array => [
+                'id' => $technician->id,
+                'company_id' => $technician->company_id,
+                'user' => [
+                    'name' => $technician->user?->name,
+                ],
+            ])
+            ->values();
     }
 }

@@ -95,8 +95,42 @@ class MediaUploadService
         $media->delete();
     }
 
-    public static function publicUrl(Media $media): string
+    public static function publicUrl(Media $media, bool $absolute = false): string
     {
-        return Storage::disk($media->disk)->url($media->file_path);
+        if ($media->disk === 'public') {
+            $path = ltrim($media->file_path, '/');
+            if (preg_match('#^(?:https?:)?//#', $path) === 1) {
+                return $path;
+            }
+
+            $url = str_starts_with($path, 'storage/')
+                ? '/'.$path
+                : '/storage/'.$path;
+
+            return $absolute ? url($url) : $url;
+        }
+
+        $url = Storage::disk($media->disk)->url($media->file_path);
+
+        if (preg_match('#^(?:https?:)?//#', $url) === 1) {
+            return $url;
+        }
+
+        return $absolute ? url($url) : $url;
+    }
+
+    /**
+     * @return array{id: int, url: string, sort_order: int, file_name: string|null, mime_type: string|null, size: int|null}
+     */
+    public static function publicPayload(Media $media, bool $absolute = false): array
+    {
+        return [
+            'id' => (int) $media->getKey(),
+            'url' => self::publicUrl($media, $absolute),
+            'sort_order' => (int) $media->sort_order,
+            'file_name' => $media->file_name,
+            'mime_type' => $media->mime_type,
+            'size' => $media->size,
+        ];
     }
 }

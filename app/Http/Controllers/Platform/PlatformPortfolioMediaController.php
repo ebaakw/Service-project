@@ -21,11 +21,18 @@ class PlatformPortfolioMediaController extends Controller
     ): RedirectResponse {
         $this->authorize('update', $portfolioProject);
 
-        $this->mediaUploadService->storePortfolioImage(
-            $portfolioProject,
-            $request->file('image'),
-            $request->input('sort_order') !== null ? (int) $request->input('sort_order') : null
-        );
+        $sortOrder = $request->input('sort_order') !== null ? (int) $request->input('sort_order') : null;
+        $images = $request->file('images', []);
+        $images = is_array($images) ? $images : [$images];
+        if ($request->hasFile('image')) {
+            $images[] = $request->file('image');
+        }
+        $images = array_values(array_filter($images));
+
+        foreach ($images as $image) {
+            $this->mediaUploadService->storePortfolioImage($portfolioProject, $image, $sortOrder);
+            $sortOrder = null;
+        }
 
         return redirect()
             ->route('platform.portfolio-projects.edit', $portfolioProject)

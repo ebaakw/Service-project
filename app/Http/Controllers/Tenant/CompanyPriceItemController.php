@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\ImportCompanyPriceItemsRequest;
 use App\Http\Requests\Tenant\StoreCompanyPriceItemRequest;
 use App\Http\Requests\Tenant\UpdateCompanyPriceItemRequest;
 use App\Models\Company;
 use App\Models\CompanyPriceItem;
 use App\Models\CompanyPriceList;
 use App\Models\ServiceCategory;
+use App\Services\Pricing\CompanyPriceItemImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -26,6 +28,8 @@ class CompanyPriceItemController extends Controller
         $search = $request->string('search')->trim()->value();
         $status = $request->input('status', 'all');
         $priceListId = $request->query('price_list_id');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
 
         $query = CompanyPriceItem::query()
             ->where('company_id', $company->getKey())
@@ -54,16 +58,18 @@ class CompanyPriceItemController extends Controller
 
         $priceLists = CompanyPriceList::query()
             ->where('company_id', $company->getKey())
+            ->with('serviceCategories:id,name_ar,name_en')
             ->orderBy('name_ar')
             ->get(['id', 'name', 'name_ar', 'name_en']);
 
         return Inertia::render('Tenant/Pricing/PriceItems/Index', [
-            'priceItems' => $query->paginate(15)->withQueryString(),
+            'priceItems' => $query->paginate($perPage)->withQueryString(),
             'priceLists' => $priceLists,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
                 'price_list_id' => $priceListId,
+                'per_page' => $perPage,
             ],
         ]);
     }
@@ -77,12 +83,12 @@ class CompanyPriceItemController extends Controller
 
         $priceLists = CompanyPriceList::query()
             ->where('company_id', $company->getKey())
+            ->with('serviceCategories:id,name_ar,name_en')
             ->orderBy('name_ar')
             ->get();
 
         $categories = ServiceCategory::query()
             ->where('is_active', true)
-            ->with(['problems' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
             ->orderBy('sort_order')
             ->get();
 
@@ -112,6 +118,23 @@ class CompanyPriceItemController extends Controller
             ->with('message', __('tenant.saved'));
     }
 
+    public function import(ImportCompanyPriceItemsRequest $request, CompanyPriceItemImportService $importService): RedirectResponse
+    {
+        $this->authorize('create', CompanyPriceItem::class);
+
+        /** @var Company $company */
+        $company = current_company();
+        abort_if($company === null, 403);
+
+        $validated = $request->validated();
+        $result = $importService->import($company, (int) $validated['company_price_list_id'], $validated['rows']);
+
+        return redirect()
+            ->route('price-items.index', ['price_list_id' => $validated['company_price_list_id']])
+            ->with('type', 'success')
+            ->with('message', __('tenant.price_items_import_success', $result));
+    }
+
     public function edit(CompanyPriceItem $price_item): Response
     {
         $this->authorize('update', $price_item);
@@ -121,12 +144,12 @@ class CompanyPriceItemController extends Controller
 
         $priceLists = CompanyPriceList::query()
             ->where('company_id', $company->getKey())
+            ->with('serviceCategories:id,name_ar,name_en')
             ->orderBy('name_ar')
             ->get();
 
         $categories = ServiceCategory::query()
             ->where('is_active', true)
-            ->with(['problems' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
             ->orderBy('sort_order')
             ->get();
 

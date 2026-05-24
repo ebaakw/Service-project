@@ -14,13 +14,23 @@ class UpdatePlatformPortfolioProjectRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $technicianIds = $this->input('technician_ids', []);
+        if (! is_array($technicianIds)) {
+            $technicianIds = [$technicianIds];
+        }
+
+        if ($this->input('technician_id') !== null && $this->input('technician_id') !== '') {
+            $technicianIds[] = $this->input('technician_id');
+        }
+
         $this->merge([
             'service_category_id' => $this->input('service_category_id') === '' || $this->input('service_category_id') === null
                 ? null
                 : $this->input('service_category_id'),
-            'technician_id' => $this->input('technician_id') === '' || $this->input('technician_id') === null
-                ? null
-                : $this->input('technician_id'),
+            'technician_ids' => array_values(array_unique(array_filter(
+                $technicianIds,
+                fn ($id): bool => $id !== null && $id !== ''
+            ))),
             'completed_at' => $this->input('completed_at') === '' ? null : $this->input('completed_at'),
         ]);
     }
@@ -33,6 +43,7 @@ class UpdatePlatformPortfolioProjectRequest extends FormRequest
         /** @var \App\Models\PortfolioProject $project */
         $project = $this->route('portfolio_project');
         $companyId = (int) $this->input('company_id', $project->company_id);
+        $maxKb = (int) config('media.max_image_size_kb', 2048);
 
         return [
             'company_id' => ['required', 'integer', 'exists:companies,id'],
@@ -46,14 +57,18 @@ class UpdatePlatformPortfolioProjectRequest extends FormRequest
             'completed_at' => ['nullable', 'date'],
             'is_featured' => ['boolean'],
             'is_active' => ['boolean'],
+            'images' => ['nullable', 'array'],
+            'images.*' => ['required', 'image', 'max:'.$maxKb],
             'service_category_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('service_categories', 'id')->where(fn ($q) => $q->where('is_active', true)),
             ],
-            'technician_id' => [
+            'technician_ids' => ['nullable', 'array'],
+            'technician_ids.*' => [
                 'nullable',
                 'integer',
+                'distinct',
                 Rule::exists('technicians', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
         ];

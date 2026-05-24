@@ -55,7 +55,7 @@ export default function PlatformTechniciansShow({ technician }: { technician: Te
                             {technician.user.avatar_url ? (
                                 <img
                                     src={technician.user.avatar_url}
-                                    alt=""
+                                    alt={technician.user.name}
                                     className="rounded border bg-white"
                                     style={{ width: 80, height: 80, objectFit: 'cover' }}
                                 />

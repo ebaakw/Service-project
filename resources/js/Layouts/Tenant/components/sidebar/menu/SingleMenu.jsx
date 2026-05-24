@@ -1,21 +1,20 @@
 import handleMouseEnter from "@/Layouts/Tenant/components/sidebar/helper.js";
-import {Link, usePage} from "@inertiajs/react";
+import {Link} from "@inertiajs/react";
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import { hasAnyPermissions, hasPermission } from "@/Utility/Hooks/usePermission.jsx";
 import {routeUrl} from "@/Utility/routeUrl.js";
 import {usePlanFeatures} from "@/Utility/Hooks/usePlanFeatures.jsx";
 import { prefetchInertiaPageForRoute } from "@/Utility/inertiaPrefetch.js";
+import SidebarBadge from "@/Layouts/Tenant/components/sidebar/menu/SidebarBadge.jsx";
 
 const SingleMenu = ({menu, index}) => {
     const {hasFeature} = usePlanFeatures();
-    const { locale } = usePage().props;
 
     if (menu?.requiredFeature && !hasFeature(menu.requiredFeature)) {
         return null;
     }
 
     const badgeCount = menu.badgeCount || 0;
-    const badgeSpacingClass = locale === 'ar' ? 'mr-2' : 'ml-2';
 
     const isRouteActive = () => {
         if (typeof route !== 'function') {
@@ -59,11 +58,7 @@ const SingleMenu = ({menu, index}) => {
                         <i className={'ok nav-icon fas ' + menu.icon + ' mr-2'}></i>
                         <p className="ok mb-0">
                             {__(menu.name)}
-                            {badgeCount > 0 && (
-                                <span className={`right badge badge-warning ${badgeSpacingClass}`}>
-                                    {badgeCount}
-                                </span>
-                            )}
+                            <SidebarBadge count={badgeCount} />
                         </p>
                     </Link>
                 </li>

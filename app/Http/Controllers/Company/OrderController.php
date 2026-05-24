@@ -32,17 +32,80 @@ class OrderController extends Controller
         $companyId = current_company()?->getKey();
         abort_if($companyId === null, 403);
 
-        $orders = Order::query()
+        $search = trim((string) $request->string('search')->toString());
+        $status = trim((string) $request->string('status')->toString());
+        $dateFrom = trim((string) $request->string('date_from')->toString());
+        $dateTo = trim((string) $request->string('date_to')->toString());
+
+        $allowedStatuses = array_map(
+            static fn (OrderStatus $case): string => $case->value,
+            OrderStatus::cases(),
+        );
+        $status = in_array($status, $allowedStatuses, true) ? $status : '';
+
+        $perPageInput = (int) $request->integer('per_page', 10);
+        $perPageAllowList = [10, 25, 50, 100];
+        $perPage = in_array($perPageInput, $perPageAllowList, true) ? $perPageInput : 10;
+
+        $ordersQuery = Order::query()
             ->where('company_id', $companyId)
-            ->with(['customer.user:id,name', 'technician.user:id,name', 'serviceCategory:id,name_ar'])
+            ->with([
+                'customer.user:id,name,name_ar,name_en,email,phone',
+                'technician.user:id,name,name_ar,name_en',
+                'serviceCategory:id,name_ar,name_en',
+            ]);
+
+        if ($search !== '') {
+            $ordersQuery->where(function ($query) use ($search) {
+                $query
+                    ->where('order_number', 'like', "%{$search}%")
+                    ->orWhereHas('customer.user', function ($userQuery) use ($search) {
+                        $userQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('name_ar', 'like', "%{$search}%")
+                            ->orWhere('name_en', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('technician.user', function ($userQuery) use ($search) {
+                        $userQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('name_ar', 'like', "%{$search}%")
+                            ->orWhere('name_en', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('serviceCategory', function ($categoryQuery) use ($search) {
+                        $categoryQuery
+                            ->where('name_ar', 'like', "%{$search}%")
+                            ->orWhere('name_en', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($status !== '') {
+            $ordersQuery->where('status', $status);
+        }
+
+        if ($dateFrom !== '') {
+            $ordersQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo !== '') {
+            $ordersQuery->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $orders = $ordersQuery
             ->orderByDesc('id')
-            ->paginate(15)
+            ->paginate($perPage)
             ->withQueryString();
 
         return Inertia::render('Company/Orders/Index', [
             'orders' => $orders,
             'filters' => [
-                'status' => $request->string('status')->toString(),
+                'search' => $search,
+                'status' => $status,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+                'per_page' => $perPage,
             ],
         ]);
     }

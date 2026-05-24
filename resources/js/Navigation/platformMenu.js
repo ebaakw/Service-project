@@ -105,10 +105,25 @@ export const platformMenu = [
     },
     {
         name: 'dashboard.nav.platform_portfolio',
-        route: 'platform.portfolio-projects.index',
         icon: 'fa-briefcase',
-        permissions: ['portfolio.view', 'portfolio.manage'],
-        activePatterns: ['platform.portfolio-projects.*'],
+        permissions: ['portfolio.view', 'portfolio.manage', 'portfolio_reviews.view'],
+        badge: 'pendingPortfolioReviews',
+        children: [
+            {
+                name: 'dashboard.nav.platform_portfolio',
+                route: 'platform.portfolio-projects.index',
+                permissions: ['portfolio.view', 'portfolio.manage'],
+                activePatterns: ['platform.portfolio-projects.*'],
+            },
+            {
+                name: 'dashboard.nav.pending_portfolio_reviews',
+                route: 'platform.portfolio-reviews.index',
+                params: { review_status: 'pending' },
+                permissions: ['portfolio_reviews.view', 'portfolio.manage'],
+                badge: 'pendingPortfolioReviews',
+                activePatterns: ['platform.portfolio-reviews.*'],
+            },
+        ],
     },
     {
         name: 'dashboard.nav.platform_feedback',

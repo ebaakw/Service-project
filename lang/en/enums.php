@@ -26,6 +26,11 @@ return [
         'approved' => 'Approved',
         'rejected' => 'Rejected',
     ],
+    'portfolio_project_review_status' => [
+        'pending' => 'Pending Review',
+        'approved' => 'Approved',
+        'rejected' => 'Rejected',
+    ],
     'invoice_status' => [
         'draft' => 'Draft',
         'sent' => 'Sent',

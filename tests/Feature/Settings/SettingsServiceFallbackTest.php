@@ -18,13 +18,13 @@ class SettingsServiceFallbackTest extends TestCase
 
         $settings = app(SettingsService::class);
 
-        $settings->setGlobal('inspection_fee', 2.0, SettingValueType::Number, 'orders', null);
-        $this->assertEquals(2.0, (float) $settings->getForCompany('inspection_fee', $company));
+        $settings->setGlobal('currency', 'KWD', SettingValueType::String, 'billing', null);
+        $this->assertSame('KWD', $settings->getForCompany('currency', $company));
 
-        $settings->setForCompany($company, 'inspection_fee', 9.5, SettingValueType::Number, 'orders', null);
-        $this->assertEquals(9.5, (float) $settings->getForCompany('inspection_fee', $company));
+        $settings->setForCompany($company, 'currency', 'SAR', SettingValueType::String, 'billing', null);
+        $this->assertSame('SAR', $settings->getForCompany('currency', $company));
 
         $other = Company::factory()->create();
-        $this->assertEquals(2.0, (float) $settings->getForCompany('inspection_fee', $other));
+        $this->assertSame('KWD', $settings->getForCompany('currency', $other));
     }
 }

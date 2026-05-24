@@ -2,21 +2,26 @@ import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { fieldError, focusField, focusFirstError, getRequiredFieldErrors, invalidClass } from './formValidation';
+import '@/Components/Core/css/switch.css';
 
 const PRICE_TYPES = ['fixed', 'starting_from', 'hourly', 'custom_quote'];
+const DISCOUNT_TYPES = ['percentage', 'fixed_amount'];
+
+function RequiredMark() {
+    return <span className="text-danger"> *</span>;
+}
 
 export default function TenantPriceItemsEdit({ priceItem, priceLists, categories }) {
-    const [catId, setCatId] = useState(priceItem.service_category_id);
-
-    const problems = useMemo(() => {
-        const c = categories.find((x) => x.id === Number(catId));
-        return c?.problems ?? [];
-    }, [categories, catId]);
+    const [clientErrors, setClientErrors] = useState({});
+    const selectedInitialList = priceLists?.find((priceList) => Number(priceList.id) === Number(priceItem.company_price_list_id));
+    const initialCategories = selectedInitialList?.service_categories?.length ? selectedInitialList.service_categories : categories;
 
     const { data, setData, put, processing, errors } = useForm({
         company_price_list_id: priceItem.company_price_list_id,
-        service_category_id: priceItem.service_category_id,
-        service_problem_id: priceItem.service_problem_id ?? '',
+        service_category_id: initialCategories.some((category) => Number(category.id) === Number(priceItem.service_category_id))
+            ? priceItem.service_category_id
+            : initialCategories[0]?.id ?? '',
         name_ar: priceItem.name_ar,
         name_en: priceItem.name_en ?? '',
         description_ar: priceItem.description_ar ?? '',
@@ -24,18 +29,66 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
         price_type: typeof priceItem.price_type === 'object' ? priceItem.price_type?.value ?? 'fixed' : priceItem.price_type,
         price: priceItem.price ?? '',
         minimum_price: priceItem.minimum_price ?? '',
-        inspection_fee: priceItem.inspection_fee ?? '',
+        discount_type:
+            typeof priceItem.discount_type === 'object' ? priceItem.discount_type?.value ?? '' : priceItem.discount_type ?? '',
+        discount_value: priceItem.discount_value ?? '',
         warranty_days: priceItem.warranty_days ?? '',
         warranty_description_ar: priceItem.warranty_description_ar ?? '',
         warranty_description_en: priceItem.warranty_description_en ?? '',
-        duration_minutes: priceItem.duration_minutes ?? '',
         sort_order: priceItem.sort_order,
         is_active: priceItem.is_active,
     });
 
+    const setField = (field, value) => {
+        setData(field, value);
+
+        if (clientErrors[field]) {
+            setClientErrors((current) => {
+                const next = { ...current };
+                delete next[field];
+
+                return next;
+            });
+        }
+    };
+
     const submit = (e) => {
         e.preventDefault();
-        put(route('price-items.update', priceItem.id));
+
+        const nextClientErrors = getRequiredFieldErrors(data, __('tenant.field_required'));
+        setClientErrors(nextClientErrors);
+
+        const firstInvalidField = Object.keys(nextClientErrors)[0];
+        if (firstInvalidField) {
+            focusField(firstInvalidField);
+            return;
+        }
+
+        put(route('price-items.update', priceItem.id), {
+            onError: (serverErrors) => focusFirstError(serverErrors),
+        });
+    };
+
+    const availableCategories = useMemo(() => {
+        const selectedList = priceLists?.find((priceList) => Number(priceList.id) === Number(data.company_price_list_id));
+
+        return selectedList?.service_categories?.length ? selectedList.service_categories : [];
+    }, [data.company_price_list_id, priceLists]);
+
+    const setSelectedPriceList = (value) => {
+        const nextPriceListId = Number(value);
+        const selectedList = priceLists?.find((priceList) => Number(priceList.id) === nextPriceListId);
+        const nextCategories = selectedList?.service_categories ?? [];
+
+        setData('company_price_list_id', nextPriceListId);
+        setData('service_category_id', nextCategories[0]?.id ?? '');
+        setClientErrors((current) => {
+            const next = { ...current };
+            delete next.company_price_list_id;
+            delete next.service_category_id;
+
+            return next;
+        });
     };
 
     return (
@@ -47,17 +100,23 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
                     <div className="card card-outline card-primary">
                         <div className="card-header">
                             <h3 className="card-title">{__('tenant.edit_price_item')}</h3>
-                            <Link href={route('price-items.index')} className="btn btn-tool btn-sm">
-                                ←
-                            </Link>
+                            <div className="card-tools">
+                                <Link href={route('price-items.index')} className="btn btn-tool btn-sm">
+                                    ←
+                                </Link>
+                            </div>
                         </div>
                         <form onSubmit={submit} className="card-body">
                             <div className="form-group">
-                                <label>{__('tenant.select_price_list')}</label>
+                                <label>
+                                    {__('tenant.select_price_list')}
+                                    <RequiredMark />
+                                </label>
                                 <select
-                                    className="form-control"
+                                    name="company_price_list_id"
+                                    className={invalidClass('custom-select', 'company_price_list_id', errors, clientErrors)}
                                     value={data.company_price_list_id}
-                                    onChange={(e) => setData('company_price_list_id', Number(e.target.value))}
+                                    onChange={(e) => setSelectedPriceList(e.target.value)}
                                 >
                                     {priceLists.map((pl) => (
                                         <option key={pl.id} value={pl.id}>
@@ -65,77 +124,80 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
                                         </option>
                                     ))}
                                 </select>
-                                {errors.company_price_list_id && (
-                                    <span className="text-danger small d-block">{errors.company_price_list_id}</span>
+                                {fieldError('company_price_list_id', errors, clientErrors) && (
+                                    <span className="text-danger small d-block">
+                                        {fieldError('company_price_list_id', errors, clientErrors)}
+                                    </span>
                                 )}
                             </div>
 
                             <div className="form-group">
-                                <label>{__('tenant.select_category')}</label>
+                                <label>
+                                    {__('tenant.select_category')}
+                                    <RequiredMark />
+                                </label>
+                                {availableCategories.length === 0 && (
+                                    <div className="alert alert-warning py-2">
+                                        {__('tenant.price_list_has_no_categories')}
+                                    </div>
+                                )}
                                 <select
-                                    className="form-control"
+                                    name="service_category_id"
+                                    className={invalidClass('custom-select', 'service_category_id', errors, clientErrors)}
                                     value={data.service_category_id}
                                     onChange={(e) => {
                                         const v = Number(e.target.value);
-                                        setCatId(v);
-                                        setData('service_category_id', v);
-                                        setData('service_problem_id', '');
+                                        setField('service_category_id', v);
                                     }}
                                 >
-                                    {categories.map((c) => (
+                                    {availableCategories.map((c) => (
                                         <option key={c.id} value={c.id}>
                                             {c.name_ar}
                                         </option>
                                     ))}
                                 </select>
-                                {errors.service_category_id && (
-                                    <span className="text-danger small d-block">{errors.service_category_id}</span>
+                                {fieldError('service_category_id', errors, clientErrors) && (
+                                    <span className="text-danger small d-block">
+                                        {fieldError('service_category_id', errors, clientErrors)}
+                                    </span>
                                 )}
                             </div>
 
                             <div className="form-group">
-                                <label>{__('tenant.select_problem')}</label>
-                                <select
-                                    className="form-control"
-                                    value={data.service_problem_id}
-                                    onChange={(e) =>
-                                        setData('service_problem_id', e.target.value ? Number(e.target.value) : '')
-                                    }
-                                >
-                                    <option value="">—</option>
-                                    {problems.map((p) => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.title_ar}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errors.service_problem_id && (
-                                    <span className="text-danger small d-block">{errors.service_problem_id}</span>
-                                )}
-                            </div>
-
-                            <div className="form-group">
-                                <label>{__('tenant.item_name_ar')}</label>
+                                <label>
+                                    {__('tenant.item_name_ar')}
+                                    <RequiredMark />
+                                </label>
                                 <input
-                                    className="form-control"
+                                    name="name_ar"
+                                    className={invalidClass('form-control', 'name_ar', errors, clientErrors)}
                                     value={data.name_ar}
-                                    onChange={(e) => setData('name_ar', e.target.value)}
+                                    onChange={(e) => setField('name_ar', e.target.value)}
                                 />
-                                {errors.name_ar && <span className="text-danger small d-block">{errors.name_ar}</span>}
+                                {fieldError('name_ar', errors, clientErrors) && (
+                                    <span className="text-danger small d-block">{fieldError('name_ar', errors, clientErrors)}</span>
+                                )}
                             </div>
                             <div className="form-group">
-                                <label>{__('tenant.item_name_en')}</label>
+                                <label>
+                                    {__('tenant.item_name_en')}
+                                    <RequiredMark />
+                                </label>
                                 <input
-                                    className="form-control"
+                                    name="name_en"
+                                    className={invalidClass('form-control', 'name_en', errors, clientErrors)}
                                     value={data.name_en}
-                                    onChange={(e) => setData('name_en', e.target.value)}
+                                    onChange={(e) => setField('name_en', e.target.value)}
                                 />
-                                {errors.name_en && <span className="text-danger small d-block">{errors.name_en}</span>}
+                                {fieldError('name_en', errors, clientErrors) && (
+                                    <span className="text-danger small d-block">{fieldError('name_en', errors, clientErrors)}</span>
+                                )}
                             </div>
 
                             <div className="form-group">
-                                <label>{__('tenant.description')} (AR)</label>
+                                <label>{__('tenant.description_ar')}</label>
                                 <textarea
+                                    name="description_ar"
                                     className="form-control"
                                     rows={2}
                                     value={data.description_ar}
@@ -143,8 +205,9 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
                                 />
                             </div>
                             <div className="form-group">
-                                <label>{__('tenant.description')} (EN)</label>
+                                <label>{__('tenant.description_en')}</label>
                                 <textarea
+                                    name="description_en"
                                     className="form-control"
                                     rows={2}
                                     value={data.description_en}
@@ -153,52 +216,95 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
                             </div>
 
                             <div className="form-group">
-                                <label>{__('tenant.price_type')}</label>
+                                <label>
+                                    {__('tenant.price_type')}
+                                    <RequiredMark />
+                                </label>
                                 <select
-                                    className="form-control"
+                                    name="price_type"
+                                    className={invalidClass('custom-select', 'price_type', errors, clientErrors)}
                                     value={data.price_type}
-                                    onChange={(e) => setData('price_type', e.target.value)}
+                                    onChange={(e) => setField('price_type', e.target.value)}
                                 >
                                     {PRICE_TYPES.map((t) => (
                                         <option key={t} value={t}>
-                                            {t}
+                                            {__(`tenant.price_type_${t}`)}
                                         </option>
                                     ))}
                                 </select>
-                                {errors.price_type && <span className="text-danger small d-block">{errors.price_type}</span>}
+                                {fieldError('price_type', errors, clientErrors) && (
+                                    <span className="text-danger small d-block">{fieldError('price_type', errors, clientErrors)}</span>
+                                )}
                             </div>
 
                             <div className="form-row">
-                                <div className="form-group col-md-4">
+                                <div className="form-group col-md-6">
                                     <label>{__('tenant.price')}</label>
                                     <input
+                                        name="price"
                                         type="number"
                                         step="0.001"
-                                        className="form-control"
+                                        className={invalidClass('form-control', 'price', errors, clientErrors)}
                                         value={data.price}
                                         onChange={(e) => setData('price', e.target.value)}
                                     />
                                     {errors.price && <span className="text-danger small d-block">{errors.price}</span>}
                                 </div>
-                                <div className="form-group col-md-4">
+                                <div className="form-group col-md-6">
                                     <label>{__('tenant.minimum_price')}</label>
                                     <input
+                                        name="minimum_price"
                                         type="number"
                                         step="0.001"
-                                        className="form-control"
+                                        className={invalidClass('form-control', 'minimum_price', errors, clientErrors)}
                                         value={data.minimum_price}
                                         onChange={(e) => setData('minimum_price', e.target.value)}
                                     />
+                                    {errors.minimum_price && (
+                                        <span className="text-danger small d-block">{errors.minimum_price}</span>
+                                    )}
                                 </div>
-                                <div className="form-group col-md-4">
-                                    <label>{__('tenant.inspection_fee')}</label>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group col-md-6">
+                                    <label>{__('tenant.price_item_discount')}</label>
+                                    <select
+                                        name="discount_type"
+                                        className={invalidClass('custom-select', 'discount_type', errors, clientErrors)}
+                                        value={data.discount_type}
+                                        onChange={(e) => {
+                                            setData('discount_type', e.target.value);
+                                            if (!e.target.value) {
+                                                setData('discount_value', '');
+                                            }
+                                        }}
+                                    >
+                                        <option value="">{__('tenant.no_discount')}</option>
+                                        {DISCOUNT_TYPES.map((type) => (
+                                            <option key={type} value={type}>
+                                                {__(`tenant.discount_type_${type}`)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.discount_type && (
+                                        <span className="text-danger small d-block">{errors.discount_type}</span>
+                                    )}
+                                </div>
+                                <div className="form-group col-md-6">
+                                    <label>{__('tenant.discount_value')}</label>
                                     <input
+                                        name="discount_value"
                                         type="number"
                                         step="0.001"
-                                        className="form-control"
-                                        value={data.inspection_fee}
-                                        onChange={(e) => setData('inspection_fee', e.target.value)}
+                                        className={invalidClass('form-control', 'discount_value', errors, clientErrors)}
+                                        value={data.discount_value}
+                                        disabled={!data.discount_type}
+                                        onChange={(e) => setData('discount_value', e.target.value)}
                                     />
+                                    {errors.discount_value && (
+                                        <span className="text-danger small d-block">{errors.discount_value}</span>
+                                    )}
                                 </div>
                             </div>
 
@@ -206,25 +312,21 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
                                 <div className="form-group col-md-4">
                                     <label>{__('tenant.warranty_days')}</label>
                                     <input
+                                        name="warranty_days"
                                         type="number"
-                                        className="form-control"
+                                        className={invalidClass('form-control', 'warranty_days', errors, clientErrors)}
                                         value={data.warranty_days}
                                         onChange={(e) => setData('warranty_days', e.target.value)}
                                     />
-                                </div>
-                                <div className="form-group col-md-4">
-                                    <label>{__('tenant.duration_minutes')}</label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        value={data.duration_minutes}
-                                        onChange={(e) => setData('duration_minutes', e.target.value)}
-                                    />
+                                    {errors.warranty_days && (
+                                        <span className="text-danger small d-block">{errors.warranty_days}</span>
+                                    )}
                                 </div>
                             </div>
                             <div className="form-group">
                                 <label>{__('tenant.warranty_desc_ar')}</label>
                                 <textarea
+                                    name="warranty_description_ar"
                                     className="form-control"
                                     rows={2}
                                     value={data.warranty_description_ar}
@@ -234,6 +336,7 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
                             <div className="form-group">
                                 <label>{__('tenant.warranty_desc_en')}</label>
                                 <textarea
+                                    name="warranty_description_en"
                                     className="form-control"
                                     rows={2}
                                     value={data.warranty_description_en}
@@ -244,22 +347,25 @@ export default function TenantPriceItemsEdit({ priceItem, priceLists, categories
                             <div className="form-group">
                                 <label>{__('tenant.sort_order')}</label>
                                 <input
+                                    name="sort_order"
                                     type="number"
-                                    className="form-control"
+                                    className={invalidClass('form-control', 'sort_order', errors, clientErrors)}
                                     value={data.sort_order}
                                     onChange={(e) => setData('sort_order', Number(e.target.value))}
                                 />
+                                {errors.sort_order && <span className="text-danger small d-block">{errors.sort_order}</span>}
                             </div>
 
-                            <div className="form-group form-check">
+                            <div className="form-group custom-control custom-switch custom-switch-md">
                                 <input
                                     id="pi_active_e"
+                                    name="is_active"
                                     type="checkbox"
-                                    className="form-check-input"
+                                    className="custom-control-input"
                                     checked={data.is_active}
                                     onChange={(e) => setData('is_active', e.target.checked)}
                                 />
-                                <label className="form-check-label" htmlFor="pi_active_e">
+                                <label className="custom-control-label pt-1 pl-3" htmlFor="pi_active_e">
                                     {__('tenant.active')}
                                 </label>
                             </div>
