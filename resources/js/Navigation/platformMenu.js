@@ -115,6 +115,7 @@ export const platformMenu = [
         route: 'platform.feedback-tickets.index',
         icon: 'fa-comment-dots',
         permissions: ['feedback.view', 'complaints.manage'],
+        badge: 'openFeedbackTickets',
         activePatterns: ['platform.feedback-tickets.*'],
     },
     {

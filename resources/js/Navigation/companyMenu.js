@@ -98,6 +98,7 @@ export const companyMenu = [
         route: 'company.feedback-tickets.index',
         icon: 'fa-comment-dots',
         permissions: ['feedback.view', 'complaints.manage'],
+        badge: 'openFeedbackTickets',
         activePatterns: ['company.feedback-tickets.*'],
     },
     {

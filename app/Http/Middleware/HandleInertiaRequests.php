@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\FeedbackTicketStatus;
 use App\Enums\UserType;
 use App\Enums\TechnicianReviewStatus;
+use App\Models\FeedbackTicket;
 use App\Models\Technician;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
@@ -97,16 +99,45 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        if ($user->isPlatformAdmin() && $user->hasPermission('technician_reviews.view')) {
-            return [
-                'pendingTechnicianReviews' => Technician::query()
+        if ($user->isPlatformAdmin()) {
+            $badges = [];
+
+            if ($user->hasPermission('technician_reviews.view')) {
+                $badges['pendingTechnicianReviews'] = Technician::query()
                     ->where('review_status', TechnicianReviewStatus::Pending)
-                    ->count(),
+                    ->count();
+            }
+
+            if ($user->hasAnyPermission(['feedback.view', 'complaints.manage'])) {
+                $badges['openFeedbackTickets'] = FeedbackTicket::query()
+                    ->where('status', FeedbackTicketStatus::Open->value)
+                    ->count();
+            }
+
+            return $badges;
+        }
+
+        if ($user->isCompanyUser()) {
+            $company = $request->attributes->get('current_company');
+            $companyId = $company?->getKey();
+            $openFeedbackTickets = 0;
+
+            if ($companyId !== null && $user->hasAnyPermission(['feedback.view', 'complaints.manage'], $companyId)) {
+                $openFeedbackTickets = FeedbackTicket::query()
+                    ->where('company_id', $companyId)
+                    ->where('status', FeedbackTicketStatus::Open->value)
+                    ->count();
+            }
+
+            return [
+                'pendingTechnicianReviews' => 0,
+                'openFeedbackTickets' => $openFeedbackTickets,
             ];
         }
 
         return [
             'pendingTechnicianReviews' => 0,
+            'openFeedbackTickets' => 0,
         ];
     }
 
