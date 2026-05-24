@@ -73,6 +73,7 @@ return [
         'back' => 'Back',
         'remove' => 'Remove',
         'close' => 'Close',
+        'view_more' => 'View more',
     ],
     'common' => [
         'yes' => 'Yes',

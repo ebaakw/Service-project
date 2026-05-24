@@ -10,6 +10,10 @@
     box-shadow: 0 0 1px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
+.service-stat-card--linked {
+    padding-bottom: 42px;
+}
+
 .service-stat-card__content {
     position: relative;
     z-index: 2;
@@ -68,6 +72,28 @@
     right: auto;
 }
 
+.service-stat-card__footer {
+    position: absolute;
+    z-index: 3;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 5px 10px;
+    color: #fff;
+    font-size: 0.875rem;
+    line-height: 1;
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.service-stat-card--rtl .service-stat-card__footer {
+    flex-direction: row-reverse;
+}
+
 .service-stat-card__link {
     display: block;
     color: inherit;
@@ -79,5 +105,8 @@
 }
 .service-stat-card__link:focus {
     outline: none;
+}
+.service-stat-card__link:focus-visible .service-stat-card {
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.45), 0 0 1px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 

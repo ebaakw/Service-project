@@ -55,6 +55,7 @@ export default function CompanyDashboard() {
         labelFallback: string;
         color: string;
         icon: string;
+        href: string;
     }> = [
         {
             key: 'orders',
@@ -62,6 +63,7 @@ export default function CompanyDashboard() {
             labelFallback: 'Company Orders',
             color: 'bg-warning',
             icon: 'fa-shopping-bag',
+            href: route('company.orders.index'),
         },
         {
             key: 'orders_pending',
@@ -69,6 +71,7 @@ export default function CompanyDashboard() {
             labelFallback: 'Pending Orders',
             color: 'bg-secondary',
             icon: 'fa-hourglass-half',
+            href: route('company.orders.index'),
         },
         {
             key: 'technicians',
@@ -76,13 +79,15 @@ export default function CompanyDashboard() {
             labelFallback: 'Company Technicians',
             color: 'bg-success',
             icon: 'fa-user-cog',
+            href: route('company.technicians.index'),
         },
         {
             key: 'invoices_unpaid',
-            labelKey: 'nav.all_invoices',
-            labelFallback: 'Unpaid Invoices',
+            labelKey: 'nav.company_orders',
+            labelFallback: 'Company Orders',
             color: 'bg-danger',
-            icon: 'fa-file-invoice',
+            icon: 'fa-shopping-bag',
+            href: route('company.orders.index'),
         },
         {
             key: 'portfolio',
@@ -90,6 +95,7 @@ export default function CompanyDashboard() {
             labelFallback: 'Company Portfolio',
             color: 'bg-info',
             icon: 'fa-briefcase',
+            href: route('company.portfolio-projects.index'),
         },
         {
             key: 'feedback_open',
@@ -97,6 +103,7 @@ export default function CompanyDashboard() {
             labelFallback: 'Company Feedback',
             color: 'bg-primary',
             icon: 'fa-comment-dots',
+            href: route('company.feedback-tickets.index'),
         },
     ];
 
@@ -127,7 +134,9 @@ export default function CompanyDashboard() {
                             value={fmt(s[c.key])}
                             icon={c.icon}
                             color={c.color}
+                            href={c.href}
                             isRtl={isRtl}
+                            moreLabel={tr(t, 'actions.view_more', 'View more')}
                         />
                     </div>
                 ))}

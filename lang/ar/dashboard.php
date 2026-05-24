@@ -73,6 +73,7 @@ return [
         'back' => 'رجوع',
         'remove' => 'إزالة',
         'close' => 'إغلاق',
+        'view_more' => 'عرض المزيد',
     ],
     'common' => [
         'yes' => 'نعم',

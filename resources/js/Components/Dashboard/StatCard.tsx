@@ -11,6 +11,7 @@ export type StatCardProps = {
     color: string;
     href?: string;
     isRtl?: boolean;
+    moreLabel?: string;
     /** Optional additional text class, e.g. "text-dark" (defaults to white on colored backgrounds) */
     textColor?: string;
 };
@@ -27,6 +28,7 @@ export default function StatCard({
     color,
     href,
     isRtl,
+    moreLabel,
     textColor,
 }: StatCardProps) {
     const rtl = typeof isRtl === 'boolean' ? isRtl : inferIsRtl();
@@ -36,6 +38,7 @@ export default function StatCard({
             className={classNames('service-stat-card', color, {
                 'service-stat-card--rtl': rtl,
                 'service-stat-card--ltr': !rtl,
+                'service-stat-card--linked': href,
             })}
         >
             <div className={classNames('service-stat-card__content', textColor ?? 'text-white')}>
@@ -45,6 +48,12 @@ export default function StatCard({
             <div className="service-stat-card__icon" aria-hidden="true">
                 <i className={classNames('fas', icon)} />
             </div>
+            {href && moreLabel ? (
+                <div className="service-stat-card__footer">
+                    <span>{moreLabel}</span>
+                    <i className="fas fa-arrow-circle-right" aria-hidden="true" />
+                </div>
+            ) : null}
         </div>
     );
 
