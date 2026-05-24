@@ -57,64 +57,73 @@ export default function PlatformDashboard() {
         labelFallback: string;
         color: string;
         icon: string;
+        href: string;
     }> = [
-            {
-                key: 'companies',
-                labelKey: 'nav.all_companies',
-                labelFallback: 'All Companies',
-                color: 'bg-info',
-                icon: 'fa-building',
-            },
-            {
-                key: 'companies_active',
-                labelKey: 'nav.all_companies',
-                labelFallback: locale === 'ar' ? 'الشركات النشطة' : 'Active Companies',
-                color: 'bg-success',
-                icon: 'fa-check-circle',
-            },
-            {
-                key: 'customers',
-                labelKey: 'nav.all_customers',
-                labelFallback: 'All Customers',
-                color: 'bg-primary',
-                icon: 'fa-user-friends',
-            },
-            {
-                key: 'technicians',
-                labelKey: 'nav.all_technicians',
-                labelFallback: 'All Technicians',
-                color: 'bg-success',
-                icon: 'fa-user-cog',
-            },
-            {
-                key: 'orders',
-                labelKey: 'nav.all_orders',
-                labelFallback: 'All Orders',
-                color: 'bg-warning',
-                icon: 'fa-shopping-bag',
-            },
-            {
-                key: 'orders_pending',
-                labelKey: 'nav.all_orders',
-                labelFallback: locale === 'ar' ? 'الطلبات قيد المعالجة' : 'Orders In Progress',
-                color: 'bg-secondary',
-                icon: 'fa-hourglass-half',
-            },
-            {
-                key: 'invoices',
-                labelKey: 'nav.all_invoices',
-                labelFallback: 'All Invoices',
-                color: 'bg-danger',
-                icon: 'fa-file-invoice',
-            },
-            {
-                key: 'feedback_open',
-                labelKey: 'nav.platform_feedback',
-                labelFallback: 'Platform Feedback',
-                color: 'bg-navy',
-                icon: 'fa-comment-dots',
-            },
-        ];
+        {
+            key: 'companies',
+            labelKey: 'nav.all_companies',
+            labelFallback: 'All Companies',
+            color: 'bg-info',
+            icon: 'fa-building',
+            href: route('platform.companies.index'),
+        },
+        {
+            key: 'companies_active',
+            labelKey: 'nav.all_companies',
+            labelFallback: locale === 'ar' ? 'الشركات النشطة' : 'Active Companies',
+            color: 'bg-success',
+            icon: 'fa-check-circle',
+            href: route('platform.companies.index'),
+        },
+        {
+            key: 'customers',
+            labelKey: 'nav.all_customers',
+            labelFallback: 'All Customers',
+            color: 'bg-primary',
+            icon: 'fa-user-friends',
+            href: route('platform.customers.index'),
+        },
+        {
+            key: 'technicians',
+            labelKey: 'nav.all_technicians',
+            labelFallback: 'All Technicians',
+            color: 'bg-success',
+            icon: 'fa-user-cog',
+            href: route('platform.technicians.index'),
+        },
+        {
+            key: 'orders',
+            labelKey: 'nav.all_orders',
+            labelFallback: 'All Orders',
+            color: 'bg-warning',
+            icon: 'fa-shopping-bag',
+            href: route('platform.orders.index'),
+        },
+        {
+            key: 'orders_pending',
+            labelKey: 'nav.all_orders',
+            labelFallback: locale === 'ar' ? 'الطلبات قيد المعالجة' : 'Orders In Progress',
+            color: 'bg-secondary',
+            icon: 'fa-hourglass-half',
+            href: route('platform.orders.index'),
+        },
+        {
+            key: 'invoices',
+            labelKey: 'nav.all_invoices',
+            labelFallback: 'All Invoices',
+            color: 'bg-danger',
+            icon: 'fa-file-invoice',
+            href: route('platform.invoices.index'),
+        },
+        {
+            key: 'feedback_open',
+            labelKey: 'nav.platform_feedback',
+            labelFallback: 'Platform Feedback',
+            color: 'bg-navy',
+            icon: 'fa-comment-dots',
+            href: route('platform.feedback-tickets.index'),
+        },
+    ];
 
     return (
         <PlatformAdminLayout
@@ -141,7 +150,9 @@ export default function PlatformDashboard() {
                             value={fmt(s[c.key])}
                             icon={c.icon}
                             color={c.color}
+                            href={c.href}
                             isRtl={isRtl}
+                            moreLabel={tr(t, 'actions.view_more', 'View more')}
                         />
                     </div>
                 ))}
