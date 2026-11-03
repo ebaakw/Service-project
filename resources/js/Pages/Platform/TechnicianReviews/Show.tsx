@@ -270,7 +270,7 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                 technicianName={technician.display_name_ar ?? technician.display_name_en ?? technician.user.name}
                 processing={isRejecting}
                 onClose={() => setShowRejectModal(false)}
-                onSubmit={submitRejection}
+                onConfirm={submitRejection}
             />
         </PlatformAdminLayout>
     );
