@@ -25,6 +25,8 @@ return [
         'pending' => 'Pending Review',
         'approved' => 'Approved',
         'rejected' => 'Rejected',
+        'pending_update' => 'Pending Update Approval',
+        'pending_deletion' => 'Pending Deletion Approval',
     ],
     'portfolio_project_review_status' => [
         'pending' => 'Pending Review',
@@ -99,5 +101,9 @@ return [
         'rejected' => 'Rejected',
         'expired' => 'Expired',
         'cancelled' => 'Cancelled',
+    ],
+    'technician_delay_type' => [
+        'accept' => 'Late acceptance',
+        'arrival' => 'Late arrival',
     ],
 ];

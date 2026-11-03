@@ -25,6 +25,8 @@ return [
         'pending' => 'قيد المراجعة',
         'approved' => 'مقبول',
         'rejected' => 'مرفوض',
+        'pending_update' => 'بانتظار اعتماد التعديل',
+        'pending_deletion' => 'بانتظار اعتماد الحذف',
     ],
     'portfolio_project_review_status' => [
         'pending' => 'قيد المراجعة',
@@ -99,5 +101,9 @@ return [
         'rejected' => 'مرفوض',
         'expired' => 'منتهي',
         'cancelled' => 'ملغي',
+    ],
+    'technician_delay_type' => [
+        'accept' => 'تأخر في القبول',
+        'arrival' => 'تأخر في الوصول',
     ],
 ];

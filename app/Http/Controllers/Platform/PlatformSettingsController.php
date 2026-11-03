@@ -20,6 +20,8 @@ class PlatformSettingsController extends Controller
         'inspection_fee' => [SettingValueType::Number, 'orders', 'Default inspection fee (KWD)'],
         'currency' => [SettingValueType::String, 'billing', 'Display currency code'],
         'order_offer_expiry_minutes' => [SettingValueType::Number, 'orders', 'Order offer expiry (minutes)'],
+        'technician_accept_sla_minutes' => [SettingValueType::Number, 'orders', 'Minutes allowed for technician to accept after assignment'],
+        'technician_arrival_sla_minutes' => [SettingValueType::Number, 'orders', 'Minutes allowed for technician to arrive after acceptance'],
         'platform_commission_percentage' => [SettingValueType::Number, 'billing', 'Platform commission percent'],
         'support_phone' => [SettingValueType::String, 'support', 'Public support phone'],
         'support_email' => [SettingValueType::String, 'support', 'Public support email'],

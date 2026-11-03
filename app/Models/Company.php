@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CompanyStatus;
 use App\Enums\SubscriptionStatus;
 use App\Models\Concerns\HasLocalizedFields;
+use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +15,7 @@ use Illuminate\Support\Str;
 
 class Company extends Model
 {
-    /** @use HasFactory<\Database\Factories\CompanyFactory> */
+    /** @use HasFactory<CompanyFactory> */
     use HasFactory, HasLocalizedFields, SoftDeletes;
 
     protected static function booted(): void
@@ -48,6 +49,11 @@ class Company extends Model
         'description_en',
         'phone',
         'email',
+        'contacts',
+        'address',
+        'working_hours',
+        'iban',
+        'bank_name',
         'status',
         'subscription_status',
         'subscription_starts_at',
@@ -59,9 +65,16 @@ class Company extends Model
         'allow_final_invoice_without_items',
     ];
 
+    public const DOCUMENT_COLLECTIONS = [
+        'license',
+        'signature_authorization',
+        'additional_documents',
+    ];
+
     protected function casts(): array
     {
         return [
+            'contacts' => 'array',
             'status' => CompanyStatus::class,
             'subscription_status' => SubscriptionStatus::class,
             'subscription_starts_at' => 'datetime',
@@ -139,4 +152,3 @@ class Company extends Model
         return $this->morphMany(Media::class, 'model');
     }
 }
-

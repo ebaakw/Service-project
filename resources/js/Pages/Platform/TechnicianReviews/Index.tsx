@@ -58,6 +58,8 @@ export default function TechnicianReviewsIndex({
         const s = (status ?? '').toLowerCase();
         if (s === 'approved') return <StatusBadge variant="success">{statusLabels.approved ?? 'Approved'}</StatusBadge>;
         if (s === 'pending') return <StatusBadge variant="warning">{statusLabels.pending ?? 'Pending'}</StatusBadge>;
+        if (s === 'pending_update') return <StatusBadge variant="warning">{statusLabels.pending_update ?? 'Pending update'}</StatusBadge>;
+        if (s === 'pending_deletion') return <StatusBadge variant="danger">{statusLabels.pending_deletion ?? 'Pending deletion'}</StatusBadge>;
         if (s === 'rejected') return <StatusBadge variant="danger">{statusLabels.rejected ?? 'Rejected'}</StatusBadge>;
         return <span className="text-muted">—</span>;
     };
@@ -253,6 +255,8 @@ export default function TechnicianReviewsIndex({
                         <div className="col-md-3 mb-3">
                             <select className="form-control" value={reviewStatus} onChange={(e) => setReviewStatus(e.target.value)}>
                                 <option value="pending">{statusLabels.pending ?? 'Pending'}</option>
+                                <option value="pending_update">{statusLabels.pending_update ?? 'Pending update'}</option>
+                                <option value="pending_deletion">{statusLabels.pending_deletion ?? 'Pending deletion'}</option>
                                 <option value="approved">{statusLabels.approved ?? 'Approved'}</option>
                                 <option value="rejected">{statusLabels.rejected ?? 'Rejected'}</option>
                                 <option value="all">{__('tenant.technician_reviews.all')}</option>

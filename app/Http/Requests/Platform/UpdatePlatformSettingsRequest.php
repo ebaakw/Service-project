@@ -35,6 +35,8 @@ class UpdatePlatformSettingsRequest extends FormRequest
             'settings.inspection_fee' => ['nullable', 'numeric', 'min:0'],
             'settings.currency' => ['nullable', 'string', 'max:10'],
             'settings.order_offer_expiry_minutes' => ['nullable', 'integer', 'min:1'],
+            'settings.technician_accept_sla_minutes' => ['nullable', 'integer', 'min:1'],
+            'settings.technician_arrival_sla_minutes' => ['nullable', 'integer', 'min:1'],
             'settings.platform_commission_percentage' => ['nullable', 'numeric', 'min:0'],
             'settings.support_phone' => ['nullable', 'string', 'max:50'],
             'settings.support_email' => ['nullable', 'email', 'max:255'],

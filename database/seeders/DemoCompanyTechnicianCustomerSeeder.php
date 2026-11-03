@@ -76,6 +76,13 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
             ['user_id' => $technicianUser->getKey()],
             [
                 'company_id' => $company->getKey(),
+                'first_name_ar' => 'فني',
+                'second_name_ar' => 'تجريبي',
+                'family_name_ar' => 'ديمو',
+                'first_name_en' => 'Demo',
+                'second_name_en' => 'Field',
+                'family_name_en' => 'Technician',
+                'civil_id_number' => '288010101001',
                 'employee_code' => 'TEC-001',
                 'job_title' => 'Field technician',
                 'is_active' => true,

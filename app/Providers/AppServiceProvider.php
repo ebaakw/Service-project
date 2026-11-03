@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\Orders\ArrivalSlaResolverInterface;
 use App\Contracts\PaymentGatewayContract;
 use App\Models\CompanyPriceItem;
 use App\Models\CompanyPriceList;
@@ -11,15 +12,16 @@ use App\Models\Media;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderOffer;
+use App\Models\PortfolioProject;
 use App\Models\Role;
+use App\Models\Technician;
 use App\Models\User;
 use App\Models\UserDevice;
-use App\Models\PortfolioProject;
-use App\Models\Technician;
 use App\Observers\OrderItemObserver;
 use App\Observers\OrderOfferObserver;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
+use App\Services\Orders\FixedMinutesArrivalSlaResolver;
 use App\Services\Payments\FakePaymentGateway;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->app->singleton(PaymentGatewayContract::class, FakePaymentGateway::class);
+        $this->app->singleton(ArrivalSlaResolverInterface::class, FixedMinutesArrivalSlaResolver::class);
     }
 
     /**

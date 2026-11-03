@@ -27,6 +27,8 @@ const GROUP_UI: Record<string, GroupUi> = {
 const INPUT_TYPES: Record<string, HTMLInputTypeAttribute> = {
     inspection_fee: 'number',
     order_offer_expiry_minutes: 'number',
+    technician_accept_sla_minutes: 'number',
+    technician_arrival_sla_minutes: 'number',
     platform_commission_percentage: 'number',
     support_email: 'email',
     support_phone: 'tel',
@@ -35,6 +37,8 @@ const INPUT_TYPES: Record<string, HTMLInputTypeAttribute> = {
 const INPUT_STEPS: Record<string, string> = {
     inspection_fee: '0.001',
     order_offer_expiry_minutes: '1',
+    technician_accept_sla_minutes: '1',
+    technician_arrival_sla_minutes: '1',
     platform_commission_percentage: '0.01',
 };
 

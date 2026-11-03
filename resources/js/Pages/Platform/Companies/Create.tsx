@@ -29,6 +29,14 @@ export default function PlatformCompaniesCreate({
         is_featured: false,
         default_inspection_fee: '',
         allow_final_invoice_without_items: false,
+        contacts: [] as Array<{ name: string; phone: string; position: string }>,
+        address: '',
+        working_hours: '',
+        iban: '',
+        bank_name: '',
+        license_files: [] as File[],
+        signature_authorization_files: [] as File[],
+        additional_documents_files: [] as File[],
         create_owner: false,
         owner_name_ar: '',
         owner_name_en: '',
@@ -99,4 +107,3 @@ export default function PlatformCompaniesCreate({
         </PlatformAdminLayout>
     );
 }
-

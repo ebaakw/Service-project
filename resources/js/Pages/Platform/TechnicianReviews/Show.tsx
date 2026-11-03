@@ -11,6 +11,15 @@ type ServiceCategory = { id: number; name_ar: string; name_en: string | null };
 
 type TechnicianDetail = {
     id: number;
+    first_name_ar: string | null;
+    second_name_ar: string | null;
+    family_name_ar: string | null;
+    first_name_en: string | null;
+    second_name_en: string | null;
+    family_name_en: string | null;
+    civil_id_number: string | null;
+    civil_id_document_url: string | null;
+    civil_id_document_name: string | null;
     employee_code: string | null;
     display_name_ar: string | null;
     display_name_en: string | null;
@@ -21,12 +30,17 @@ type TechnicianDetail = {
     review_status: string | null;
     reviewed_at: string | null;
     rejection_reason: string | null;
+    pending_changes: Record<string, unknown> | null;
     reviewed_by: { id: number; name: string; email: string | null } | null;
     company: { id: number; name: string; slug: string | null };
     user: { id: number; name: string; email: string | null; phone: string | null; status: string | null; avatar_url: string | null };
     service_categories: ServiceCategory[];
     can: { approve: boolean; reject: boolean };
 };
+
+function composeName(first: string | null, second: string | null, family: string | null): string {
+    return [first, second, family].filter((part) => Boolean(part && String(part).trim())).join(' ') || '—';
+}
 
 export default function TechnicianReviewsShow({ technician }: { technician: TechnicianDetail }) {
     const page = usePage<PageProps>().props;
@@ -35,11 +49,14 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
     const statusLabels = page.enumLabels?.technician_review_status ?? {};
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [isRejecting, setIsRejecting] = useState(false);
+    const reviewStatus = String(technician.review_status ?? '').toLowerCase();
 
     const statusBadge = (status: string | null) => {
         const s = (status ?? '').toLowerCase();
         if (s === 'approved') return <StatusBadge variant="success">{statusLabels.approved ?? __('dashboard.technician_reviews.approve')}</StatusBadge>;
         if (s === 'pending') return <StatusBadge variant="warning">{statusLabels.pending ?? __('dashboard.nav.pending_technicians')}</StatusBadge>;
+        if (s === 'pending_update') return <StatusBadge variant="warning">{statusLabels.pending_update ?? s}</StatusBadge>;
+        if (s === 'pending_deletion') return <StatusBadge variant="danger">{statusLabels.pending_deletion ?? s}</StatusBadge>;
         if (s === 'rejected') return <StatusBadge variant="danger">{statusLabels.rejected ?? __('dashboard.technician_reviews.reject')}</StatusBadge>;
         return <span className="text-muted">—</span>;
     };
@@ -56,6 +73,8 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
             },
         );
     };
+
+    const pending = technician.pending_changes ?? null;
 
     return (
         <PlatformAdminLayout
@@ -77,17 +96,20 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                         </button>
                     ) : null}
                     {technician.can?.reject ? (
-                        <button
-                            type="button"
-                            className="btn btn-danger"
-                            onClick={() => setShowRejectModal(true)}
-                        >
+                        <button type="button" className="btn btn-danger" onClick={() => setShowRejectModal(true)}>
                             <i className="fas fa-times mr-1" />
                             {__('dashboard.technician_reviews.reject')}
                         </button>
                     ) : null}
                 </div>
             </div>
+
+            {reviewStatus === 'pending_update' ? (
+                <div className="callout callout-warning">{__('dashboard.technician_reviews.pending_update_banner')}</div>
+            ) : null}
+            {reviewStatus === 'pending_deletion' ? (
+                <div className="callout callout-danger">{__('dashboard.technician_reviews.pending_deletion_banner')}</div>
+            ) : null}
 
             <div className="row">
                 <div className="col-lg-4">
@@ -118,9 +140,6 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                                 <div className="text-muted small" dir="ltr">
                                     {technician.user.phone ?? '—'}
                                 </div>
-                                <div className="text-muted small" dir="ltr">
-                                    {technician.user.status ?? '—'}
-                                </div>
                             </div>
                         </div>
                     </TableCard>
@@ -147,14 +166,32 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                                 <div className="mb-3">{technician.rejection_reason ?? '—'}</div>
                             </div>
                             <div className="col-md-6">
-                                <div className="text-muted small">{__('dashboard.technician_reviews.reviewed_at')}</div>
+                                <div className="text-muted small">{__('dashboard.technician_reviews.full_name_ar')}</div>
+                                <div className="mb-3">{composeName(technician.first_name_ar, technician.second_name_ar, technician.family_name_ar)}</div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="text-muted small">{__('dashboard.technician_reviews.full_name_en')}</div>
                                 <div className="mb-3" dir="ltr">
-                                    {technician.reviewed_at ?? '—'}
+                                    {composeName(technician.first_name_en, technician.second_name_en, technician.family_name_en)}
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div className="text-muted small">{__('dashboard.technician_reviews.reviewed_by')}</div>
-                                <div className="mb-3">{technician.reviewed_by?.name ?? '—'}</div>
+                                <div className="text-muted small">{__('dashboard.technician_reviews.civil_id_number')}</div>
+                                <div className="mb-3" dir="ltr">
+                                    {technician.civil_id_number ?? '—'}
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="text-muted small">{__('dashboard.technician_reviews.civil_id_document')}</div>
+                                <div className="mb-3">
+                                    {technician.civil_id_document_url ? (
+                                        <a href={technician.civil_id_document_url} target="_blank" rel="noreferrer">
+                                            {technician.civil_id_document_name ?? __('dashboard.technician_reviews.civil_id_document')}
+                                        </a>
+                                    ) : (
+                                        '—'
+                                    )}
+                                </div>
                             </div>
                             <div className="col-md-6">
                                 <div className="text-muted small">{__('tenant.technicians.employeeCode')}</div>
@@ -162,8 +199,41 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                                     {technician.employee_code ?? '—'}
                                 </div>
                             </div>
+                            <div className="col-md-6">
+                                <div className="text-muted small">{__('dashboard.technician_reviews.reviewed_by')}</div>
+                                <div className="mb-3">{technician.reviewed_by?.name ?? '—'}</div>
+                            </div>
                         </div>
                     </TableCard>
+
+                    {pending && reviewStatus === 'pending_update' ? (
+                        <TableCard title={__('dashboard.technician_reviews.pending_changes')}>
+                            <div className="row">
+                                <div className="col-md-6 mb-3">
+                                    <div className="text-muted small">{__('dashboard.technician_reviews.full_name_ar')}</div>
+                                    <div>
+                                        {composeName(
+                                            typeof pending.first_name_ar === 'string' ? pending.first_name_ar : null,
+                                            typeof pending.second_name_ar === 'string' ? pending.second_name_ar : null,
+                                            typeof pending.family_name_ar === 'string' ? pending.family_name_ar : null,
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="col-md-6 mb-3">
+                                    <div className="text-muted small">{__('dashboard.technician_reviews.civil_id_number')}</div>
+                                    <div dir="ltr">{typeof pending.civil_id_number === 'string' ? pending.civil_id_number : '—'}</div>
+                                </div>
+                                <div className="col-md-6 mb-3">
+                                    <div className="text-muted small">{__('tenant.technicians.phone')}</div>
+                                    <div dir="ltr">{typeof pending.phone === 'string' ? pending.phone : '—'}</div>
+                                </div>
+                                <div className="col-md-6 mb-3">
+                                    <div className="text-muted small">{__('tenant.technicians.email')}</div>
+                                    <div dir="ltr">{typeof pending.email === 'string' ? pending.email : '—'}</div>
+                                </div>
+                            </div>
+                        </TableCard>
+                    ) : null}
 
                     <TableCard title={__('tenant.technicians.profileSection')}>
                         <div className="row">
@@ -199,12 +269,9 @@ export default function TechnicianReviewsShow({ technician }: { technician: Tech
                 show={showRejectModal}
                 technicianName={technician.display_name_ar ?? technician.display_name_en ?? technician.user.name}
                 processing={isRejecting}
-                onClose={() => {
-                    if (!isRejecting) setShowRejectModal(false);
-                }}
-                onConfirm={submitRejection}
+                onClose={() => setShowRejectModal(false)}
+                onSubmit={submitRejection}
             />
         </PlatformAdminLayout>
     );
 }
-

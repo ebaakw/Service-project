@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Company;
 
+use App\Enums\TechnicianReviewStatus;
 use App\Models\Technician;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateTechnicianRequest extends FormRequest
 {
@@ -38,9 +40,28 @@ class UpdateTechnicianRequest extends FormRequest
         $technician = $this->route('technician');
         $userId = $technician->user_id;
 
+        $hasCivilIdDocument = $technician->civilIdMedia() !== null;
+
         return [
-            'name_ar' => ['required', 'string', 'max:255'],
-            'name_en' => ['nullable', 'string', 'max:255'],
+            'first_name_ar' => ['required', 'string', 'max:100'],
+            'second_name_ar' => ['required', 'string', 'max:100'],
+            'family_name_ar' => ['required', 'string', 'max:100'],
+            'first_name_en' => ['nullable', 'string', 'max:100'],
+            'second_name_en' => ['nullable', 'string', 'max:100'],
+            'family_name_en' => ['nullable', 'string', 'max:100'],
+            'civil_id_number' => [
+                'required',
+                'string',
+                'regex:/^\d{12}$/',
+                Rule::unique('technicians', 'civil_id_number')->ignore($technician->getKey()),
+            ],
+            'civil_id_document' => [
+                Rule::requiredIf(! $hasCivilIdDocument),
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp,pdf',
+                'max:5120',
+            ],
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'display_name_ar' => ['nullable', 'string', 'max:255'],
             'display_name_en' => ['nullable', 'string', 'max:255'],
@@ -66,5 +87,23 @@ class UpdateTechnicianRequest extends FormRequest
             'service_category_ids' => ['nullable', 'array'],
             'service_category_ids.*' => ['integer', Rule::exists('service_categories', 'id')->where('is_active', true)],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            /** @var Technician|null $technician */
+            $technician = $this->route('technician');
+            if (! $technician instanceof Technician) {
+                return;
+            }
+
+            if ($technician->review_status === TechnicianReviewStatus::PendingDeletion) {
+                $validator->errors()->add(
+                    'review_status',
+                    __('tenant.technicians.cannot_edit_while_pending_deletion'),
+                );
+            }
+        });
     }
 }

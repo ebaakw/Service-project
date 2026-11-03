@@ -13,8 +13,10 @@ use App\Models\ServiceCategory;
 use App\Models\Technician;
 use App\Models\User;
 use App\Services\Media\MediaUploadService;
+use App\Support\TechnicianProfileSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -46,6 +48,10 @@ class TechnicianController extends Controller
                 $q->where('display_name_ar', 'like', $like)
                     ->orWhere('display_name_en', 'like', $like)
                     ->orWhere('employee_code', 'like', $like)
+                    ->orWhere('first_name_ar', 'like', $like)
+                    ->orWhere('second_name_ar', 'like', $like)
+                    ->orWhere('family_name_ar', 'like', $like)
+                    ->orWhere('civil_id_number', 'like', $like)
                     ->orWhereHas('user', function ($uq) use ($like): void {
                         $uq->where('name', 'like', $like)
                             ->orWhere('name_ar', 'like', $like)
@@ -103,15 +109,26 @@ class TechnicianController extends Controller
 
         $validated = $request->validated();
         $avatar = $request->file('avatar');
+        $civilIdDocument = $request->file('civil_id_document');
         $categoryIds = $validated['service_category_ids'] ?? [];
-        unset($validated['service_category_ids']);
-        unset($validated['avatar']);
+        unset($validated['service_category_ids'], $validated['avatar'], $validated['civil_id_document']);
 
-        DB::transaction(function () use ($validated, $categoryIds, $companyId, $avatar): void {
+        DB::transaction(function () use ($validated, $categoryIds, $companyId, $avatar, $civilIdDocument): void {
+            $nameAr = Technician::composeFullName(
+                $validated['first_name_ar'],
+                $validated['second_name_ar'],
+                $validated['family_name_ar'],
+            );
+            $nameEn = Technician::composeFullName(
+                $validated['first_name_en'] ?? null,
+                $validated['second_name_en'] ?? null,
+                $validated['family_name_en'] ?? null,
+            );
+
             $user = User::query()->create([
-                'name_ar' => $validated['name_ar'],
-                'name_en' => $validated['name_en'] ?? null,
-                'email' => $validated['email'],
+                'name_ar' => $nameAr,
+                'name_en' => $nameEn,
+                'email' => $validated['email'] ?? null,
                 'phone' => $validated['phone'],
                 'password' => $validated['password'],
                 'type' => UserType::Technician,
@@ -125,6 +142,13 @@ class TechnicianController extends Controller
             $technician = Technician::query()->create([
                 'company_id' => $companyId,
                 'user_id' => $user->getKey(),
+                'first_name_ar' => $validated['first_name_ar'],
+                'second_name_ar' => $validated['second_name_ar'],
+                'family_name_ar' => $validated['family_name_ar'],
+                'first_name_en' => $validated['first_name_en'] ?? null,
+                'second_name_en' => $validated['second_name_en'] ?? null,
+                'family_name_en' => $validated['family_name_en'] ?? null,
+                'civil_id_number' => $validated['civil_id_number'],
                 'employee_code' => $validated['employee_code'] ?? null,
                 'display_name_ar' => $validated['display_name_ar'] ?? null,
                 'display_name_en' => $validated['display_name_en'] ?? null,
@@ -137,7 +161,12 @@ class TechnicianController extends Controller
                 'reviewed_by_user_id' => null,
                 'reviewed_at' => null,
                 'rejection_reason' => null,
+                'pending_changes' => null,
             ]);
+
+            if ($civilIdDocument !== null) {
+                app(MediaUploadService::class)->storeTechnicianCivilId($technician, $civilIdDocument);
+            }
 
             $technician->serviceCategories()->sync($categoryIds);
         });
@@ -151,15 +180,26 @@ class TechnicianController extends Controller
     {
         $this->authorize('update', $technician);
 
-        $technician->load(['user', 'serviceCategories', 'company']);
+        $technician->load(['user', 'serviceCategories', 'company', 'media']);
         $avatarUrl = null;
         if (! empty($technician->user?->avatar_path)) {
             $avatarUrl = Storage::disk('public')->url($technician->user->avatar_path);
         }
 
+        $civilId = $technician->civilIdMedia();
+
         return Inertia::render('Company/Technicians/Edit', [
             'technician' => [
                 'id' => $technician->id,
+                'first_name_ar' => $technician->first_name_ar,
+                'second_name_ar' => $technician->second_name_ar,
+                'family_name_ar' => $technician->family_name_ar,
+                'first_name_en' => $technician->first_name_en,
+                'second_name_en' => $technician->second_name_en,
+                'family_name_en' => $technician->family_name_en,
+                'civil_id_number' => $technician->civil_id_number,
+                'civil_id_document_url' => $civilId ? MediaUploadService::publicUrl($civilId) : null,
+                'civil_id_document_name' => $civilId?->file_name,
                 'employee_code' => $technician->employee_code,
                 'display_name_ar' => $technician->display_name_ar,
                 'display_name_en' => $technician->display_name_en,
@@ -172,6 +212,7 @@ class TechnicianController extends Controller
                 'availability_status_label' => $technician->availability_status?->label(),
                 'review_status' => $technician->review_status?->value,
                 'rejection_reason' => $technician->rejection_reason,
+                'pending_changes' => $technician->pending_changes,
                 'created_at' => $technician->created_at?->toISOString(),
                 'company' => [
                     'id' => $technician->company?->id,
@@ -196,63 +237,57 @@ class TechnicianController extends Controller
     {
         $validated = $request->validated();
         $avatar = $request->file('avatar');
+        $civilIdDocument = $request->file('civil_id_document');
         $categoryIds = $validated['service_category_ids'] ?? null;
-        unset($validated['service_category_ids']);
-        $password = $validated['password'] ?? null;
-        unset($validated['password']);
-        unset($validated['avatar']);
+        unset($validated['service_category_ids'], $validated['avatar'], $validated['civil_id_document']);
 
-        DB::transaction(function () use ($validated, $categoryIds, $password, $technician, $avatar): void {
-            $technician->user->fill([
-                'name_ar' => $validated['name_ar'],
-                'name_en' => $validated['name_en'] ?? null,
-                'email' => $validated['email'],
-                'phone' => $validated['phone'],
-            ]);
+        $status = $technician->review_status;
 
-            if (! empty($password)) {
-                $technician->user->password = $password;
+        DB::transaction(function () use ($validated, $categoryIds, $technician, $avatar, $civilIdDocument, $status): void {
+            if ($status?->appliesLiveOnCompanyEdit()) {
+                TechnicianProfileSync::applyLive(
+                    $technician,
+                    $validated,
+                    $avatar,
+                    $civilIdDocument,
+                    is_array($categoryIds) ? $categoryIds : [],
+                    resubmitForCreateReview: true,
+                );
+
+                return;
             }
 
-            $technician->user->save();
-
-            if ($avatar !== null) {
-                app(MediaUploadService::class)->storeUserAvatar($technician->user, $avatar);
-            }
-
-            $technician->fill([
-                'employee_code' => $validated['employee_code'] ?? null,
-                'display_name_ar' => $validated['display_name_ar'] ?? null,
-                'display_name_en' => $validated['display_name_en'] ?? null,
-                'bio_ar' => $validated['bio_ar'] ?? null,
-                'bio_en' => $validated['bio_en'] ?? null,
-                'job_title_ar' => $validated['job_title_ar'] ?? null,
-                'job_title_en' => $validated['job_title_en'] ?? null,
-                // Any company edit re-submits the technician for platform review.
-                'is_active' => false,
-                'review_status' => TechnicianReviewStatus::Pending,
-                'reviewed_by_user_id' => null,
-                'reviewed_at' => null,
-                'rejection_reason' => null,
-            ]);
-            $technician->save();
-
-            // Company edits force technician user inactive until platform re-approval.
-            $technician->user->forceFill(['status' => UserStatus::Inactive])->save();
-
-            if (is_array($categoryIds)) {
-                $technician->serviceCategories()->sync($categoryIds);
-            }
+            TechnicianProfileSync::stagePending(
+                $technician,
+                $validated,
+                $avatar,
+                $civilIdDocument,
+                is_array($categoryIds) ? $categoryIds : null,
+            );
         });
+
+        $message = $status?->appliesLiveOnCompanyEdit()
+            ? __('tenant.technicians.updatedSuccessfully')
+            : __('tenant.technicians.updateSubmittedForReview');
 
         return redirect()->route('company.technicians.index')
             ->with('type', 'success')
-            ->with('message', __('tenant.technicians.updatedSuccessfully'));
+            ->with('message', $message);
     }
 
     public function destroy(Technician $technician): RedirectResponse
     {
         $this->authorize('delete', $technician);
+
+        $status = $technician->review_status;
+
+        if ($status?->isLiveApprovedLike()) {
+            TechnicianProfileSync::requestDeletion($technician);
+
+            return redirect()->route('company.technicians.index')
+                ->with('type', 'success')
+                ->with('message', __('tenant.technicians.deletionSubmittedForReview'));
+        }
 
         DB::transaction(function () use ($technician): void {
             $technician->delete();
@@ -261,7 +296,7 @@ class TechnicianController extends Controller
 
         return redirect()->route('company.technicians.index')
             ->with('type', 'success')
-            ->with('message', 'saved');
+            ->with('message', __('tenant.technicians.deletedSuccessfully'));
     }
 
     public function resetPassword(ResetTechnicianPasswordRequest $request, Technician $technician): RedirectResponse
@@ -276,7 +311,7 @@ class TechnicianController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{id: int, name_ar: string, name_en: string|null}>
+     * @return Collection<int, array{id: int, name_ar: string, name_en: string|null}>
      */
     private function activeServiceCategories()
     {

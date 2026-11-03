@@ -4,6 +4,10 @@ import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import {Link, usePage} from "@inertiajs/react";
 import {asset} from "@/Utility/Hooks/useAsset.jsx";
 import {useEffect, useState} from "react";
+import {
+    isDelaySoundEnabled,
+    setDelaySoundEnabled,
+} from "@/Utility/technicianDelayAlerts.js";
 
 const Navbar = ({shellVariant}) => {
     const {locale, today, auth, timezone} = usePage().props;
@@ -18,11 +22,23 @@ const Navbar = ({shellVariant}) => {
         });
 
     const [currentTime, setCurrentTime] = useState(formatTime);
+    const [soundEnabled, setSoundEnabled] = useState(true);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(formatTime()), 1000);
         return () => clearInterval(timer);
     }, [tz]);
+
+    useEffect(() => {
+        setSoundEnabled(isDelaySoundEnabled());
+    }, []);
+
+    const toggleDelaySound = (event) => {
+        event.preventDefault();
+        const next = !soundEnabled;
+        setSoundEnabled(next);
+        setDelaySoundEnabled(next);
+    };
 
     const changeLang = (event) => {
         event.preventDefault();
@@ -88,6 +104,28 @@ const Navbar = ({shellVariant}) => {
                         {__('tenant.lang')}
                     </a>
                 </li>
+
+                {(shellVariant === 'platform' || shellVariant === 'company') && (
+                    <li className="nav-item d-none d-sm-inline-block text-sm mt-1">
+                        <a
+                            href="#"
+                            onClick={toggleDelaySound}
+                            className="nav-link"
+                            title={
+                                soundEnabled
+                                    ? __('dashboard.delay_alerts.sound_disable')
+                                    : __('dashboard.delay_alerts.sound_enable')
+                            }
+                            aria-label={
+                                soundEnabled
+                                    ? __('dashboard.delay_alerts.sound_disable')
+                                    : __('dashboard.delay_alerts.sound_enable')
+                            }
+                        >
+                            <i className={`fas ${soundEnabled ? 'fa-volume-up' : 'fa-volume-mute'} mx-1`} />
+                        </a>
+                    </li>
+                )}
 
                 <li className="nav-item dropdown">
                     <a

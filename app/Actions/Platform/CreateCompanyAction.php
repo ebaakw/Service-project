@@ -6,6 +6,7 @@ use App\Http\Requests\Platform\StorePlatformCompanyRequest;
 use App\Models\Company;
 use App\Services\CompanyPrimaryUserService;
 use App\Services\Media\MediaUploadService;
+use App\Support\PlatformCompanyProfile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -27,7 +28,7 @@ class CreateCompanyAction
                 $slug = $this->uniqueCompanySlug(Str::slug($base));
             }
 
-            $company = Company::query()->create([
+            $company = Company::query()->create(array_merge([
                 'name_ar' => $data['name_ar'],
                 'name_en' => $data['name_en'] ?? null,
                 'slug' => $slug,
@@ -44,11 +45,13 @@ class CreateCompanyAction
                 'is_featured' => (bool) ($data['is_featured'] ?? false),
                 'default_inspection_fee' => $data['default_inspection_fee'] ?? null,
                 'allow_final_invoice_without_items' => (bool) ($data['allow_final_invoice_without_items'] ?? false),
-            ]);
+            ], PlatformCompanyProfile::attributesFromValidated($data)));
 
             if ($request->hasFile('logo')) {
                 $this->media->storeCompanyLogo($company, $request->file('logo'));
             }
+
+            PlatformCompanyProfile::syncDocuments($company, $request, $this->media);
 
             $createOwner = (bool) ($data['create_owner'] ?? false);
             $ownerEmail = isset($data['owner_email']) && is_string($data['owner_email']) ? trim($data['owner_email']) : '';
@@ -86,4 +89,3 @@ class CreateCompanyAction
         return $slug;
     }
 }
-

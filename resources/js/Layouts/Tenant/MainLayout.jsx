@@ -10,10 +10,11 @@ import {toast, ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './css/table-middle-cell.css'
 import './css/progress.css'
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import ScrollUpButton from "@/Layouts/Tenant/components/scrollUp/ScrollUpButton.jsx";
 import { filterMenuByPermissions } from "@/Support/permissions.js";
+import { playDelayAlertSound } from "@/Utility/technicianDelayAlerts.js";
 
 const applyBadges = (items, badges) => {
     if (!Array.isArray(items)) return [];
@@ -69,6 +70,78 @@ const MainLayout = ({
             toast[flash.type](msg);
         }
     }, [flash])
+
+    const knownDelayIdsRef = useRef(new Set());
+    const delayPollReadyRef = useRef(false);
+
+    useEffect(() => {
+        if (shellVariant !== 'platform' && shellVariant !== 'company') {
+            return undefined;
+        }
+
+        const endpoint =
+            shellVariant === 'platform'
+                ? route('platform.alerts.technician-delays')
+                : route('company.alerts.technician-delays');
+
+        let cancelled = false;
+
+        const poll = async () => {
+            try {
+                const response = await fetch(endpoint, {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                });
+
+                if (!response.ok || cancelled) {
+                    return;
+                }
+
+                const payload = await response.json();
+                const delays = Array.isArray(payload?.delays) ? payload.delays : [];
+                const nextIds = new Set(delays.map((item) => String(item.id)));
+
+                if (!delayPollReadyRef.current) {
+                    knownDelayIdsRef.current = nextIds;
+                    delayPollReadyRef.current = true;
+                    return;
+                }
+
+                const fresh = delays.filter((item) => !knownDelayIdsRef.current.has(String(item.id)));
+                knownDelayIdsRef.current = nextIds;
+
+                if (fresh.length === 0) {
+                    return;
+                }
+
+                const first = fresh[0];
+                const typeLabel =
+                    first.delay_type === 'arrival'
+                        ? __('dashboard.delay_alerts.arrival_type')
+                        : __('dashboard.delay_alerts.accept_type');
+
+                toast.warn(
+                    `${__('dashboard.delay_alerts.toast_title')}: ${typeLabel} — ${first.order_number ?? ''}`.trim(),
+                );
+                playDelayAlertSound();
+            } catch {
+                // Ignore transient network/auth errors during polling.
+            }
+        };
+
+        void poll();
+        const timer = window.setInterval(() => {
+            void poll();
+        }, 30000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, [shellVariant]);
 
     return (
         <div

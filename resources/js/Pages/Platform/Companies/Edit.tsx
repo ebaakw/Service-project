@@ -5,6 +5,16 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 type Option = { value: string; label: string };
+
+type DocumentItem = {
+    id: number;
+    url: string;
+    sort_order: number;
+    file_name: string | null;
+    mime_type: string | null;
+    size: number | null;
+};
+
 type Company = {
     id: number;
     name_ar: string;
@@ -13,6 +23,16 @@ type Company = {
     logo_url: string | null;
     phone: string | null;
     email: string | null;
+    contacts: Array<{ name?: string | null; phone?: string | null; position?: string | null }>;
+    address: string | null;
+    working_hours: string | null;
+    iban: string | null;
+    bank_name: string | null;
+    documents: {
+        license: DocumentItem[];
+        signature_authorization: DocumentItem[];
+        additional_documents: DocumentItem[];
+    };
     short_description_ar: string | null;
     short_description_en: string | null;
     description_ar: string | null;
@@ -47,6 +67,15 @@ export default function PlatformCompaniesEdit({
     enums: { company_status: Option[]; subscription_status: Option[] };
     userStatuses: Option[];
 }) {
+    const initialContacts =
+        Array.isArray(company.contacts) && company.contacts.length > 0
+            ? company.contacts.map((c) => ({
+                  name: c.name ?? '',
+                  phone: c.phone ?? '',
+                  position: c.position ?? '',
+              }))
+            : [];
+
     const form = useForm(`platform.companies.edit.${company.id}`, {
         name_ar: company.name_ar,
         name_en: company.name_en ?? '',
@@ -68,6 +97,15 @@ export default function PlatformCompaniesEdit({
                 ? ''
                 : String(company.default_inspection_fee),
         allow_final_invoice_without_items: company.allow_final_invoice_without_items,
+        contacts: initialContacts,
+        address: company.address ?? '',
+        working_hours: company.working_hours ?? '',
+        iban: company.iban ?? '',
+        bank_name: company.bank_name ?? '',
+        license_files: [] as File[],
+        signature_authorization_files: [] as File[],
+        additional_documents_files: [] as File[],
+        remove_document_ids: [] as number[],
 
         owner_user_id: primaryUser?.id ?? '',
         create_owner: false,
@@ -141,9 +179,9 @@ export default function PlatformCompaniesEdit({
                     clientRequiredErrors={clientRequiredErrors}
                     primaryUser={primaryUser}
                     userStatuses={userStatuses}
+                    documents={company.documents}
                 />
             </form>
         </PlatformAdminLayout>
     );
 }
-

@@ -111,6 +111,37 @@ class SettingsService
         );
     }
 
+    public function forgetForCompany(Company $company, string $key): void
+    {
+        CompanySetting::query()
+            ->where('company_id', $company->getKey())
+            ->where('key', $key)
+            ->delete();
+    }
+
+    public function companyHasOverride(Company $company, string $key): bool
+    {
+        return CompanySetting::query()
+            ->where('company_id', $company->getKey())
+            ->where('key', $key)
+            ->whereNotNull('value')
+            ->exists();
+    }
+
+    public function getCompanyRaw(Company $company, string $key): mixed
+    {
+        $companyRow = CompanySetting::query()
+            ->where('company_id', $company->getKey())
+            ->where('key', $key)
+            ->first();
+
+        if ($companyRow === null || $companyRow->value === null) {
+            return null;
+        }
+
+        return $this->normalizeDecoded($companyRow->value, $companyRow->type, null);
+    }
+
     private function prepareStoredValue(mixed $value, SettingValueType $type): mixed
     {
         if ($value === null) {

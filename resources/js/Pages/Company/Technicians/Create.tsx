@@ -21,8 +21,14 @@ export default function CompanyTechniciansCreate({
     serviceCategories: ServiceCategoryOption[];
 }) {
     const { data, setData, post, processing, errors } = useForm({
-        name_ar: '',
-        name_en: '',
+        first_name_ar: '',
+        second_name_ar: '',
+        family_name_ar: '',
+        first_name_en: '',
+        second_name_en: '',
+        family_name_en: '',
+        civil_id_number: '',
+        civil_id_document: null as File | null,
         avatar: null as File | null,
         email: '',
         phone: '',
@@ -40,12 +46,16 @@ export default function CompanyTechniciansCreate({
 
     const { direction } = usePage<PageProps>().props;
     const isRtl = direction === 'rtl';
+    const align = isRtl ? 'right' : 'left';
     const [attemptedSubmit, setAttemptedSubmit] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
 
     const refs = {
-        name_ar: useRef<HTMLInputElement | null>(null),
+        first_name_ar: useRef<HTMLInputElement | null>(null),
+        second_name_ar: useRef<HTMLInputElement | null>(null),
+        family_name_ar: useRef<HTMLInputElement | null>(null),
+        civil_id_number: useRef<HTMLInputElement | null>(null),
         email: useRef<HTMLInputElement | null>(null),
         phone: useRef<HTMLInputElement | null>(null),
         password: useRef<HTMLInputElement | null>(null),
@@ -60,12 +70,31 @@ export default function CompanyTechniciansCreate({
     };
 
     const focusFirstError = (errs: Record<string, string>) => {
-        const first = Object.keys(errs)[0] as keyof typeof refs | undefined;
-        if (first && first in refs) focusField(first);
-        else if (errs.name_ar) focusField('name_ar');
-        else if (errs.email || errs.phone) focusField('email');
-        else if (errs.password) focusField('password');
-        else if (errs.avatar) {
+        const order: (keyof typeof refs)[] = [
+            'first_name_ar',
+            'second_name_ar',
+            'family_name_ar',
+            'civil_id_number',
+            'email',
+            'phone',
+            'password',
+            'password_confirmation',
+        ];
+        for (const key of order) {
+            if (errs[key]) {
+                focusField(key);
+                return;
+            }
+        }
+        if (errs.civil_id_document) {
+            const el = document.getElementById('civil_id_document') as HTMLInputElement | null;
+            if (el) {
+                el.scrollIntoView({ block: 'center' });
+                el.focus();
+            }
+            return;
+        }
+        if (errs.avatar) {
             const el = document.getElementById('avatar') as HTMLInputElement | null;
             if (el) {
                 el.scrollIntoView({ block: 'center' });
@@ -78,9 +107,24 @@ export default function CompanyTechniciansCreate({
         if (!attemptedSubmit) return {};
         const invalid: Record<string, string> = {};
         const phone = String(data.phone ?? '').trim();
+        const civilId = String(data.civil_id_number ?? '').trim();
 
-        if (!String(data.name_ar ?? '').trim()) {
-            invalid.name_ar = __('tenant.technicians.validation_name_required');
+        if (!String(data.first_name_ar ?? '').trim()) {
+            invalid.first_name_ar = __('tenant.technicians.validation_first_name_ar_required');
+        }
+        if (!String(data.second_name_ar ?? '').trim()) {
+            invalid.second_name_ar = __('tenant.technicians.validation_second_name_ar_required');
+        }
+        if (!String(data.family_name_ar ?? '').trim()) {
+            invalid.family_name_ar = __('tenant.technicians.validation_family_name_ar_required');
+        }
+        if (!civilId) {
+            invalid.civil_id_number = __('tenant.technicians.validation_civil_id_number_required');
+        } else if (!/^\d{12}$/.test(civilId)) {
+            invalid.civil_id_number = __('tenant.technicians.validation_civil_id_number_digits');
+        }
+        if (!data.civil_id_document) {
+            invalid.civil_id_document = __('tenant.technicians.validation_civil_id_document_required');
         }
         if (!phone) {
             invalid.phone = __('tenant.technicians.validation_phone_required');
@@ -95,7 +139,7 @@ export default function CompanyTechniciansCreate({
         }
 
         return invalid;
-    }, [attemptedSubmit, data.name_ar, data.phone, data.password, data.password_confirmation]);
+    }, [attemptedSubmit, data.first_name_ar, data.second_name_ar, data.family_name_ar, data.civil_id_number, data.civil_id_document, data.phone, data.password, data.password_confirmation]);
 
     const validationMessages = useMemo(() => {
         const serverMessages = Object.values(errors).filter((message): message is string => typeof message === 'string' && message.trim() !== '');
@@ -109,7 +153,6 @@ export default function CompanyTechniciansCreate({
         };
     }, [avatarPreviewUrl]);
 
-    // ---- Multi-select services (badges + checkbox menu) ----
     const [servicesOpen, setServicesOpen] = useState(false);
     const [servicesQuery, setServicesQuery] = useState('');
     const servicesMenuRef = useRef<HTMLDivElement | null>(null);
@@ -119,59 +162,57 @@ export default function CompanyTechniciansCreate({
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') setServicesOpen(false);
         };
-        const onMouseDown = (e: MouseEvent) => {
-            const el = servicesMenuRef.current;
-            if (!el) return;
-            if (el.contains(e.target as Node)) return;
-            setServicesOpen(false);
+        const onClick = (e: MouseEvent) => {
+            if (!servicesMenuRef.current?.contains(e.target as Node)) setServicesOpen(false);
         };
         document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousedown', onClick);
         return () => {
             document.removeEventListener('keydown', onKeyDown);
-            document.removeEventListener('mousedown', onMouseDown);
+            document.removeEventListener('mousedown', onClick);
         };
     }, [servicesOpen]);
 
-    const selectedServiceIds = data.service_category_ids ?? [];
-    const selectedServices = useMemo(() => {
-        const map = new Map(serviceCategories.map((c) => [c.id, c] as const));
-        return selectedServiceIds.map((id) => map.get(id)).filter(Boolean) as ServiceCategoryOption[];
-    }, [selectedServiceIds, serviceCategories]);
-
+    const selectedServiceIds = data.service_category_ids;
+    const selectedServices = useMemo(
+        () => serviceCategories.filter((c) => selectedServiceIds.includes(c.id)),
+        [serviceCategories, selectedServiceIds],
+    );
     const filteredServices = useMemo(() => {
         const q = servicesQuery.trim().toLowerCase();
         if (!q) return serviceCategories;
-        return serviceCategories.filter((c) => {
-            const hay = `${c.name_ar ?? ''} ${c.name_en ?? ''}`.toLowerCase();
-            return hay.includes(q);
-        });
-    }, [servicesQuery, serviceCategories]);
+        return serviceCategories.filter((c) => `${c.name_ar} ${c.name_en ?? ''}`.toLowerCase().includes(q));
+    }, [serviceCategories, servicesQuery]);
 
     const toggleService = (id: number) => {
-        const exists = selectedServiceIds.includes(id);
-        const next = exists ? selectedServiceIds.filter((x) => x !== id) : [...selectedServiceIds, id];
-        setData('service_category_ids', next);
+        setData(
+            'service_category_ids',
+            selectedServiceIds.includes(id) ? selectedServiceIds.filter((x) => x !== id) : [...selectedServiceIds, id],
+        );
     };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         setAttemptedSubmit(true);
-        if (!String(data.name_ar ?? '').trim()) {
-            focusField('name_ar');
-            return;
-        }
-        const phone = String(data.phone ?? '').trim();
-        if (!phone || !/^\d{8}$/.test(phone)) {
-            focusField('phone');
-            return;
-        }
-        if (!String(data.password ?? '').trim()) {
-            focusField('password');
-            return;
-        }
-        if (!String(data.password_confirmation ?? '').trim()) {
-            focusField('password_confirmation');
+        const nextLocal = (() => {
+            const invalid: Record<string, string> = {};
+            const phone = String(data.phone ?? '').trim();
+            const civilId = String(data.civil_id_number ?? '').trim();
+            if (!String(data.first_name_ar ?? '').trim()) invalid.first_name_ar = __('tenant.technicians.validation_first_name_ar_required');
+            if (!String(data.second_name_ar ?? '').trim()) invalid.second_name_ar = __('tenant.technicians.validation_second_name_ar_required');
+            if (!String(data.family_name_ar ?? '').trim()) invalid.family_name_ar = __('tenant.technicians.validation_family_name_ar_required');
+            if (!civilId) invalid.civil_id_number = __('tenant.technicians.validation_civil_id_number_required');
+            else if (!/^\d{12}$/.test(civilId)) invalid.civil_id_number = __('tenant.technicians.validation_civil_id_number_digits');
+            if (!data.civil_id_document) invalid.civil_id_document = __('tenant.technicians.validation_civil_id_document_required');
+            if (!phone) invalid.phone = __('tenant.technicians.validation_phone_required');
+            else if (!/^\d{8}$/.test(phone)) invalid.phone = __('tenant.technicians.phone_must_be_8_digits');
+            if (!String(data.password ?? '').trim()) invalid.password = __('tenant.technicians.validation_password_required');
+            if (!String(data.password_confirmation ?? '').trim()) invalid.password_confirmation = __('tenant.technicians.validation_password_confirmation_required');
+            return invalid;
+        })();
+
+        if (Object.keys(nextLocal).length > 0) {
+            focusFirstError(nextLocal);
             return;
         }
 
@@ -180,6 +221,21 @@ export default function CompanyTechniciansCreate({
             onError: (errs) => focusFirstError(errs as any),
         });
     };
+
+    const optionalPlaceholder = (label: string, value: string, onChange: (v: string) => void, opts?: { dir?: 'ltr' | 'rtl'; id?: string }) => (
+        <div className="form-group">
+            <input
+                id={opts?.id}
+                className="form-control"
+                placeholder={label}
+                aria-label={label}
+                dir={opts?.dir}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                style={{ textAlign: align }}
+            />
+        </div>
+    );
 
     return (
         <CompanyDashboardLayout header={<h4 className="m-0 font-weight-bold text-dark">{__('tenant.technicians.createTitle')}</h4>}>
@@ -208,33 +264,108 @@ export default function CompanyTechniciansCreate({
                             </div>
                         ) : null}
 
-                        <div className="col-md-6">
+                        <div className="col-md-4">
                             <div className="form-group">
                                 <label>
-                                    {__('tenant.technicians.userNameAr')}
+                                    {__('tenant.technicians.firstNameAr')}
                                     <span className="text-danger"> *</span>
                                 </label>
                                 <input
-                                    ref={refs.name_ar}
-                                    className={`form-control ${(errors.name_ar || localErrors.name_ar) ? 'is-invalid' : ''}`}
+                                    ref={refs.first_name_ar}
+                                    className={`form-control ${(errors.first_name_ar || localErrors.first_name_ar) ? 'is-invalid' : ''}`}
                                     dir="rtl"
-                                    value={data.name_ar}
-                                    onChange={(e) => setData('name_ar', e.target.value)}
+                                    value={data.first_name_ar}
+                                    onChange={(e) => setData('first_name_ar', e.target.value)}
                                     style={{ textAlign: 'right' }}
                                 />
-                                {errors.name_ar || localErrors.name_ar ? <div className="text-danger small mt-1">{errors.name_ar ?? localErrors.name_ar}</div> : null}
+                                {errors.first_name_ar || localErrors.first_name_ar ? <div className="text-danger small mt-1">{errors.first_name_ar ?? localErrors.first_name_ar}</div> : null}
+                            </div>
+                        </div>
+                        <div className="col-md-4">
+                            <div className="form-group">
+                                <label>
+                                    {__('tenant.technicians.secondNameAr')}
+                                    <span className="text-danger"> *</span>
+                                </label>
+                                <input
+                                    ref={refs.second_name_ar}
+                                    className={`form-control ${(errors.second_name_ar || localErrors.second_name_ar) ? 'is-invalid' : ''}`}
+                                    dir="rtl"
+                                    value={data.second_name_ar}
+                                    onChange={(e) => setData('second_name_ar', e.target.value)}
+                                    style={{ textAlign: 'right' }}
+                                />
+                                {errors.second_name_ar || localErrors.second_name_ar ? <div className="text-danger small mt-1">{errors.second_name_ar ?? localErrors.second_name_ar}</div> : null}
+                            </div>
+                        </div>
+                        <div className="col-md-4">
+                            <div className="form-group">
+                                <label>
+                                    {__('tenant.technicians.familyNameAr')}
+                                    <span className="text-danger"> *</span>
+                                </label>
+                                <input
+                                    ref={refs.family_name_ar}
+                                    className={`form-control ${(errors.family_name_ar || localErrors.family_name_ar) ? 'is-invalid' : ''}`}
+                                    dir="rtl"
+                                    value={data.family_name_ar}
+                                    onChange={(e) => setData('family_name_ar', e.target.value)}
+                                    style={{ textAlign: 'right' }}
+                                />
+                                {errors.family_name_ar || localErrors.family_name_ar ? <div className="text-danger small mt-1">{errors.family_name_ar ?? localErrors.family_name_ar}</div> : null}
+                            </div>
+                        </div>
+
+                        <div className="col-md-4">
+                            {optionalPlaceholder(__('tenant.technicians.firstNameEn'), data.first_name_en, (v) => setData('first_name_en', v), { dir: 'ltr' })}
+                            {errors.first_name_en ? <div className="text-danger small mt-1 mb-3">{errors.first_name_en}</div> : null}
+                        </div>
+                        <div className="col-md-4">
+                            {optionalPlaceholder(__('tenant.technicians.secondNameEn'), data.second_name_en, (v) => setData('second_name_en', v), { dir: 'ltr' })}
+                            {errors.second_name_en ? <div className="text-danger small mt-1 mb-3">{errors.second_name_en}</div> : null}
+                        </div>
+                        <div className="col-md-4">
+                            {optionalPlaceholder(__('tenant.technicians.familyNameEn'), data.family_name_en, (v) => setData('family_name_en', v), { dir: 'ltr' })}
+                            {errors.family_name_en ? <div className="text-danger small mt-1 mb-3">{errors.family_name_en}</div> : null}
+                        </div>
+
+                        <div className="col-md-6">
+                            <div className="form-group">
+                                <label>
+                                    {__('tenant.technicians.civilIdNumber')}
+                                    <span className="text-danger"> *</span>
+                                </label>
+                                <input
+                                    ref={refs.civil_id_number}
+                                    className={`form-control ${(errors.civil_id_number || localErrors.civil_id_number) ? 'is-invalid' : ''}`}
+                                    dir="ltr"
+                                    value={data.civil_id_number}
+                                    onChange={(e) => setData('civil_id_number', e.target.value)}
+                                    style={{ textAlign: align }}
+                                />
+                                <div className="text-muted small mt-1">{__('tenant.technicians.civilIdNumberHint')}</div>
+                                {errors.civil_id_number || localErrors.civil_id_number ? <div className="text-danger small mt-1">{errors.civil_id_number ?? localErrors.civil_id_number}</div> : null}
                             </div>
                         </div>
                         <div className="col-md-6">
                             <div className="form-group">
-                                <label>{__('tenant.technicians.userNameEn')}</label>
-                                <input
-                                    className="form-control"
-                                    dir="ltr"
-                                    value={data.name_en}
-                                    onChange={(e) => setData('name_en', e.target.value)}
-                                />
-                                {errors.name_en ? <div className="text-danger small mt-1">{errors.name_en}</div> : null}
+                                <label>
+                                    {__('tenant.technicians.civilIdDocument')}
+                                    <span className="text-danger"> *</span>
+                                </label>
+                                <div className="custom-file">
+                                    <input
+                                        type="file"
+                                        accept="image/*,.pdf,application/pdf"
+                                        className={`custom-file-input ${(errors.civil_id_document || localErrors.civil_id_document) ? 'is-invalid' : ''}`}
+                                        id="civil_id_document"
+                                        onChange={(e) => setData('civil_id_document', e.target.files?.[0] ?? null)}
+                                    />
+                                    <label className="custom-file-label" htmlFor="civil_id_document">
+                                        {data.civil_id_document ? data.civil_id_document.name : __('tenant.choose_file')}
+                                    </label>
+                                </div>
+                                {errors.civil_id_document || localErrors.civil_id_document ? <div className="text-danger small mt-1">{errors.civil_id_document ?? localErrors.civil_id_document}</div> : null}
                             </div>
                         </div>
 
@@ -269,16 +400,16 @@ export default function CompanyTechniciansCreate({
 
                         <div className="col-md-6">
                             <div className="form-group">
-                                <label>
-                                    {__('tenant.technicians.email')}
-                                </label>
                                 <input
                                     ref={refs.email}
                                     className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                                     type="email"
+                                    placeholder={__('tenant.technicians.email')}
+                                    aria-label={__('tenant.technicians.email')}
                                     dir="ltr"
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
+                                    style={{ textAlign: align }}
                                 />
                                 {errors.email ? <div className="text-danger small mt-1">{errors.email}</div> : null}
                             </div>
@@ -295,6 +426,7 @@ export default function CompanyTechniciansCreate({
                                     dir="ltr"
                                     value={data.phone}
                                     onChange={(e) => setData('phone', e.target.value)}
+                                    style={{ textAlign: align }}
                                 />
                                 {errors.phone || localErrors.phone ? <div className="text-danger small mt-1">{errors.phone ?? localErrors.phone}</div> : null}
                             </div>
@@ -363,55 +495,56 @@ export default function CompanyTechniciansCreate({
                         </div>
 
                         <div className="col-md-6">
-                            <div className="form-group">
-                                <label>{__('tenant.technicians.displayNameAr')}</label>
-                                <input className="form-control" dir="rtl" value={data.display_name_ar} onChange={(e) => setData('display_name_ar', e.target.value)} style={{ textAlign: 'right' }} />
-                                {errors.display_name_ar ? <div className="text-danger small mt-1">{errors.display_name_ar}</div> : null}
-                            </div>
+                            {optionalPlaceholder(__('tenant.technicians.displayNameAr'), data.display_name_ar, (v) => setData('display_name_ar', v), { dir: 'rtl' })}
+                            {errors.display_name_ar ? <div className="text-danger small mt-1 mb-3">{errors.display_name_ar}</div> : null}
                         </div>
                         <div className="col-md-6">
-                            <div className="form-group">
-                                <label>{__('tenant.technicians.displayNameEn')}</label>
-                                <input className="form-control" dir="ltr" value={data.display_name_en} onChange={(e) => setData('display_name_en', e.target.value)} />
-                                {errors.display_name_en ? <div className="text-danger small mt-1">{errors.display_name_en}</div> : null}
-                            </div>
+                            {optionalPlaceholder(__('tenant.technicians.displayNameEn'), data.display_name_en, (v) => setData('display_name_en', v), { dir: 'ltr' })}
+                            {errors.display_name_en ? <div className="text-danger small mt-1 mb-3">{errors.display_name_en}</div> : null}
                         </div>
 
                         <div className="col-md-6">
-                            <div className="form-group">
-                                <label>{__('tenant.technicians.employeeCode')}</label>
-                                <input className="form-control" dir="ltr" value={data.employee_code} onChange={(e) => setData('employee_code', e.target.value)} />
-                                {errors.employee_code ? <div className="text-danger small mt-1">{errors.employee_code}</div> : null}
-                            </div>
+                            {optionalPlaceholder(__('tenant.technicians.employeeCode'), data.employee_code, (v) => setData('employee_code', v), { dir: 'ltr' })}
+                            {errors.employee_code ? <div className="text-danger small mt-1 mb-3">{errors.employee_code}</div> : null}
                         </div>
                         <div className="col-md-6" />
 
                         <div className="col-md-6">
-                            <div className="form-group">
-                                <label>{__('tenant.technicians.jobTitleAr')}</label>
-                                <input className="form-control" dir="rtl" value={data.job_title_ar} onChange={(e) => setData('job_title_ar', e.target.value)} style={{ textAlign: 'right' }} />
-                                {errors.job_title_ar ? <div className="text-danger small mt-1">{errors.job_title_ar}</div> : null}
-                            </div>
+                            {optionalPlaceholder(__('tenant.technicians.jobTitleAr'), data.job_title_ar, (v) => setData('job_title_ar', v), { dir: 'rtl' })}
+                            {errors.job_title_ar ? <div className="text-danger small mt-1 mb-3">{errors.job_title_ar}</div> : null}
                         </div>
                         <div className="col-md-6">
-                            <div className="form-group">
-                                <label>{__('tenant.technicians.jobTitleEn')}</label>
-                                <input className="form-control" dir="ltr" value={data.job_title_en} onChange={(e) => setData('job_title_en', e.target.value)} />
-                                {errors.job_title_en ? <div className="text-danger small mt-1">{errors.job_title_en}</div> : null}
-                            </div>
+                            {optionalPlaceholder(__('tenant.technicians.jobTitleEn'), data.job_title_en, (v) => setData('job_title_en', v), { dir: 'ltr' })}
+                            {errors.job_title_en ? <div className="text-danger small mt-1 mb-3">{errors.job_title_en}</div> : null}
                         </div>
 
                         <div className="col-md-6">
                             <div className="form-group">
-                                <label>{__('tenant.technicians.bioAr')}</label>
-                                <textarea className="form-control" dir="rtl" rows={3} value={data.bio_ar} onChange={(e) => setData('bio_ar', e.target.value)} style={{ textAlign: 'right' }} />
+                                <textarea
+                                    className="form-control"
+                                    rows={3}
+                                    placeholder={__('tenant.technicians.bioAr')}
+                                    aria-label={__('tenant.technicians.bioAr')}
+                                    dir="rtl"
+                                    value={data.bio_ar}
+                                    onChange={(e) => setData('bio_ar', e.target.value)}
+                                    style={{ textAlign: align }}
+                                />
                                 {errors.bio_ar ? <div className="text-danger small mt-1">{errors.bio_ar}</div> : null}
                             </div>
                         </div>
                         <div className="col-md-6">
                             <div className="form-group">
-                                <label>{__('tenant.technicians.bioEn')}</label>
-                                <textarea className="form-control" dir="ltr" rows={3} value={data.bio_en} onChange={(e) => setData('bio_en', e.target.value)} />
+                                <textarea
+                                    className="form-control"
+                                    rows={3}
+                                    placeholder={__('tenant.technicians.bioEn')}
+                                    aria-label={__('tenant.technicians.bioEn')}
+                                    dir="ltr"
+                                    value={data.bio_en}
+                                    onChange={(e) => setData('bio_en', e.target.value)}
+                                    style={{ textAlign: align }}
+                                />
                                 {errors.bio_en ? <div className="text-danger small mt-1">{errors.bio_en}</div> : null}
                             </div>
                         </div>
@@ -454,9 +587,10 @@ export default function CompanyTechniciansCreate({
                                             <input
                                                 className="form-control form-control-sm mb-2"
                                                 placeholder={__('tenant.search')}
+                                                aria-label={__('tenant.search')}
                                                 value={servicesQuery}
                                                 onChange={(e) => setServicesQuery(e.target.value)}
-                                                style={{ textAlign: isRtl ? 'right' : 'left' }}
+                                                style={{ textAlign: align }}
                                             />
                                             {filteredServices.map((c) => {
                                                 const checked = selectedServiceIds.includes(c.id);

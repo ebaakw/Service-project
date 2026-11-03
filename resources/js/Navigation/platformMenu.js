@@ -97,6 +97,14 @@ export const platformMenu = [
         activePatterns: ['platform.orders.*'],
     },
     {
+        name: 'dashboard.nav.technicians_report',
+        route: 'platform.reports.technicians',
+        icon: 'fa-chart-line',
+        permissions: ['reports.view', 'orders.view', 'orders.manage'],
+        badge: 'activeTechnicianDelays',
+        activePatterns: ['platform.reports.technicians'],
+    },
+    {
         name: 'dashboard.nav.all_invoices',
         route: 'platform.invoices.index',
         icon: 'fa-file-invoice',

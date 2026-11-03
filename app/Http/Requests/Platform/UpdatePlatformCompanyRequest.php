@@ -3,8 +3,11 @@
 namespace App\Http\Requests\Platform;
 
 use App\Models\Company;
+use App\Models\Media;
+use App\Support\PlatformCompanyProfile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdatePlatformCompanyRequest extends FormRequest
 {
@@ -20,7 +23,7 @@ class UpdatePlatformCompanyRequest extends FormRequest
 
         $ownerUserId = $this->input('owner_user_id');
 
-        return [
+        return array_merge([
             'name_ar' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'slug' => [
@@ -65,7 +68,36 @@ class UpdatePlatformCompanyRequest extends FormRequest
             'owner_status' => ['nullable', Rule::in(['active', 'inactive', 'suspended'])],
             'owner_password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'owner_password_confirmation' => ['nullable', 'string', 'min:8'],
-        ];
+        ], PlatformCompanyProfile::validationRules(forUpdate: true));
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v): void {
+            /** @var Company|null $company */
+            $company = $this->route('company');
+            if ($company === null) {
+                return;
+            }
+
+            $ids = $this->input('remove_document_ids', []);
+            if (! is_array($ids) || $ids === []) {
+                return;
+            }
+
+            $allowed = Media::query()
+                ->where('model_type', $company::class)
+                ->where('model_id', $company->getKey())
+                ->whereIn('collection_name', Company::DOCUMENT_COLLECTIONS)
+                ->whereIn('id', $ids)
+                ->pluck('id')
+                ->all();
+
+            foreach ($ids as $index => $id) {
+                if (! in_array((int) $id, array_map('intval', $allowed), true)) {
+                    $v->errors()->add("remove_document_ids.{$index}", __('validation.exists', ['attribute' => 'remove_document_ids']));
+                }
+            }
+        });
     }
 }
-

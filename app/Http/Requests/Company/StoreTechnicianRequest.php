@@ -32,8 +32,14 @@ class StoreTechnicianRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name_ar' => ['required', 'string', 'max:255'],
-            'name_en' => ['nullable', 'string', 'max:255'],
+            'first_name_ar' => ['required', 'string', 'max:100'],
+            'second_name_ar' => ['required', 'string', 'max:100'],
+            'family_name_ar' => ['required', 'string', 'max:100'],
+            'first_name_en' => ['nullable', 'string', 'max:100'],
+            'second_name_en' => ['nullable', 'string', 'max:100'],
+            'family_name_en' => ['nullable', 'string', 'max:100'],
+            'civil_id_number' => ['required', 'string', 'regex:/^\d{12}$/', Rule::unique('technicians', 'civil_id_number')],
+            'civil_id_document' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'display_name_ar' => ['nullable', 'string', 'max:255'],
             'display_name_en' => ['nullable', 'string', 'max:255'],

@@ -9,7 +9,9 @@ use App\Models\ServiceCategory;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TechnicianStoreValidationTest extends TestCase
@@ -18,6 +20,7 @@ class TechnicianStoreValidationTest extends TestCase
 
     public function test_store_rejects_inactive_service_category(): void
     {
+        Storage::fake('public');
         $this->seed(PermissionSeeder::class);
 
         $company = Company::factory()->create();
@@ -36,8 +39,14 @@ class TechnicianStoreValidationTest extends TestCase
         $inactive = ServiceCategory::factory()->create(['is_active' => false]);
 
         $this->actingAs($companyUser)->post(route('company.technicians.store'), [
-            'name_ar' => 'Technician One',
-            'name_en' => 'Technician One',
+            'first_name_ar' => 'أحمد',
+            'second_name_ar' => 'محمد',
+            'family_name_ar' => 'علي',
+            'first_name_en' => 'Ahmed',
+            'second_name_en' => 'Mohamed',
+            'family_name_en' => 'Ali',
+            'civil_id_number' => '288010101002',
+            'civil_id_document' => UploadedFile::fake()->create('civil.pdf', 120, 'application/pdf'),
             'email' => 'tech-active-cat@example.test',
             'phone' => '12345678',
             'password' => 'password123',

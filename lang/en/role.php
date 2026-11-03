@@ -10,6 +10,7 @@ return [
     'services' => 'Services',
     'pricing' => 'Pricing',
     'technicians' => 'Technicians',
+    'technician_reviews' => 'Technician reviews',
     'orders' => 'Orders',
     'invoices' => 'Invoices',
     'reports' => 'Reports',
@@ -60,6 +61,10 @@ return [
     'technicians.delete' => 'Delete technicians',
     'technicians.reset_password' => 'Reset technician password',
     'technicians.manage' => 'Manage technicians',
+
+    'technician_reviews.view' => 'View technician reviews',
+    'technician_reviews.approve' => 'Approve technician reviews',
+    'technician_reviews.reject' => 'Reject technician reviews',
 
     'orders.view' => 'View orders',
     'orders.manage' => 'Manage orders',

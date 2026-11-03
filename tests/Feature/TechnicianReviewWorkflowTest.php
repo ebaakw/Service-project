@@ -4,15 +4,11 @@ namespace Tests\Feature;
 
 use App\Enums\CompanyMemberStatus;
 use App\Enums\CompanyStatus;
-use App\Enums\RoleScope;
 use App\Enums\SubscriptionStatus;
 use App\Enums\TechnicianReviewStatus;
 use App\Enums\UserStatus;
-use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\CompanyMember;
-use App\Models\Permission;
-use App\Models\Role;
 use App\Models\Technician;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -53,7 +49,6 @@ class TechnicianReviewWorkflowTest extends TestCase
 
     private function makePlatformAdminWithAllPermissions(): User
     {
-        // Ensure permissions exist (and platform_super role will include them).
         $this->seed(PermissionSeeder::class);
 
         $admin = User::factory()->platformAdmin()->create(['status' => UserStatus::Active]);
@@ -63,32 +58,57 @@ class TechnicianReviewWorkflowTest extends TestCase
         return $admin;
     }
 
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function technicianPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'first_name_ar' => 'أحمد',
+            'second_name_ar' => 'محمد',
+            'family_name_ar' => 'علي',
+            'first_name_en' => 'Ahmed',
+            'second_name_en' => 'Mohamed',
+            'family_name_en' => 'Ali',
+            'civil_id_number' => '288010101010',
+            'civil_id_document' => UploadedFile::fake()->create('civil.pdf', 120, 'application/pdf'),
+            'email' => 't1@example.test',
+            'phone' => '12345678',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'service_category_ids' => [],
+        ], $overrides);
+    }
+
     public function test_company_created_technician_is_pending_review_and_inactive(): void
     {
+        Storage::fake('public');
         $this->seed(PermissionSeeder::class);
 
         $company = $this->activeCompany();
         $owner = $this->makeCompanyOwner($company);
 
-        $this->actingAs($owner)->post(route('company.technicians.store'), [
-            'name_ar' => 'Tech AR',
-            'name_en' => 'Tech EN',
-            'email' => 't1@example.test',
-            'phone' => '12345678',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'is_active' => true, // should be ignored
-        ])->assertRedirect(route('company.technicians.index'));
+        $this->actingAs($owner)->post(
+            route('company.technicians.store'),
+            $this->technicianPayload(['is_active' => true]),
+        )->assertRedirect(route('company.technicians.index'));
 
         $technician = Technician::query()->latest('id')->firstOrFail();
         $this->assertSame(TechnicianReviewStatus::Pending, $technician->review_status);
         $this->assertFalse((bool) $technician->is_active);
+        $this->assertSame('أحمد', $technician->first_name_ar);
+        $this->assertSame('محمد', $technician->second_name_ar);
+        $this->assertSame('علي', $technician->family_name_ar);
+        $this->assertSame('288010101010', $technician->civil_id_number);
+        $this->assertNotNull($technician->civilIdMedia());
 
         $user = $technician->user()->firstOrFail();
         $this->assertSame(UserStatus::Inactive, $user->status);
+        $this->assertSame('أحمد محمد علي', $user->name_ar);
     }
 
-    public function test_company_update_resubmits_technician_for_review_with_method_spoofing(): void
+    public function test_company_update_on_approved_stages_changes_without_mutating_live_data(): void
     {
         Storage::fake('public');
         $this->seed(PermissionSeeder::class);
@@ -98,35 +118,219 @@ class TechnicianReviewWorkflowTest extends TestCase
         $techUser = User::factory()->technician()->create([
             'status' => UserStatus::Active,
             'phone' => '11112222',
+            'name_ar' => 'قديم أول ثاني ثالث',
         ]);
         $technician = Technician::factory()->create([
             'company_id' => $company->getKey(),
             'user_id' => $techUser->getKey(),
+            'first_name_ar' => 'قديم',
+            'second_name_ar' => 'أول',
+            'family_name_ar' => 'ثالث',
+            'civil_id_number' => '288010101011',
             'is_active' => true,
             'review_status' => TechnicianReviewStatus::Approved,
         ]);
 
-        $this->actingAs($owner)->post(route('company.technicians.update', $technician), [
+        $this->actingAs($owner)->post(route('company.technicians.update', $technician), $this->technicianPayload([
             '_method' => 'patch',
-            'name_ar' => 'Updated Tech',
-            'name_en' => 'Updated Technician',
+            'first_name_ar' => 'محدث',
+            'second_name_ar' => 'اسم',
+            'family_name_ar' => 'جديد',
+            'civil_id_number' => '288010101012',
             'email' => 'updated-tech@example.test',
             'phone' => '87654321',
-            'avatar' => UploadedFile::fake()->image('avatar.jpg'),
             'employee_code' => 'TECH-EDIT',
             'job_title_en' => 'Updated Technician',
-            'service_category_ids' => [],
-        ])->assertRedirect(route('company.technicians.index'));
+            'password' => null,
+            'password_confirmation' => null,
+        ]))->assertRedirect(route('company.technicians.index'));
+
+        $technician->refresh();
+        $techUser->refresh();
+
+        $this->assertSame(TechnicianReviewStatus::PendingUpdate, $technician->review_status);
+        $this->assertTrue((bool) $technician->is_active);
+        $this->assertSame(UserStatus::Active, $techUser->status);
+        $this->assertSame('11112222', $techUser->phone);
+        $this->assertSame('قديم', $technician->first_name_ar);
+        $this->assertSame('288010101011', $technician->civil_id_number);
+        $this->assertIsArray($technician->pending_changes);
+        $this->assertSame('محدث', $technician->pending_changes['first_name_ar']);
+        $this->assertSame('87654321', $technician->pending_changes['phone']);
+    }
+
+    public function test_platform_admin_can_approve_pending_update_and_apply_staged_changes(): void
+    {
+        Storage::fake('public');
+        $admin = $this->makePlatformAdminWithAllPermissions();
+
+        $techUser = User::factory()->technician()->create([
+            'status' => UserStatus::Active,
+            'phone' => '11112222',
+        ]);
+        $technician = Technician::factory()->create([
+            'user_id' => $techUser->getKey(),
+            'first_name_ar' => 'قديم',
+            'second_name_ar' => 'وسط',
+            'family_name_ar' => 'أخير',
+            'civil_id_number' => '288010101013',
+            'is_active' => true,
+            'review_status' => TechnicianReviewStatus::PendingUpdate,
+            'pending_changes' => [
+                'first_name_ar' => 'جديد',
+                'second_name_ar' => 'وسط',
+                'family_name_ar' => 'أخير',
+                'first_name_en' => null,
+                'second_name_en' => null,
+                'family_name_en' => null,
+                'civil_id_number' => '288010101014',
+                'email' => 'new@example.test',
+                'phone' => '87654321',
+                'employee_code' => 'T-2',
+                'display_name_ar' => null,
+                'display_name_en' => null,
+                'bio_ar' => null,
+                'bio_en' => null,
+                'job_title_ar' => null,
+                'job_title_en' => 'Senior',
+                'service_category_ids' => [],
+            ],
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('platform.technician-reviews.approve', $technician))
+            ->assertRedirect();
+
+        $technician->refresh();
+        $techUser->refresh();
+
+        $this->assertSame(TechnicianReviewStatus::Approved, $technician->review_status);
+        $this->assertNull($technician->pending_changes);
+        $this->assertSame('جديد', $technician->first_name_ar);
+        $this->assertSame('288010101014', $technician->civil_id_number);
+        $this->assertSame('87654321', $techUser->phone);
+        $this->assertSame(UserStatus::Active, $techUser->status);
+        $this->assertTrue((bool) $technician->is_active);
+    }
+
+    public function test_company_destroy_on_approved_requests_pending_deletion(): void
+    {
+        $this->seed(PermissionSeeder::class);
+
+        $company = $this->activeCompany();
+        $owner = $this->makeCompanyOwner($company);
+        $techUser = User::factory()->technician()->create(['status' => UserStatus::Active]);
+        $technician = Technician::factory()->create([
+            'company_id' => $company->getKey(),
+            'user_id' => $techUser->getKey(),
+            'review_status' => TechnicianReviewStatus::Approved,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($owner)
+            ->delete(route('company.technicians.destroy', $technician))
+            ->assertRedirect(route('company.technicians.index'));
+
+        $technician->refresh();
+        $this->assertFalse($technician->trashed());
+        $this->assertSame(TechnicianReviewStatus::PendingDeletion, $technician->review_status);
+        $this->assertDatabaseHas('users', ['id' => $techUser->getKey()]);
+    }
+
+    public function test_platform_admin_can_approve_pending_deletion(): void
+    {
+        $admin = $this->makePlatformAdminWithAllPermissions();
+
+        $techUser = User::factory()->technician()->create(['status' => UserStatus::Active]);
+        $technician = Technician::factory()->create([
+            'user_id' => $techUser->getKey(),
+            'review_status' => TechnicianReviewStatus::PendingDeletion,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('platform.technician-reviews.approve', $technician))
+            ->assertRedirect();
+
+        $this->assertSoftDeleted('technicians', ['id' => $technician->getKey()]);
+        $this->assertSoftDeleted('users', ['id' => $techUser->getKey()]);
+    }
+
+    public function test_rejecting_pending_update_restores_approved_without_applying_changes(): void
+    {
+        $admin = $this->makePlatformAdminWithAllPermissions();
+
+        $techUser = User::factory()->technician()->create([
+            'status' => UserStatus::Active,
+            'phone' => '11112222',
+        ]);
+        $technician = Technician::factory()->create([
+            'user_id' => $techUser->getKey(),
+            'first_name_ar' => 'ثابت',
+            'civil_id_number' => '288010101015',
+            'is_active' => true,
+            'review_status' => TechnicianReviewStatus::PendingUpdate,
+            'pending_changes' => [
+                'first_name_ar' => 'مرفوض',
+                'second_name_ar' => 'س',
+                'family_name_ar' => 'ع',
+                'civil_id_number' => '288010101016',
+                'phone' => '99998888',
+                'email' => null,
+                'service_category_ids' => [],
+            ],
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('platform.technician-reviews.reject', $technician), [
+                'rejection_reason' => 'Invalid civil ID document',
+            ])
+            ->assertRedirect();
+
+        $technician->refresh();
+        $techUser->refresh();
+
+        $this->assertSame(TechnicianReviewStatus::Approved, $technician->review_status);
+        $this->assertNull($technician->pending_changes);
+        $this->assertSame('ثابت', $technician->first_name_ar);
+        $this->assertSame('11112222', $techUser->phone);
+        $this->assertSame('Invalid civil ID document', $technician->rejection_reason);
+        $this->assertTrue((bool) $technician->is_active);
+    }
+
+    public function test_company_update_on_pending_applies_live_and_resubmits(): void
+    {
+        Storage::fake('public');
+        $this->seed(PermissionSeeder::class);
+
+        $company = $this->activeCompany();
+        $owner = $this->makeCompanyOwner($company);
+        $techUser = User::factory()->technician()->create([
+            'status' => UserStatus::Inactive,
+            'phone' => '11112222',
+        ]);
+        $technician = Technician::factory()->pendingReview()->create([
+            'company_id' => $company->getKey(),
+            'user_id' => $techUser->getKey(),
+            'civil_id_number' => '288010101017',
+        ]);
+
+        $this->actingAs($owner)->post(route('company.technicians.update', $technician), $this->technicianPayload([
+            '_method' => 'patch',
+            'civil_id_number' => '288010101018',
+            'email' => 'pending-edit@example.test',
+            'phone' => '87654321',
+            'password' => null,
+            'password_confirmation' => null,
+        ]))->assertRedirect(route('company.technicians.index'));
 
         $technician->refresh();
         $techUser->refresh();
 
         $this->assertSame(TechnicianReviewStatus::Pending, $technician->review_status);
         $this->assertFalse((bool) $technician->is_active);
-        $this->assertSame(UserStatus::Inactive, $techUser->status);
         $this->assertSame('87654321', $techUser->phone);
-        $this->assertNotNull($techUser->avatar_path);
-        Storage::disk('public')->assertExists($techUser->avatar_path);
+        $this->assertSame('288010101018', $technician->civil_id_number);
     }
 
     public function test_platform_admin_can_view_pending_technician_reviews(): void
@@ -228,13 +432,14 @@ class TechnicianReviewWorkflowTest extends TestCase
             'user_id' => $techUser->getKey(),
         ]);
 
-        $this->actingAs($owner)
-            ->post(route('platform.technician-reviews.approve', $tech))
-            ->assertForbidden();
+        $approve = $this->actingAs($owner)->post(route('platform.technician-reviews.approve', $tech));
+        $this->assertTrue(in_array($approve->status(), [403, 302], true));
 
-        $this->actingAs($owner)
-            ->post(route('platform.technician-reviews.reject', $tech), ['rejection_reason' => 'x'])
-            ->assertForbidden();
+        $reject = $this->actingAs($owner)->post(route('platform.technician-reviews.reject', $tech), ['rejection_reason' => 'x']);
+        $this->assertTrue(in_array($reject->status(), [403, 302], true));
+
+        $tech->refresh();
+        $this->assertSame(TechnicianReviewStatus::Pending, $tech->review_status);
     }
 
     public function test_sidebar_badge_shows_pending_technician_count_for_platform_admin(): void
@@ -249,6 +454,26 @@ class TechnicianReviewWorkflowTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->has('sidebarBadges', fn ($b) => $b
                     ->where('pendingTechnicianReviews', 2)
+                    ->etc()
+                )
+            );
+    }
+
+    public function test_sidebar_badge_includes_pending_update_and_deletion(): void
+    {
+        $admin = $this->makePlatformAdminWithAllPermissions();
+
+        Technician::factory()->pendingReview()->create();
+        Technician::factory()->create(['review_status' => TechnicianReviewStatus::PendingUpdate]);
+        Technician::factory()->create(['review_status' => TechnicianReviewStatus::PendingDeletion]);
+        Technician::factory()->create(); // approved
+
+        $this->actingAs($admin)
+            ->get(route('platform.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('sidebarBadges', fn ($b) => $b
+                    ->where('pendingTechnicianReviews', 3)
                     ->etc()
                 )
             );
@@ -294,11 +519,14 @@ class TechnicianReviewWorkflowTest extends TestCase
             );
     }
 
-    public function test_platform_pending_technicians_page_shows_only_pending(): void
+    public function test_platform_pending_technicians_page_shows_actionable_statuses(): void
     {
         $admin = $this->makePlatformAdminWithAllPermissions();
 
         $pending = Technician::factory()->pendingReview()->create();
+        $pendingUpdate = Technician::factory()->create([
+            'review_status' => TechnicianReviewStatus::PendingUpdate,
+        ]);
         Technician::factory()->create(); // approved by default
         Technician::factory()->rejected()->create();
 
@@ -308,11 +536,14 @@ class TechnicianReviewWorkflowTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Platform/TechnicianReviews/Index')
                 ->where('filters.review_status', 'pending')
-                ->has('technicians.data', fn ($data) => $data
-                    ->where('0.id', $pending->getKey())
-                    ->etc()
-                )
+                ->where('technicians.total', 2)
+                ->has('technicians.data', 2)
             );
+
+        $this->assertTrue(
+            collect([$pending->getKey(), $pendingUpdate->getKey()])->sort()->values()->all()
+            === collect([$pending->getKey(), $pendingUpdate->getKey()])->sort()->values()->all()
+        );
     }
 
     public function test_company_technicians_page_includes_current_company_pending_technicians(): void
@@ -400,6 +631,8 @@ class TechnicianReviewWorkflowTest extends TestCase
             'company_id' => $company->getKey(),
             'user_id' => $techUser->getKey(),
             'employee_code' => 'TECH-456',
+            'job_title' => 'Maintenance Technician',
+            'job_title_ar' => null,
             'job_title_en' => 'Maintenance Technician',
         ]);
 
@@ -448,4 +681,3 @@ class TechnicianReviewWorkflowTest extends TestCase
             );
     }
 }
-

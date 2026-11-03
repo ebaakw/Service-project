@@ -52,11 +52,16 @@ export default function CompanyTechniciansIndex({
     const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
     const hasActiveFilters = Boolean((filters.search ?? '').trim());
 
-    const deleteTechnician = (id: number) => {
-        if (!confirm(__('tenant.technicians.deleteConfirm'))) {
+    const deleteTechnician = (row: TechnicianRow) => {
+        const status = (row.review_status ?? '').toLowerCase();
+        const needsApproval = ['approved', 'pending_update', 'pending_deletion'].includes(status);
+        const message = needsApproval
+            ? __('tenant.technicians.deleteConfirmApproved')
+            : __('tenant.technicians.deleteConfirm');
+        if (!confirm(message)) {
             return;
         }
-        router.delete(route('company.technicians.destroy', id));
+        router.delete(route('company.technicians.destroy', row.id));
     };
 
     const applyFilters = () => {
@@ -139,13 +144,17 @@ export default function CompanyTechniciansIndex({
                     const status = (r.review_status ?? '').toLowerCase();
                     if (!status) return <span>—</span>;
                     if (status === 'approved')
-                        return <StatusBadge variant="success">{statusLabels.approved ?? __('tenant.technicians.approved_notice')}</StatusBadge>;
+                        return <StatusBadge variant="success">{statusLabels.approved ?? status}</StatusBadge>;
                     if (status === 'pending')
-                        return <StatusBadge variant="warning">{statusLabels.pending ?? __('tenant.technicians.pending_review_notice')}</StatusBadge>;
+                        return <StatusBadge variant="warning">{statusLabels.pending ?? status}</StatusBadge>;
+                    if (status === 'pending_update')
+                        return <StatusBadge variant="warning">{statusLabels.pending_update ?? status}</StatusBadge>;
+                    if (status === 'pending_deletion')
+                        return <StatusBadge variant="danger">{statusLabels.pending_deletion ?? status}</StatusBadge>;
                     if (status === 'rejected')
                         return (
                             <div>
-                                <StatusBadge variant="danger">{statusLabels.rejected ?? __('tenant.technicians.rejected_notice')}</StatusBadge>
+                                <StatusBadge variant="danger">{statusLabels.rejected ?? status}</StatusBadge>
                                 {r.rejection_reason ? <div className="text-muted small mt-1">{r.rejection_reason}</div> : null}
                             </div>
                         );
@@ -170,14 +179,14 @@ export default function CompanyTechniciansIndex({
                         <Link href={route('company.technicians.edit', r.id)} className="btn btn-outline-primary">
                             {__('tenant.technicians.edit')}
                         </Link>
-                        <button type="button" onClick={() => deleteTechnician(r.id)} className="btn btn-outline-danger">
+                        <button type="button" onClick={() => deleteTechnician(r)} className="btn btn-outline-danger">
                             {__('tenant.technicians.delete')}
                         </button>
                     </div>
                 ),
             },
         ],
-        [deleteTechnician, statusLabels],
+        [statusLabels],
     );
 
     const resolvedVisibleColumnIds = visibleColumnIds.length > 0 ? visibleColumnIds : tableColumns.map((c) => c.id);

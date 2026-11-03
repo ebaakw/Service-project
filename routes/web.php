@@ -8,6 +8,8 @@ use App\Http\Controllers\Company\PortfolioMediaController;
 use App\Http\Controllers\Company\PortfolioProjectController;
 use App\Http\Controllers\Company\RoleController as CompanyRoleController;
 use App\Http\Controllers\Company\TechnicianController;
+use App\Http\Controllers\Company\TechnicianDelayAlertController as CompanyTechnicianDelayAlertController;
+use App\Http\Controllers\Company\TechnicianReportController as CompanyTechnicianReportController;
 use App\Http\Controllers\Company\UserController as CompanyUserController;
 use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\CompanyProbeController;
@@ -26,6 +28,8 @@ use App\Http\Controllers\Platform\ServiceCategoryController;
 use App\Http\Controllers\Platform\ServiceIntakeFieldController;
 use App\Http\Controllers\Platform\ServiceProblemController;
 use App\Http\Controllers\Platform\TechnicianController as PlatformTechnicianController;
+use App\Http\Controllers\Platform\TechnicianDelayAlertController as PlatformTechnicianDelayAlertController;
+use App\Http\Controllers\Platform\TechnicianReportController as PlatformTechnicianReportController;
 use App\Http\Controllers\Platform\TechnicianReviewController as PlatformTechnicianReviewController;
 use App\Http\Controllers\Platform\UserController as PlatformUserController;
 use App\Http\Controllers\PlatformCompaniesController;
@@ -123,6 +127,9 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::get('/orders', [PlatformOrderController::class, 'index'])->name('orders.index');
     Route::get('/invoices', [PlatformInvoiceController::class, 'index'])->name('invoices.index');
 
+    Route::get('/reports/technicians', PlatformTechnicianReportController::class)->name('reports.technicians');
+    Route::get('/alerts/technician-delays', PlatformTechnicianDelayAlertController::class)->name('alerts.technician-delays');
+
     Route::get('/settings', [PlatformSettingsController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [PlatformSettingsController::class, 'update'])->name('settings.update');
 
@@ -165,6 +172,9 @@ Route::middleware(['auth', 'verified', 'company.user', 'company.resolve'])->pref
     Route::resource('technicians', TechnicianController::class);
     Route::post('technicians/{technician}/reset-password', [TechnicianController::class, 'resetPassword'])
         ->name('technicians.reset-password');
+
+    Route::get('reports/technicians', CompanyTechnicianReportController::class)->name('reports.technicians');
+    Route::get('alerts/technician-delays', CompanyTechnicianDelayAlertController::class)->name('alerts.technician-delays');
 
     Route::resource('orders', CompanyOrderController::class)->only(['index', 'show']);
     Route::post('orders/{order}/assign-technician', [CompanyOrderController::class, 'assignTechnician'])

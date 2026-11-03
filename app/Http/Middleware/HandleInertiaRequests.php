@@ -9,6 +9,7 @@ use App\Enums\UserType;
 use App\Models\FeedbackTicket;
 use App\Models\PortfolioProject;
 use App\Models\Technician;
+use App\Services\Orders\TechnicianSlaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Storage;
@@ -110,7 +111,7 @@ class HandleInertiaRequests extends Middleware
 
             if ($user->hasPermission('technician_reviews.view')) {
                 $badges['pendingTechnicianReviews'] = Technician::query()
-                    ->where('review_status', TechnicianReviewStatus::Pending)
+                    ->whereIn('review_status', TechnicianReviewStatus::actionableValues())
                     ->count();
             }
 
@@ -126,6 +127,8 @@ class HandleInertiaRequests extends Middleware
                     ->count();
             }
 
+            $badges['activeTechnicianDelays'] = app(TechnicianSlaService::class)->activeDelayCount();
+
             return $badges;
         }
 
@@ -133,6 +136,7 @@ class HandleInertiaRequests extends Middleware
             $company = $request->attributes->get('current_company');
             $companyId = $company?->getKey();
             $openFeedbackTickets = 0;
+            $activeTechnicianDelays = 0;
 
             if ($companyId !== null && $user->hasAnyPermission(['feedback.view', 'complaints.manage'], $companyId)) {
                 $openFeedbackTickets = FeedbackTicket::query()
@@ -141,10 +145,15 @@ class HandleInertiaRequests extends Middleware
                     ->count();
             }
 
+            if ($companyId !== null && $user->hasAnyPermission(['orders.view', 'reports.view'], $companyId)) {
+                $activeTechnicianDelays = app(TechnicianSlaService::class)->activeDelayCount((int) $companyId);
+            }
+
             return [
                 'pendingTechnicianReviews' => 0,
                 'pendingPortfolioReviews' => 0,
                 'openFeedbackTickets' => $openFeedbackTickets,
+                'activeTechnicianDelays' => $activeTechnicianDelays,
             ];
         }
 
@@ -152,6 +161,7 @@ class HandleInertiaRequests extends Middleware
             'pendingTechnicianReviews' => 0,
             'pendingPortfolioReviews' => 0,
             'openFeedbackTickets' => 0,
+            'activeTechnicianDelays' => 0,
         ];
     }
 

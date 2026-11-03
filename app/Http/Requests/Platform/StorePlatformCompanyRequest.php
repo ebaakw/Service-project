@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Platform;
 
+use App\Support\PlatformCompanyProfile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -16,7 +17,7 @@ class StorePlatformCompanyRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        return array_merge([
             'name_ar' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'unique:companies,slug'],
@@ -43,7 +44,7 @@ class StorePlatformCompanyRequest extends FormRequest
             'owner_phone' => ['nullable', 'string', 'max:30', 'unique:users,phone'],
             'owner_password' => ['required_if:create_owner,1', 'nullable', 'string', 'min:8', 'confirmed'],
             'owner_password_confirmation' => ['required_if:create_owner,1', 'nullable', 'string', 'min:8'],
-        ];
+        ], PlatformCompanyProfile::validationRules());
     }
 
     public function withValidator(Validator $validator): void
@@ -97,4 +98,3 @@ class StorePlatformCompanyRequest extends FormRequest
         });
     }
 }
-

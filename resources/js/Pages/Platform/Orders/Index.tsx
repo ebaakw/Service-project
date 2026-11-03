@@ -14,6 +14,7 @@ type Row = {
     id: number;
     order_number: string;
     status: string;
+    total_amount: string | number | null;
     created_at: string | null;
     company: { name: string; name_ar?: string | null; name_en?: string | null } | null;
     customer: { user: { name: string; name_ar?: string | null; name_en?: string | null; email?: string | null; phone?: string | null } } | null;
@@ -176,6 +177,16 @@ export default function PlatformOrdersIndex({
                     const user = o.customer?.user;
                     return `${localizedName(locale, user ?? null)} ${user?.email ?? ''} ${user?.phone ?? ''}`.trim();
                 },
+            },
+            {
+                id: 'collected_amount',
+                key: 'collected_amount',
+                label: t.col_collected_amount ?? 'Collected amount',
+                header: t.col_collected_amount ?? 'Collected amount',
+                render: (o) => (
+                    <span dir="ltr">{o.total_amount != null && o.total_amount !== '' ? String(o.total_amount) : '—'}</span>
+                ),
+                searchText: (o) => String(o.total_amount ?? ''),
             },
             {
                 id: 'created_at',

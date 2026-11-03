@@ -10,6 +10,7 @@ return [
     'services' => 'الخدمات',
     'pricing' => 'التسعير',
     'technicians' => 'الفنيون',
+    'technician_reviews' => 'مراجعة الفنيين',
     'orders' => 'الطلبات',
     'invoices' => 'الفواتير',
     'reports' => 'التقارير',
@@ -60,6 +61,10 @@ return [
     'technicians.delete' => 'حذف فني',
     'technicians.reset_password' => 'إعادة تعيين كلمة مرور الفني',
     'technicians.manage' => 'إدارة الفنيين',
+
+    'technician_reviews.view' => 'عرض مراجعة الفنيين',
+    'technician_reviews.approve' => 'اعتماد مراجعة الفنيين',
+    'technician_reviews.reject' => 'رفض مراجعة الفنيين',
 
     'orders.view' => 'عرض الطلبات',
     'orders.manage' => 'إدارة الطلبات',

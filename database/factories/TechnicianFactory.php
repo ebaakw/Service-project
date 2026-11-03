@@ -28,6 +28,13 @@ class TechnicianFactory extends Factory
                 'type' => UserType::Technician,
                 'status' => UserStatus::Active,
             ]),
+            'first_name_ar' => fake()->firstName(),
+            'second_name_ar' => fake()->firstName(),
+            'family_name_ar' => fake()->lastName(),
+            'first_name_en' => fake()->optional()->firstName(),
+            'second_name_en' => fake()->optional()->firstName(),
+            'family_name_en' => fake()->optional()->lastName(),
+            'civil_id_number' => fake()->unique()->numerify('############'),
             'employee_code' => null,
             'display_name_ar' => null,
             'display_name_en' => null,
@@ -49,6 +56,7 @@ class TechnicianFactory extends Factory
             'reviewed_by_user_id' => null,
             'reviewed_at' => null,
             'rejection_reason' => null,
+            'pending_changes' => null,
         ];
     }
 

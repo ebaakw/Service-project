@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\CompanyPrimaryUserService;
 use App\Services\Media\MediaUploadService;
+use App\Support\PlatformCompanyProfile;
 use Illuminate\Support\Facades\DB;
 
 class UpdateCompanyAction
@@ -21,7 +22,7 @@ class UpdateCompanyAction
         $data = $request->validated();
 
         return DB::transaction(function () use ($data, $request, $company): Company {
-            $company->fill([
+            $company->fill(array_merge([
                 'name_ar' => $data['name_ar'],
                 'name_en' => $data['name_en'] ?? null,
                 'slug' => $data['slug'] ?? null,
@@ -38,12 +39,14 @@ class UpdateCompanyAction
                 'is_featured' => (bool) ($data['is_featured'] ?? false),
                 'default_inspection_fee' => $data['default_inspection_fee'] ?? null,
                 'allow_final_invoice_without_items' => (bool) ($data['allow_final_invoice_without_items'] ?? false),
-            ]);
+            ], PlatformCompanyProfile::attributesFromValidated($data)));
             $company->save();
 
             if ($request->hasFile('logo')) {
                 $this->media->storeCompanyLogo($company, $request->file('logo'));
             }
+
+            PlatformCompanyProfile::syncDocuments($company, $request, $this->media);
 
             $createOwner = (bool) ($data['create_owner'] ?? false);
             $ownerUserId = isset($data['owner_user_id']) ? (int) $data['owner_user_id'] : null;
@@ -70,4 +73,3 @@ class UpdateCompanyAction
         });
     }
 }
-

@@ -66,6 +66,14 @@ export const companyMenu = [
         activePatterns: ['company.technicians.*'],
     },
     {
+        name: 'dashboard.nav.technicians_report',
+        route: 'company.reports.technicians',
+        icon: 'fa-chart-line',
+        permission: 'reports.view',
+        badge: 'activeTechnicianDelays',
+        activePatterns: ['company.reports.technicians'],
+    },
+    {
         name: 'dashboard.nav.company_pricing',
         icon: 'fa-tags',
         permissions: ['price_lists.view', 'price_items.view', 'pricing.manage'],
