@@ -2,6 +2,7 @@
 
 namespace App\Services\Media;
 
+use App\Models\Banner;
 use App\Models\Company;
 use App\Models\Media;
 use App\Models\PortfolioProject;
@@ -12,6 +13,36 @@ use Illuminate\Support\Facades\Storage;
 
 class MediaUploadService
 {
+    public function storeBannerImage(Banner $banner, UploadedFile $file): Media
+    {
+        $path = $file->store("banners/{$banner->getKey()}", 'public');
+
+        $media = $banner->media()->create([
+            'collection_name' => 'image',
+            'disk' => 'public',
+            'file_path' => $path,
+            'file_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'size' => $file->getSize(),
+            'sort_order' => 0,
+        ]);
+
+        $banner->forceFill(['image_path' => $path])->save();
+
+        Media::query()
+            ->where('model_type', $banner::class)
+            ->where('model_id', $banner->getKey())
+            ->where('collection_name', 'image')
+            ->whereKeyNot($media->getKey())
+            ->get()
+            ->each(function (Media $old): void {
+                Storage::disk($old->disk)->delete($old->file_path);
+                $old->delete();
+            });
+
+        return $media->fresh();
+    }
+
     public function storeCompanyLogo(Company $company, UploadedFile $file): Media
     {
         $path = $file->store("companies/{$company->getKey()}/logo", 'public');

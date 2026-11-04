@@ -1,22 +1,27 @@
 <?php
 
+use App\Http\Controllers\Api\CurrentUserController;
 use App\Http\Controllers\Api\V1\Customer\AddressController as CustomerAddressController;
 use App\Http\Controllers\Api\V1\Customer\AuthController as CustomerAuthController;
 use App\Http\Controllers\Api\V1\Customer\AvailableTechnicianController;
 use App\Http\Controllers\Api\V1\Customer\ComplaintController as CustomerComplaintController;
 use App\Http\Controllers\Api\V1\Customer\DeviceController as CustomerDeviceController;
 use App\Http\Controllers\Api\V1\Customer\FeedbackController as CustomerFeedbackController;
+use App\Http\Controllers\Api\V1\Customer\HomeController as CustomerHomeController;
+use App\Http\Controllers\Api\V1\Customer\NotificationController as CustomerNotificationController;
 use App\Http\Controllers\Api\V1\Customer\OrderController as CustomerOrderController;
+use App\Http\Controllers\Api\V1\Customer\SearchController as CustomerSearchController;
 use App\Http\Controllers\Api\V1\Customer\ServiceCategoryController as CustomerServiceCategoryController;
 use App\Http\Controllers\Api\V1\PaymentCompletionController;
+use App\Http\Controllers\Api\V1\Public\PublicBannerController;
 use App\Http\Controllers\Api\V1\Public\PublicCompanyController;
+use App\Http\Controllers\Api\V1\Public\PublicContentPageController;
 use App\Http\Controllers\Api\V1\Technician\AuthController as TechnicianAuthController;
 use App\Http\Controllers\Api\V1\Technician\AvailabilityController as TechnicianAvailabilityController;
 use App\Http\Controllers\Api\V1\Technician\DeviceController as TechnicianDeviceController;
 use App\Http\Controllers\Api\V1\Technician\LocationController as TechnicianLocationController;
 use App\Http\Controllers\Api\V1\Technician\OrderController as TechnicianOrderController;
 use App\Http\Controllers\Api\V1\Technician\OrderItemController as TechnicianOrderItemController;
-use App\Http\Controllers\Api\CurrentUserController;
 use App\Http\Controllers\Api\V1\Technician\OrderOfferController as TechnicianOrderOfferController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -29,8 +34,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
 Route::prefix('v1')->group(function (): void {
     Route::prefix('public')->middleware('throttle:60,1')->group(function (): void {
+        Route::get('/banners', [PublicBannerController::class, 'index']);
         Route::get('/companies', [PublicCompanyController::class, 'index']);
+        Route::get('/companies/{company}', [PublicCompanyController::class, 'show']);
         Route::get('/companies/{company}/portfolio', [PublicCompanyController::class, 'portfolio']);
+        Route::get('/pages/{slug}', [PublicContentPageController::class, 'show']);
     });
 
     Route::prefix('customer')->middleware('throttle:20,1')->group(function (): void {
@@ -45,7 +53,15 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::prefix('customer')->group(function (): void {
             Route::get('/me', [CustomerAuthController::class, 'me']);
+            Route::patch('/me', [CustomerAuthController::class, 'updateProfile']);
             Route::post('/logout', [CustomerAuthController::class, 'logout']);
+
+            Route::get('/home', [CustomerHomeController::class, 'show']);
+            Route::get('/search', [CustomerSearchController::class, 'index']);
+
+            Route::get('/notifications', [CustomerNotificationController::class, 'index']);
+            Route::post('/notifications/read-all', [CustomerNotificationController::class, 'markAllRead']);
+            Route::post('/notifications/{id}/read', [CustomerNotificationController::class, 'markRead']);
 
             Route::get('/addresses', [CustomerAddressController::class, 'index']);
             Route::post('/addresses', [CustomerAddressController::class, 'store']);

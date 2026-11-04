@@ -90,6 +90,20 @@ export const platformMenu = [
         activePatterns: ['platform.service-categories.*'],
     },
     {
+        name: 'dashboard.nav.banners',
+        route: 'platform.banners.index',
+        icon: 'fa-images',
+        permission: 'banners.manage',
+        activePatterns: ['platform.banners.*'],
+    },
+    {
+        name: 'dashboard.nav.content_pages',
+        route: 'platform.content-pages.index',
+        icon: 'fa-file-alt',
+        permission: 'content_pages.manage',
+        activePatterns: ['platform.content-pages.*'],
+    },
+    {
         name: 'dashboard.nav.all_orders',
         route: 'platform.orders.index',
         icon: 'fa-shopping-bag',

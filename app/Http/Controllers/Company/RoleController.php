@@ -21,6 +21,8 @@ class RoleController extends Controller
         'companies.update',
         'companies.delete',
         'services.manage',
+        'banners.manage',
+        'content_pages.manage',
     ];
 
     public function index(Request $request): Response

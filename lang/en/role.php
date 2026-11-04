@@ -51,6 +51,8 @@ return [
     'roles.delete' => 'Delete roles',
     'roles.manage' => 'Manage roles & permissions',
     'services.manage' => 'Manage services',
+    'banners.manage' => 'Manage banners',
+    'content_pages.manage' => 'Manage content pages',
     'pricing.manage' => 'Manage pricing',
 
     'customers.view' => 'View customers',

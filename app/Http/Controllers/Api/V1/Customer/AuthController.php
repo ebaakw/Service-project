@@ -7,6 +7,7 @@ use App\Enums\UserType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Customer\LoginRequest;
 use App\Http\Requests\Api\V1\Customer\RegisterCustomerRequest;
+use App\Http\Requests\Api\V1\Customer\UpdateProfileRequest;
 use App\Http\Resources\Api\V1\CustomerResource;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\Customer;
@@ -92,6 +93,29 @@ class AuthController extends Controller
         $user = $request->user();
         abort_unless($user !== null && $user->isCustomer(), 403);
 
+        $user->load('customerProfile');
+
+        return response()->json([
+            'user' => new UserResource($user),
+            'customer' => new CustomerResource($user->customerProfile),
+            'unread_notifications_count' => $user->unreadNotifications()->count(),
+        ]);
+    }
+
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null && $user->isCustomer(), 403);
+
+        $validated = $request->validated();
+
+        // User::saving syncs `name` from name_ar/name_en; keep them aligned when only `name` is sent.
+        if (array_key_exists('name', $validated) && ! array_key_exists('name_ar', $validated)) {
+            $validated['name_ar'] = $validated['name'];
+        }
+
+        $user->fill($validated);
+        $user->save();
         $user->load('customerProfile');
 
         return response()->json([

@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             PlatformAdminSeeder::class,
             PlatformSettingsSeeder::class,
             ServiceCatalogSeeder::class,
+            ContentPagesSeeder::class,
             DemoCompanyTechnicianCustomerSeeder::class,
         ]);
     }

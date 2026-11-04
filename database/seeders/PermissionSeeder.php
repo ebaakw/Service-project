@@ -45,6 +45,8 @@ class PermissionSeeder extends Seeder
             ['key' => 'technician_reviews.reject', 'name' => 'Reject technician reviews', 'group' => 'technician_reviews'],
 
             ['key' => 'services.manage', 'name' => 'Manage services', 'group' => 'services'],
+            ['key' => 'banners.manage', 'name' => 'Manage banners', 'group' => 'content'],
+            ['key' => 'content_pages.manage', 'name' => 'Manage content pages', 'group' => 'content'],
 
             ['key' => 'orders.view', 'name' => 'View orders', 'group' => 'orders'],
             ['key' => 'orders.manage', 'name' => 'Manage orders', 'group' => 'orders'],

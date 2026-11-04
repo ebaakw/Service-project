@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import type { ComponentType } from 'react';
 import HtmlLocale from '@/Components/HtmlLocale';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'خدمتي';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

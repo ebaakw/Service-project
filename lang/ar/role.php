@@ -51,6 +51,8 @@ return [
     'roles.delete' => 'حذف دور',
     'roles.manage' => 'إدارة الأدوار والصلاحيات',
     'services.manage' => 'إدارة الخدمات',
+    'banners.manage' => 'إدارة الإعلانات',
+    'content_pages.manage' => 'إدارة صفحات المحتوى',
     'pricing.manage' => 'إدارة التسعير',
 
     'customers.view' => 'عرض العملاء',

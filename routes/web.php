@@ -24,6 +24,8 @@ use App\Http\Controllers\Platform\PlatformPortfolioProjectController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\PortfolioProjectReviewController as PlatformPortfolioProjectReviewController;
 use App\Http\Controllers\Platform\RoleController as PlatformRoleController;
+use App\Http\Controllers\Platform\BannerController;
+use App\Http\Controllers\Platform\ContentPageController;
 use App\Http\Controllers\Platform\ServiceCategoryController;
 use App\Http\Controllers\Platform\ServiceIntakeFieldController;
 use App\Http\Controllers\Platform\ServiceProblemController;
@@ -35,11 +37,15 @@ use App\Http\Controllers\Platform\UserController as PlatformUserController;
 use App\Http\Controllers\PlatformCompaniesController;
 use App\Http\Controllers\PlatformDashboardController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\WebsiteController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [WelcomeController::class, 'index']);
+Route::get('/', [WebsiteController::class, 'home'])->name('website.home');
+Route::get('/about', [WebsiteController::class, 'about'])->name('website.about');
+Route::get('/features', [WebsiteController::class, 'features'])->name('website.features');
+Route::get('/contact', [WebsiteController::class, 'contact'])->name('website.contact');
+Route::post('/contact', [WebsiteController::class, 'submitContact'])->name('website.contact.submit');
 
 Route::get('/locale/{locale}', [LocaleController::class, 'switch'])
     ->name('locale.switch');
@@ -123,6 +129,9 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::resource('service-categories.intake-fields', ServiceIntakeFieldController::class)
         ->scoped()
         ->except(['show']);
+
+    Route::resource('banners', BannerController::class)->except(['show']);
+    Route::resource('content-pages', ContentPageController::class)->except(['show']);
 
     Route::get('/orders', [PlatformOrderController::class, 'index'])->name('orders.index');
     Route::get('/invoices', [PlatformInvoiceController::class, 'index'])->name('invoices.index');

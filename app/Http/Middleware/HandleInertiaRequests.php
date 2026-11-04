@@ -57,6 +57,12 @@ class HandleInertiaRequests extends Middleware
     {
         $locale = app()->getLocale();
         $dashboardTranslations = trans('dashboard');
+        $websiteTranslations = Lang::get('website');
+
+        $sharedTranslations = is_array($dashboardTranslations) ? $dashboardTranslations : [];
+        if (is_array($websiteTranslations)) {
+            $sharedTranslations['website'] = $websiteTranslations;
+        }
 
         return [
             ...parent::share($request),
@@ -67,7 +73,7 @@ class HandleInertiaRequests extends Middleware
             'currentCompany' => fn () => $this->resolveCurrentCompanyPayload($request),
             'locale' => $locale,
             'direction' => $locale === 'ar' ? 'rtl' : 'ltr',
-            't' => is_array($dashboardTranslations) ? $dashboardTranslations : [],
+            't' => $sharedTranslations,
             'enumLabels' => [
                 'order_status' => Lang::get('enums.order_status'),
                 'technician_availability' => Lang::get('enums.technician_availability'),

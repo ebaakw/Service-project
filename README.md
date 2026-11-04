@@ -103,6 +103,32 @@ Visit the URL `php artisan serve` prints (e.g. `http://127.0.0.1:8000`).
 
 - Versioned JSON API under `/api/v1/...` for customer and technician apps.
 - Example: `GET /api/user` with `Authorization: Bearer {token}` for Sanctum token auth.
+- Locale: `?locale=ar|en` or `Accept-Language`.
+
+### Customer mobile (highlights)
+
+| Method | Path | Notes |
+|--------|------|--------|
+| GET | `/api/v1/public/banners` | Active home ads/slider |
+| GET | `/api/v1/public/companies` | `q`, `category_id`, `sort=featured\|name\|offers` |
+| GET | `/api/v1/public/companies/{id}` | Company details |
+| GET | `/api/v1/public/pages/{slug}` | CMS pages (e.g. `guarantees`) |
+| GET | `/api/v1/customer/home` | Home aggregate (auth) |
+| GET | `/api/v1/customer/search?q=` | Categories + companies + technicians |
+| GET/PATCH | `/api/v1/customer/me` | Profile read/update |
+| GET | `/api/v1/customer/notifications` | Inbox (+ `unread_count`) |
+| POST | `/api/v1/customer/notifications/{id}/read` | Mark one read |
+| POST | `/api/v1/customer/notifications/read-all` | Mark all read |
+
+Platform admin CRUD: `/platform/banners`, `/platform/content-pages`.
+
+### Postman (mobile)
+
+Import the collection + local environment from [`postman/`](postman/):
+
+- [`postman/Services-Mobile-API.postman_collection.json`](postman/Services-Mobile-API.postman_collection.json) — all `/api/v1` mobile routes (customer, technician, public)
+- [`postman/Services-Mobile-API.local.postman_environment.json`](postman/Services-Mobile-API.local.postman_environment.json)
+- Setup notes: [`postman/README.md`](postman/README.md)
 
 ## Quality checks
 
