@@ -14,4 +14,16 @@ class UnauthenticatedApiJsonTest extends TestCase
         $this->assertNotEmpty($response->headers->get('content-type'));
         $this->assertStringContainsString('json', (string) $response->headers->get('content-type'));
     }
+
+    public function test_unauthenticated_payment_placeholders_return_401(): void
+    {
+        $this->postJson('/api/v1/customer/orders/1/pay-inspection-placeholder')
+            ->assertUnauthorized();
+
+        $this->postJson('/api/v1/customer/orders/1/pay-final-placeholder')
+            ->assertUnauthorized();
+
+        $this->getJson('/api/v1/customer/orders/1/invoice')
+            ->assertUnauthorized();
+    }
 }

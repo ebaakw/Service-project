@@ -44,6 +44,28 @@ class CustomerHomeAndBannersTest extends TestCase
         $response->assertJsonPath('0.title_ar', 'نشط');
     }
 
+    public function test_guest_customer_home_returns_catalog_without_user_fields(): void
+    {
+        Banner::factory()->create(['is_active' => true, 'title_ar' => 'عرض']);
+        ServiceCategory::factory()->create(['is_active' => true, 'name_ar' => 'تكييف']);
+        Company::factory()->create([
+            'status' => CompanyStatus::Active,
+            'is_featured' => true,
+            'name_ar' => 'شركة تجريبية',
+        ]);
+
+        $response = $this->getJson('/api/v1/customer/home');
+
+        $response->assertOk();
+        $response->assertJsonPath('user', null);
+        $response->assertJsonPath('greeting_name', null);
+        $response->assertJsonPath('current_location', null);
+        $response->assertJsonPath('unread_notifications_count', null);
+        $this->assertNotEmpty($response->json('banners'));
+        $this->assertNotEmpty($response->json('categories'));
+        $this->assertNotEmpty($response->json('featured_companies'));
+    }
+
     public function test_customer_home_returns_aggregate_payload(): void
     {
         $user = User::factory()->customer()->create([
@@ -72,6 +94,33 @@ class CustomerHomeAndBannersTest extends TestCase
         $this->assertNotEmpty($response->json('categories'));
         $this->assertNotEmpty($response->json('featured_companies'));
         $response->assertJsonPath('unread_notifications_count', 0);
+    }
+
+    public function test_guest_can_search_and_browse_service_categories(): void
+    {
+        $category = ServiceCategory::factory()->create([
+            'name_ar' => 'تكييف مركزي',
+            'is_active' => true,
+        ]);
+        Company::factory()->create([
+            'status' => CompanyStatus::Active,
+            'name_ar' => 'شركة التكييف',
+        ]);
+
+        $search = $this->getJson('/api/v1/customer/search?q=تكييف');
+        $search->assertOk();
+        $this->assertNotEmpty($search->json('categories'));
+        $this->assertNotEmpty($search->json('companies'));
+
+        $categories = $this->getJson('/api/v1/customer/service-categories');
+        $categories->assertOk();
+        $this->assertNotEmpty($categories->json('data'));
+
+        $problems = $this->getJson('/api/v1/customer/service-categories/'.$category->getKey().'/problems');
+        $problems->assertOk();
+
+        $fields = $this->getJson('/api/v1/customer/service-categories/'.$category->getKey().'/intake-fields');
+        $fields->assertOk();
     }
 
     public function test_public_guarantees_page_is_available(): void

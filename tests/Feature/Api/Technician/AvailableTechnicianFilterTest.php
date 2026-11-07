@@ -62,4 +62,31 @@ class AvailableTechnicianFilterTest extends TestCase
         $this->assertContains($near->getKey(), $ids);
         $this->assertNotContains($busy->getKey(), $ids);
     }
+
+    public function test_guest_can_list_available_technicians(): void
+    {
+        $company = Company::factory()->create(['status' => CompanyStatus::Active]);
+        $category = ServiceCategory::factory()->create(['is_active' => true]);
+
+        $nearUser = User::factory()->technician()->create(['status' => UserStatus::Active]);
+        $near = Technician::factory()->create([
+            'company_id' => $company->getKey(),
+            'user_id' => $nearUser->getKey(),
+            'is_active' => true,
+            'availability_status' => TechnicianAvailabilityStatus::Available,
+            'current_lat' => '29.3758590',
+            'current_lng' => '47.9774050',
+        ]);
+        $near->serviceCategories()->sync([$category->getKey()]);
+
+        $response = $this->getJson('/api/v1/customer/available-technicians?'.http_build_query([
+            'service_category_id' => $category->getKey(),
+            'lat' => 29.3758590,
+            'lng' => 47.9774050,
+        ]));
+
+        $response->assertOk();
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertContains($near->getKey(), $ids);
+    }
 }

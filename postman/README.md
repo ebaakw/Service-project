@@ -20,9 +20,9 @@
 
 ### عميل
 
-1. **Customer / Auth → Register** أو **Login** (يحفظ `customer_token` تلقائيًا).
-2. **Customer / Home & Search → Home**.
-3. Catalog → Addresses → Orders حسب الحاجة.
+1. **Guest browse (بدون توكن):** Home / Search / Catalog / Available technicians تعمل مباشرة.
+2. **Customer / Auth → Register** أو **Login** (يحفظ `customer_token` تلقائيًا) لتخصيص Home والطلبات والدفع.
+3. Addresses → Orders → Pay/Invoice (تتطلب Bearer).
 
 ### فني
 

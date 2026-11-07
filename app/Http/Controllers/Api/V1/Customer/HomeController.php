@@ -12,6 +12,7 @@ use App\Http\Resources\Api\V1\UserResource;
 use App\Models\Banner;
 use App\Models\Company;
 use App\Models\ServiceCategory;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,10 +20,11 @@ class HomeController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $user = $request->user();
-        abort_unless($user !== null && $user->isCustomer(), 403);
+        $user = $this->optionalCustomer($request);
 
-        $user->load(['customerProfile.defaultAddress']);
+        if ($user !== null) {
+            $user->load(['customerProfile.defaultAddress']);
+        }
 
         $banners = Banner::query()
             ->currentlyVisible()
@@ -55,18 +57,33 @@ class HomeController extends Controller
             ->limit(12)
             ->get();
 
-        $unreadCount = $user->unreadNotifications()->count();
-
         return response()->json([
-            'user' => new UserResource($user),
-            'greeting_name' => $user->localized('name') ?: $user->name,
-            'current_location' => $user->customerProfile?->defaultAddress
+            'user' => $user !== null ? new UserResource($user) : null,
+            'greeting_name' => $user !== null
+                ? ($user->localized('name') ?: $user->name)
+                : null,
+            'current_location' => $user?->customerProfile?->defaultAddress
                 ? new CustomerAddressResource($user->customerProfile->defaultAddress)
                 : null,
             'categories' => ServiceCategoryResource::collection($categories),
             'banners' => BannerResource::collection($banners),
             'featured_companies' => CompanyResource::collection($featuredCompanies),
-            'unread_notifications_count' => $unreadCount,
+            'unread_notifications_count' => $user !== null
+                ? $user->unreadNotifications()->count()
+                : null,
         ]);
+    }
+
+    private function optionalCustomer(Request $request): ?User
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        abort_unless($user->isCustomer(), 403);
+
+        return $user;
     }
 }

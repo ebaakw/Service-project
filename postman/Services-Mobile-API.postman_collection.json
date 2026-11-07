@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Services Mobile API v1",
-    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: register/login + home, catalog, orders, notifications, addresses\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- Protected routes: `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Typical customer flow\n1. POST /customer/register or /login → save token\n2. GET /customer/home\n3. GET /service-categories → problems → intake-fields\n4. GET /available-technicians?service_category_id=\n5. POST /addresses (if needed)\n6. POST /orders\n7. Pay placeholders / invoice\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
+    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ problems / intake-fields), `/available-technicians` — valid Bearer enriches home user fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. POST /customer/register or /login → save token (personalized home)\n3. GET /service-categories → problems → intake-fields\n4. GET /available-technicians?service_category_id=\n5. POST /addresses (if needed)\n6. POST /orders\n7. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -546,7 +546,7 @@
     },
     {
       "name": "Customer / Home & Search",
-      "description": "Home aggregate matches Figma home screen.",
+      "description": "Auth-optional. Guest home returns categories/banners/featured_companies with null user fields; Bearer enriches user/location/notifications.",
       "item": [
         {
           "name": "Home",
@@ -574,7 +574,40 @@
                 "home"
               ]
             },
-            "description": "Aggregate: user, greeting_name, current_location (default address), categories, banners, featured_companies, unread_notifications_count.",
+            "description": "Auth-optional. Aggregate: categories, banners, featured_companies. With Bearer: user, greeting_name, current_location, unread_notifications_count. Guest: those user fields are null.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Home (authenticated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/home",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "home"
+              ]
+            },
+            "description": "Same as Home with Bearer {{customer_token}} — returns personalized user fields.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -621,16 +654,9 @@
                 }
               ]
             },
-            "description": "Required q. Returns categories, companies, technicians (approved+active).",
+            "description": "Auth-optional. Required q. Returns categories, companies, technicians (approved+active).",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{customer_token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "response": []
@@ -1001,7 +1027,7 @@
     },
     {
       "name": "Customer / Catalog",
-      "description": "Service categories → problems → intake fields → available technicians.",
+      "description": "Auth-optional guest browse: service categories → problems → intake fields → available technicians. Orders/payments still require auth.",
       "item": [
         {
           "name": "List service categories",
@@ -1029,16 +1055,9 @@
                 "service-categories"
               ]
             },
-            "description": "Active categories with icon_path/icon_url, localized names.",
+            "description": "Auth-optional. Active categories with icon_path/icon_url, localized names.",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{customer_token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "response": []
@@ -1071,16 +1090,9 @@
                 "problems"
               ]
             },
-            "description": "Problems for choose-service screen.",
+            "description": "Auth-optional. Problems for choose-service screen.",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{customer_token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "response": []
@@ -1113,16 +1125,9 @@
                 "intake-fields"
               ]
             },
-            "description": "Extra intake questions for order creation.",
+            "description": "Auth-optional. Extra intake questions for order creation.",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{customer_token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "response": []
@@ -1170,16 +1175,9 @@
                 }
               ]
             },
-            "description": "Required service_category_id. Optional lat,lng for distance sort. Only available approved technicians with coordinates.",
+            "description": "Auth-optional. Required service_category_id. Optional lat,lng for distance sort. Only available approved technicians with coordinates.",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{customer_token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             }
           },
           "response": []

@@ -18,7 +18,9 @@ class AvailableTechnicianController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        abort_unless($user !== null && $user->isCustomer(), 403);
+        if ($user !== null) {
+            abort_unless($user->isCustomer(), 403);
+        }
 
         $validated = $request->validate([
             'service_category_id' => ['required', 'integer', 'exists:service_categories,id'],

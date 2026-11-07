@@ -14,8 +14,7 @@ class ServiceCategoryController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        abort_unless($user !== null && $user->isCustomer(), 403);
+        $this->ensureGuestOrCustomer($request);
 
         $categories = ServiceCategory::query()
             ->where('is_active', true)
@@ -30,8 +29,7 @@ class ServiceCategoryController extends Controller
 
     public function problems(Request $request, ServiceCategory $serviceCategory): JsonResponse
     {
-        $user = $request->user();
-        abort_unless($user !== null && $user->isCustomer(), 403);
+        $this->ensureGuestOrCustomer($request);
 
         abort_unless($serviceCategory->is_active, 404);
 
@@ -47,8 +45,7 @@ class ServiceCategoryController extends Controller
 
     public function intakeFields(Request $request, ServiceCategory $serviceCategory): JsonResponse
     {
-        $user = $request->user();
-        abort_unless($user !== null && $user->isCustomer(), 403);
+        $this->ensureGuestOrCustomer($request);
 
         abort_unless($serviceCategory->is_active, 404);
 
@@ -60,5 +57,14 @@ class ServiceCategoryController extends Controller
         return response()->json([
             'data' => ServiceIntakeFieldResource::collection($fields),
         ]);
+    }
+
+    private function ensureGuestOrCustomer(Request $request): void
+    {
+        $user = $request->user();
+
+        if ($user !== null) {
+            abort_unless($user->isCustomer(), 403);
+        }
     }
 }

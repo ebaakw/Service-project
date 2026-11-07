@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureCompanyUser;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\OptionalSanctumAuth;
 use App\Http\Middleware\ResolveCurrentCompany;
 use App\Http\Middleware\SetApiLocale;
 use App\Http\Middleware\SetLocale;
@@ -10,11 +11,11 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Laravel\Sanctum\Http\Middleware\CheckAbilities;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
-use Inertia\Inertia;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'company.user' => EnsureCompanyUser::class,
             'company.resolve' => ResolveCurrentCompany::class,
             'abilities' => CheckAbilities::class,
+            'auth.optional.sanctum' => OptionalSanctumAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

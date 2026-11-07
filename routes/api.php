@@ -50,14 +50,23 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/technician/login', [TechnicianAuthController::class, 'login'])
         ->middleware('throttle:20,1');
 
+    // Guest-friendly browse: work without Authorization; enrich when a valid Bearer token is present.
+    Route::prefix('customer')->middleware('auth.optional.sanctum')->group(function (): void {
+        Route::get('/home', [CustomerHomeController::class, 'show']);
+        Route::get('/search', [CustomerSearchController::class, 'index']);
+
+        Route::get('/service-categories', [CustomerServiceCategoryController::class, 'index']);
+        Route::get('/service-categories/{serviceCategory}/problems', [CustomerServiceCategoryController::class, 'problems']);
+        Route::get('/service-categories/{serviceCategory}/intake-fields', [CustomerServiceCategoryController::class, 'intakeFields']);
+
+        Route::get('/available-technicians', [AvailableTechnicianController::class, 'index']);
+    });
+
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::prefix('customer')->group(function (): void {
             Route::get('/me', [CustomerAuthController::class, 'me']);
             Route::patch('/me', [CustomerAuthController::class, 'updateProfile']);
             Route::post('/logout', [CustomerAuthController::class, 'logout']);
-
-            Route::get('/home', [CustomerHomeController::class, 'show']);
-            Route::get('/search', [CustomerSearchController::class, 'index']);
 
             Route::get('/notifications', [CustomerNotificationController::class, 'index']);
             Route::post('/notifications/read-all', [CustomerNotificationController::class, 'markAllRead']);
@@ -68,12 +77,6 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/addresses/{address}', [CustomerAddressController::class, 'show']);
             Route::patch('/addresses/{address}', [CustomerAddressController::class, 'update']);
             Route::delete('/addresses/{address}', [CustomerAddressController::class, 'destroy']);
-
-            Route::get('/service-categories', [CustomerServiceCategoryController::class, 'index']);
-            Route::get('/service-categories/{serviceCategory}/problems', [CustomerServiceCategoryController::class, 'problems']);
-            Route::get('/service-categories/{serviceCategory}/intake-fields', [CustomerServiceCategoryController::class, 'intakeFields']);
-
-            Route::get('/available-technicians', [AvailableTechnicianController::class, 'index']);
 
             Route::get('/orders', [CustomerOrderController::class, 'index']);
             Route::post('/orders', [CustomerOrderController::class, 'store']);
