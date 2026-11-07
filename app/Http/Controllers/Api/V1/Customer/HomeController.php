@@ -13,6 +13,7 @@ use App\Models\Banner;
 use App\Models\Company;
 use App\Models\ServiceCategory;
 use App\Models\User;
+use App\Support\SafeEloquent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,11 +27,11 @@ class HomeController extends Controller
             $user->load(['customerProfile.defaultAddress']);
         }
 
-        $banners = Banner::query()
+        $banners = SafeEloquent::collectIfTable('banners', static fn () => Banner::query()
             ->currentlyVisible()
             ->orderBy('sort_order')
             ->orderByDesc('id')
-            ->get();
+            ->get());
 
         $categories = ServiceCategory::query()
             ->where('is_active', true)

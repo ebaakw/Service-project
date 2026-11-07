@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Models\ServiceCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -64,6 +65,23 @@ class CustomerHomeAndBannersTest extends TestCase
         $this->assertNotEmpty($response->json('banners'));
         $this->assertNotEmpty($response->json('categories'));
         $this->assertNotEmpty($response->json('featured_companies'));
+    }
+
+    public function test_guest_home_and_public_banners_survive_missing_banners_table(): void
+    {
+        ServiceCategory::factory()->create(['is_active' => true, 'name_ar' => 'تكييف']);
+
+        Schema::drop('banners');
+
+        $home = $this->getJson('/api/v1/customer/home');
+        $home->assertOk();
+        $home->assertJsonPath('user', null);
+        $home->assertJsonPath('banners', []);
+        $this->assertNotEmpty($home->json('categories'));
+
+        $banners = $this->getJson('/api/v1/public/banners');
+        $banners->assertOk();
+        $this->assertSame([], $banners->json());
     }
 
     public function test_customer_home_returns_aggregate_payload(): void
