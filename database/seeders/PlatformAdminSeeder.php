@@ -17,6 +17,9 @@ class PlatformAdminSeeder extends Seeder
 {
     public function run(): void
     {
+        // Ensure newly added permission keys exist before syncing the super role.
+        $this->call(PermissionSeeder::class);
+
         $admin = config('platform.admin', []);
 
         $name = isset($admin['name']) && is_string($admin['name']) ? trim($admin['name']) : '';
