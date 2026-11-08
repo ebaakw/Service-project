@@ -125,6 +125,8 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::patch('service-categories/reorder', [ServiceCategoryController::class, 'reorder'])
         ->name('service-categories.reorder');
     Route::resource('service-categories', ServiceCategoryController::class);
+    Route::patch('service-categories/{service_category}/problems/reorder', [ServiceProblemController::class, 'reorder'])
+        ->name('service-categories.problems.reorder');
     Route::resource('service-categories.problems', ServiceProblemController::class)
         ->scoped()
         ->except(['show']);

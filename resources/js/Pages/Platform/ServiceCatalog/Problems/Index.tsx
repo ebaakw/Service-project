@@ -1,5 +1,5 @@
-import DataTable from '@/Components/ui/DataTable';
 import Pagination from '@/Components/ui/Pagination';
+import SortableDataTable from '@/Components/ui/SortableDataTable';
 import StatusBadge from '@/Components/ui/StatusBadge';
 import TableCard from '@/Components/ui/TableCard';
 import type { TableToolbarColumn } from '@/Components/ui/TableToolbar';
@@ -8,7 +8,7 @@ import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import type { PageProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Category = { id: number; name_ar: string; slug: string };
 type ProblemRow = {
@@ -48,9 +48,53 @@ export default function PlatformServiceProblemsIndex({
     const [perPage, setPerPage] = useState<number>(Number(filters.per_page ?? 10) || 10);
     const [isFiltering, setIsFiltering] = useState(false);
     const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
+    const [rows, setRows] = useState<ProblemRow[]>(problems.data);
+    const [isReordering, setIsReordering] = useState(false);
+
+    useEffect(() => {
+        setRows(problems.data);
+    }, [problems.data]);
 
     const hasActiveFilters = Boolean(
         (filters.search ?? '').trim() || ((filters.status ?? 'all') !== 'all' && (filters.status ?? '') !== ''),
+    );
+
+    const handleReorder = useCallback(
+        (orderedIds: Array<string | number>) => {
+            if (isReordering) {
+                return;
+            }
+
+            const idOrder = orderedIds.map((id) => Number(id));
+            const byId = new Map(rows.map((row) => [row.id, row]));
+            const nextRows = idOrder
+                .map((id) => byId.get(id))
+                .filter((row): row is ProblemRow => row !== undefined);
+
+            if (nextRows.length !== rows.length) {
+                return;
+            }
+
+            const previousOrders = rows.map((row) => row.sort_order).sort((a, b) => a - b);
+            const withUpdatedOrders = nextRows.map((row, index) => ({
+                ...row,
+                sort_order: previousOrders[index] ?? row.sort_order,
+            }));
+
+            setRows(withUpdatedOrders);
+            setIsReordering(true);
+
+            router.patch(
+                route('platform.service-categories.problems.reorder', category.id),
+                { ids: idOrder },
+                {
+                    preserveScroll: true,
+                    onFinish: () => setIsReordering(false),
+                    onError: () => setRows(problems.data),
+                },
+            );
+        },
+        [category.id, isReordering, problems.data, rows],
     );
 
     const applyFilters = () => {
@@ -282,7 +326,7 @@ export default function PlatformServiceProblemsIndex({
             >
                 <div className="p-3 border-bottom">
                     <TableToolbar<ProblemRow>
-                        rows={problems.data}
+                        rows={rows}
                         columns={tableColumns}
                         showSearch={false}
                         exportFilename="platform-service-problems"
@@ -313,11 +357,14 @@ export default function PlatformServiceProblemsIndex({
                     />
                 </div>
 
-                <DataTable<ProblemRow>
+                <SortableDataTable<ProblemRow>
                     columns={visibleTableColumns}
-                    rows={problems.data}
+                    rows={rows}
                     rowKey={(row) => row.id}
                     emptyTitle={__('dashboard.service_problems.empty')}
+                    dragHandleLabel={__('dashboard.service_problems.drag_handle')}
+                    disabled={isReordering}
+                    onReorder={handleReorder}
                 />
                 <div className="px-3 pb-3">
                     <Pagination

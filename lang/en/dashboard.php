@@ -292,6 +292,8 @@ return [
         'other_label' => 'Other option',
         'delete_confirm' => 'Delete this problem?',
         'empty' => 'No problems found.',
+        'drag_handle' => 'Drag to reorder',
+        'reorder_success' => 'Problem order updated.',
     ],
     'service_intake_fields' => [
         'page_title' => 'Additional data',

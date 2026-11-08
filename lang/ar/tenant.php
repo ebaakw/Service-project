@@ -7,7 +7,7 @@ return [
     'regular' => 'عادي',
     'urgent' => 'مستعجل',
     'cancelled' => 'تم الغاء',
-    'saved' => 'تم الحفظ',
+    'saved' => 'تم الحفظ بنجاح',
     'no_data_found' => 'لا توجد بيانات.',
     'suspended' => 'موقوف',
     'insert_by_excel' => 'إدراج بالاكسيل',

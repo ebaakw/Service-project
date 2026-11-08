@@ -292,6 +292,8 @@ return [
         'other_label' => 'خيار أخرى',
         'delete_confirm' => 'حذف هذه المشكلة؟',
         'empty' => 'لا توجد مشاكل.',
+        'drag_handle' => 'اسحب لإعادة الترتيب',
+        'reorder_success' => 'تم تحديث ترتيب المشاكل.',
     ],
     'service_intake_fields' => [
         'page_title' => 'البيانات الإضافية',

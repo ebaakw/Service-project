@@ -65,7 +65,10 @@ const MainLayout = ({
 
     useEffect(() => {
         if (!flash?.type) return;
-        const msg = flash.message === 'saved' ? __('tenant.saved') : flash.message;
+        const msg =
+            flash.message === 'saved' || flash.message === 'Saved.'
+                ? __('tenant.saved')
+                : flash.message;
         if (typeof toast[flash.type] === 'function') {
             toast[flash.type](msg);
         }

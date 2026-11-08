@@ -22,7 +22,8 @@ NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
 NODE_MINOR="$(node -p "process.versions.node.split('.')[1]")"
 if [ "$NODE_MAJOR" -lt 20 ] || { [ "$NODE_MAJOR" -eq 20 ] && [ "$NODE_MINOR" -lt 19 ]; }; then
   echo "ERROR: Node.js ^20.19.0 or >=22.12.0 is required (found $(node -v))." >&2
-  echo "Upgrade Node in Cloudways Application Settings, then re-run deploy.sh." >&2
+  echo "On Cloudways SSH, run:  . \"\$HOME/.nvm/nvm.sh\" && nvm use 22 && bash deploy.sh" >&2
+  echo "Or upgrade Node in Application Settings / Stack, then open a new SSH session." >&2
   exit 1
 fi
 

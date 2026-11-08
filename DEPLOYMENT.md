@@ -121,20 +121,44 @@ Add a single cron entry (replace `/path/to/project`):
 
 ## 11. Optional: use `deploy.sh`
 
-A sample script is provided at the project root: [deploy.sh](deploy.sh). On Linux/macOS, make it executable once: `chmod +x deploy.sh`. It runs Composer, npm, build, maintenance mode, `migrate --force`, cache commands, and `queue:restart`. It does **not** run `migrate:fresh` or automatic seeding. Create or update the platform admin separately:
+A sample script is provided at the project root: [deploy.sh](deploy.sh). It runs Composer, npm, build, maintenance mode, `migrate --force`, cache commands, and `queue:restart`. It does **not** run `migrate:fresh` or automatic seeding. Create or update the platform admin separately:
 
 ```bash
 php artisan db:seed --class=PlatformAdminSeeder --force
 ```
 
-**Node.js requirement:** `^20.19.0` or `>=22.12.0` (Vite 8 / laravel-vite-plugin). On Cloudways, set this under Application Management → Settings / Stack before running `./deploy.sh`. Older Node (e.g. `v20.5.1`) can leave `public/build` unchanged when the frontend build fails.
+**Node.js requirement:** `^20.19.0` or `>=22.12.0` (Vite 8 / laravel-vite-plugin). Older Node (e.g. Cloudways default `v20.5.1`) makes `vite build` fail and leaves `public/build` unchanged, so UI updates never appear.
+
+### Cloudways (production) — required every deploy
+
+The application stack Node may stay on an old version even when nvm has Node 22 installed. **Activate Node 22 in the SSH session before deploy:**
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh
+cd ~/applications/<APP_ID>/public_html/
+
+. "$HOME/.nvm/nvm.sh"
+nvm use 22
+node -v    # must show v22.x (or >=20.19)
+
+# chmod often fails on Cloudways — run via bash:
+bash deploy.sh
 ```
 
-After a successful deploy, `public/build/manifest.json` should show today’s timestamp. If it is still old, the UI changes were not published.
+Optional one-liner:
+
+```bash
+. "$HOME/.nvm/nvm.sh" && nvm use 22 && bash deploy.sh
+```
+
+After a successful deploy, verify:
+
+```bash
+ls -la public/build/manifest.json
+```
+
+The timestamp must be **today**. If it is still old, the UI changes were not published. Then hard-refresh the browser (`Ctrl+Shift+R`).
+
+Agent-oriented notes also live in [`.cursor/rules/deployment-cloudways.mdc`](.cursor/rules/deployment-cloudways.mdc).
 
 ## Troubleshooting
 

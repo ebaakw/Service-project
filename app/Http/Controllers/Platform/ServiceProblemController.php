@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Platform\ReorderServiceProblemsRequest;
 use App\Http\Requests\Platform\StoreServiceProblemRequest;
 use App\Http\Requests\Platform\UpdateServiceProblemRequest;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProblem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,6 +52,42 @@ class ServiceProblemController extends Controller
                 'per_page' => $perPage,
             ],
         ]);
+    }
+
+    public function reorder(ReorderServiceProblemsRequest $request, ServiceCategory $service_category): RedirectResponse
+    {
+        /** @var list<int> $ids */
+        $ids = array_map('intval', $request->validated('ids'));
+
+        $problems = $service_category->problems()
+            ->whereIn('id', $ids)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($ids as $id) {
+            /** @var ServiceProblem $problem */
+            $problem = $problems->get($id);
+            $this->authorize('update', $problem);
+        }
+
+        $sortedOrders = $problems
+            ->pluck('sort_order')
+            ->map(fn ($order) => (int) $order)
+            ->sort()
+            ->values()
+            ->all();
+
+        DB::transaction(function () use ($ids, $sortedOrders, $service_category): void {
+            foreach ($ids as $index => $id) {
+                $service_category->problems()
+                    ->whereKey($id)
+                    ->update(['sort_order' => $sortedOrders[$index]]);
+            }
+        });
+
+        return back()
+            ->with('type', 'success')
+            ->with('message', __('dashboard.service_problems.reorder_success'));
     }
 
     public function create(ServiceCategory $service_category): Response
