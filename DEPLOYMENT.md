@@ -127,6 +127,15 @@ A sample script is provided at the project root: [deploy.sh](deploy.sh). On Linu
 php artisan db:seed --class=PlatformAdminSeeder --force
 ```
 
+**Node.js requirement:** `^20.19.0` or `>=22.12.0` (Vite 8 / laravel-vite-plugin). On Cloudways, set this under Application Management → Settings / Stack before running `./deploy.sh`. Older Node (e.g. `v20.5.1`) can leave `public/build` unchanged when the frontend build fails.
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+After a successful deploy, `public/build/manifest.json` should show today’s timestamp. If it is still old, the UI changes were not published.
+
 ## Troubleshooting
 
 | Symptom | Things to check |
@@ -136,6 +145,8 @@ php artisan db:seed --class=PlatformAdminSeeder --force
 | **Database connection failed** | `DB_*` in `.env`, MySQL user grants, firewall to DB host |
 | **Permission denied** | Ownership of `storage`, `bootstrap/cache`; SELinux/AppArmor |
 | **Vite manifest not found** | Run `npm run build`; ensure `public/build/manifest.json` exists; `APP_ENV` not pointing at dev-only asset URLs |
+| **UI changes missing after upload** | `ls -la public/build/manifest.json` still old → frontend build did not succeed. Fix Node version, run `./deploy.sh` (or `npm install && npm run build`), hard-refresh browser |
+| **`npm ci` lock out of sync** | Commit an updated `package-lock.json`, or let `deploy.sh` fall back to `npm install` |
 | **Route cache failed** | Run `php artisan route:clear`; fix any route definition errors; ensure no unsupported closures in route files |
 | **Storage link / broken images** | `php artisan storage:link`; `FILESYSTEM_DISK=public`; disk URL matches `APP_URL` |
 | **Blank page after login** | Logs, Inertia/Vite build present, `SANCTUM_STATEFUL_DOMAINS`, session domain/cookie |
