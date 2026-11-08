@@ -1,13 +1,14 @@
 import '@/Components/Core/css/switch.css';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
+import type { PageProps } from '@/types';
 import type { InertiaFormProps } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 
 export type ServiceCategoryFormData = {
     name_ar: string;
     name_en: string;
     slug: string;
-    icon_path: string;
+    icon: File | null;
     description_ar: string;
     description_en: string;
     sort_order: number;
@@ -25,13 +26,18 @@ function RequiredMark() {
 
 export default function ServiceCategoryForm({
     form,
+    iconUrl,
     clearClientRequiredKey,
     clientRequiredErrors,
 }: {
     form: InertiaFormProps<ServiceCategoryFormData>;
+    iconUrl?: string | null;
     clearClientRequiredKey?: (key: keyof ServiceCategoryFormData) => void;
     clientRequiredErrors?: Record<string, boolean>;
 }) {
+    const { direction } = usePage<PageProps>().props;
+    const align = direction === 'rtl' ? 'right' : 'left';
+
     const { data, setData, errors, processing } = form;
     const anyErrors = errors as Record<string, string | undefined>;
     const requiredClient = clientRequiredErrors ?? {};
@@ -48,6 +54,10 @@ export default function ServiceCategoryForm({
     const touch = (key: keyof ServiceCategoryFormData) => {
         clearClientRequiredKey?.(key);
     };
+
+    const descriptionArLabel = __('dashboard.forms.description_ar');
+    const descriptionEnLabel = __('dashboard.forms.description_en');
+    const sortOrderLabel = __('dashboard.forms.sort_order');
 
     return (
         <div className="card card-outline card-primary">
@@ -70,6 +80,7 @@ export default function ServiceCategoryForm({
                                     touch('name_ar');
                                 }}
                                 dir="rtl"
+                                style={{ textAlign: align }}
                             />
                             <FieldError error={fieldError('name_ar')} />
                         </div>
@@ -92,6 +103,7 @@ export default function ServiceCategoryForm({
                                     touch('name_en');
                                 }}
                                 dir="ltr"
+                                style={{ textAlign: align }}
                             />
                             <FieldError error={fieldError('name_en')} />
                         </div>
@@ -114,6 +126,7 @@ export default function ServiceCategoryForm({
                                     touch('slug');
                                 }}
                                 dir="ltr"
+                                style={{ textAlign: align }}
                             />
                             <FieldError error={fieldError('slug')} />
                         </div>
@@ -121,23 +134,26 @@ export default function ServiceCategoryForm({
 
                     <div className="col-12 col-lg-6">
                         <div className="form-group">
-                            <label htmlFor="icon_path">{__('dashboard.forms.icon_path')}</label>
+                            <label htmlFor="icon">{__('dashboard.service_categories.icon')}</label>
+                            {iconUrl ? (
+                                <div className="mb-2">
+                                    <img src={iconUrl} alt="" style={{ maxHeight: 120, maxWidth: '100%' }} />
+                                </div>
+                            ) : null}
                             <input
-                                id="icon_path"
-                                name="icon_path"
-                                type="text"
-                                className={`form-control ${isInvalid('icon_path') ? 'is-invalid' : ''}`}
-                                value={data.icon_path}
-                                onChange={(e) => setData('icon_path', e.target.value)}
-                                dir="ltr"
+                                id="icon"
+                                name="icon"
+                                type="file"
+                                accept="image/*"
+                                className={`form-control-file ${isInvalid('icon') ? 'is-invalid' : ''}`}
+                                onChange={(e) => setData('icon', e.target.files?.[0] ?? null)}
                             />
-                            <FieldError error={anyErrors.icon_path} />
+                            <FieldError error={anyErrors.icon} />
                         </div>
                     </div>
 
                     <div className="col-12">
                         <div className="form-group">
-                            <label htmlFor="description_ar">{__('dashboard.forms.description_ar')}</label>
                             <textarea
                                 id="description_ar"
                                 name="description_ar"
@@ -145,7 +161,10 @@ export default function ServiceCategoryForm({
                                 className={`form-control ${isInvalid('description_ar') ? 'is-invalid' : ''}`}
                                 value={data.description_ar}
                                 onChange={(e) => setData('description_ar', e.target.value)}
+                                placeholder={descriptionArLabel}
+                                aria-label={descriptionArLabel}
                                 dir="rtl"
+                                style={{ textAlign: align }}
                             />
                             <FieldError error={anyErrors.description_ar} />
                         </div>
@@ -153,7 +172,6 @@ export default function ServiceCategoryForm({
 
                     <div className="col-12">
                         <div className="form-group">
-                            <label htmlFor="description_en">{__('dashboard.forms.description_en')}</label>
                             <textarea
                                 id="description_en"
                                 name="description_en"
@@ -161,7 +179,10 @@ export default function ServiceCategoryForm({
                                 className={`form-control ${isInvalid('description_en') ? 'is-invalid' : ''}`}
                                 value={data.description_en}
                                 onChange={(e) => setData('description_en', e.target.value)}
+                                placeholder={descriptionEnLabel}
+                                aria-label={descriptionEnLabel}
                                 dir="ltr"
+                                style={{ textAlign: align }}
                             />
                             <FieldError error={anyErrors.description_en} />
                         </div>
@@ -169,7 +190,6 @@ export default function ServiceCategoryForm({
 
                     <div className="col-12 col-md-6">
                         <div className="form-group">
-                            <label htmlFor="sort_order">{__('dashboard.forms.sort_order')}</label>
                             <input
                                 id="sort_order"
                                 name="sort_order"
@@ -178,7 +198,10 @@ export default function ServiceCategoryForm({
                                 className={`form-control ${isInvalid('sort_order') ? 'is-invalid' : ''}`}
                                 value={data.sort_order}
                                 onChange={(e) => setData('sort_order', Number(e.target.value))}
+                                placeholder={sortOrderLabel}
+                                aria-label={sortOrderLabel}
                                 dir="ltr"
+                                style={{ textAlign: align }}
                             />
                             <FieldError error={anyErrors.sort_order} />
                         </div>

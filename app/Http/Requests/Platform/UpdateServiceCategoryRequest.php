@@ -25,7 +25,7 @@ class UpdateServiceCategoryRequest extends FormRequest
             'name_ar' => ['required', 'string', 'max:255'],
             'name_en' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:255', Rule::unique('service_categories', 'slug')->ignore($category->getKey())],
-            'icon_path' => ['nullable', 'string', 'max:500'],
+            'icon' => ['nullable', 'image', 'max:5120'],
             'description_ar' => ['nullable', 'string'],
             'description_en' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:0'],

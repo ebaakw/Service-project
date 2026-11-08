@@ -9,7 +9,7 @@ export default function PlatformServiceCategoriesCreate() {
         name_ar: '',
         name_en: '',
         slug: '',
-        icon_path: '',
+        icon: null,
         description_ar: '',
         description_en: '',
         sort_order: 0,
@@ -49,6 +49,7 @@ export default function PlatformServiceCategoriesCreate() {
 
         setClientRequiredErrors({});
         form.post(route('platform.service-categories.store'), {
+            forceFormData: true,
             preserveState: true,
             preserveScroll: true,
             onError: (errs) => {

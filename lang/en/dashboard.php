@@ -121,6 +121,7 @@ return [
         'new_title' => 'New service category',
         'edit_title' => 'Edit service category',
         'add_category' => 'Add category',
+        'icon' => 'Icon',
         'name_ar_label' => 'Name (AR)',
         'name_en_label' => 'Name (EN)',
         'search_placeholder' => 'Search by Arabic name, English name, or slug…',
@@ -138,6 +139,8 @@ return [
         'active_label' => 'Active',
         'yes' => 'Yes',
         'no' => 'No',
+        'drag_handle' => 'Drag to reorder',
+        'reorder_success' => 'Category order updated.',
     ],
     'banners' => [
         'page_title' => 'Banners / Ads',

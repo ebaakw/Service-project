@@ -9,11 +9,11 @@ type Category = {
     name_ar: string;
     name_en: string | null;
     slug: string;
-    icon_path: string | null;
     description_ar: string | null;
     description_en: string | null;
     sort_order: number;
     is_active: boolean;
+    icon_url: string | null;
 };
 
 export default function PlatformServiceCategoriesEdit({ category }: { category: Category }) {
@@ -21,7 +21,7 @@ export default function PlatformServiceCategoriesEdit({ category }: { category: 
         name_ar: category.name_ar,
         name_en: category.name_en ?? '',
         slug: category.slug,
-        icon_path: category.icon_path ?? '',
+        icon: null,
         description_ar: category.description_ar ?? '',
         description_en: category.description_en ?? '',
         sort_order: category.sort_order,
@@ -60,7 +60,9 @@ export default function PlatformServiceCategoriesEdit({ category }: { category: 
         }
 
         setClientRequiredErrors({});
-        form.put(route('platform.service-categories.update', category.id), {
+        form.transform((data) => ({ ...data, _method: 'put' }));
+        form.post(route('platform.service-categories.update', category.id), {
+            forceFormData: true,
             preserveState: true,
             preserveScroll: true,
             onError: (errs) => {
@@ -87,6 +89,7 @@ export default function PlatformServiceCategoriesEdit({ category }: { category: 
             <form onSubmit={submit} noValidate>
                 <ServiceCategoryForm
                     form={form}
+                    iconUrl={category.icon_url}
                     clientRequiredErrors={clientRequiredErrors}
                     clearClientRequiredKey={clearClientRequiredKey}
                 />

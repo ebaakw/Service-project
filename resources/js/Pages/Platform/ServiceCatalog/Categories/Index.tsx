@@ -1,5 +1,6 @@
 import DataTable from '@/Components/ui/DataTable';
 import Pagination from '@/Components/ui/Pagination';
+import SortableDataTable from '@/Components/ui/SortableDataTable';
 import StatusBadge from '@/Components/ui/StatusBadge';
 import TableCard from '@/Components/ui/TableCard';
 import type { TableToolbarColumn } from '@/Components/ui/TableToolbar';
@@ -8,7 +9,7 @@ import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import type { PageProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type CategoryRow = {
     id: number;
@@ -51,9 +52,55 @@ export default function PlatformServiceCategoriesIndex({
     const [perPage, setPerPage] = useState<number>(Number(filters.per_page ?? 10) || 10);
     const [isFiltering, setIsFiltering] = useState(false);
     const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
+    const [rows, setRows] = useState<CategoryRow[]>(categories.data);
+    const [isReordering, setIsReordering] = useState(false);
+
+    useEffect(() => {
+        setRows(categories.data);
+    }, [categories.data]);
+
+    const canReorder = rows.some((r) => r.can_update);
 
     const hasActiveFilters = Boolean(
         (filters.search ?? '').trim() || ((filters.status ?? 'all') !== 'all' && (filters.status ?? '') !== ''),
+    );
+
+    const handleReorder = useCallback(
+        (orderedIds: Array<string | number>) => {
+            if (isReordering) {
+                return;
+            }
+
+            const idOrder = orderedIds.map((id) => Number(id));
+            const byId = new Map(rows.map((row) => [row.id, row]));
+            const nextRows = idOrder
+                .map((id) => byId.get(id))
+                .filter((row): row is CategoryRow => row !== undefined);
+
+            if (nextRows.length !== rows.length) {
+                return;
+            }
+
+            const previousOrders = rows.map((row) => row.sort_order).sort((a, b) => a - b);
+            const withUpdatedOrders = nextRows.map((row, index) => ({
+                ...row,
+                sort_order: previousOrders[index] ?? row.sort_order,
+            }));
+
+            setRows(withUpdatedOrders);
+            setIsReordering(true);
+
+            router.patch(
+                route('platform.service-categories.reorder'),
+                { ids: idOrder },
+                {
+                    preserveScroll: true,
+                    onFinish: () => setIsReordering(false),
+                    onError: () => setRows(categories.data),
+                },
+            );
+        },
+        [categories.data, isReordering, rows],
     );
 
     const applyFilters = () => {
@@ -279,7 +326,7 @@ export default function PlatformServiceCategoriesIndex({
             >
                 <div className="p-3 border-bottom">
                     <TableToolbar<CategoryRow>
-                        rows={categories.data}
+                        rows={rows}
                         columns={tableColumns}
                         showSearch={false}
                         exportFilename="platform-service-categories"
@@ -310,12 +357,24 @@ export default function PlatformServiceCategoriesIndex({
                     />
                 </div>
 
-                <DataTable<CategoryRow>
-                    columns={visibleTableColumns}
-                    rows={categories.data}
-                    rowKey={(r) => r.id}
-                    emptyTitle={__('dashboard.service_categories.empty')}
-                />
+                {canReorder ? (
+                    <SortableDataTable<CategoryRow>
+                        columns={visibleTableColumns}
+                        rows={rows}
+                        rowKey={(r) => r.id}
+                        emptyTitle={__('dashboard.service_categories.empty')}
+                        dragHandleLabel={__('dashboard.service_categories.drag_handle')}
+                        disabled={isReordering}
+                        onReorder={handleReorder}
+                    />
+                ) : (
+                    <DataTable<CategoryRow>
+                        columns={visibleTableColumns}
+                        rows={rows}
+                        rowKey={(r) => r.id}
+                        emptyTitle={__('dashboard.service_categories.empty')}
+                    />
+                )}
                 <div className="px-3 pb-3">
                     <Pagination
                         links={categories.links}

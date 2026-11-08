@@ -121,6 +121,7 @@ return [
         'new_title' => 'تصنيف خدمة جديد',
         'edit_title' => 'تعديل تصنيف خدمة',
         'add_category' => 'إضافة تصنيف',
+        'icon' => 'الأيقونة',
         'name_ar_label' => 'الاسم (عربي)',
         'name_en_label' => 'الاسم (إنجليزي)',
         'search_placeholder' => 'بحث بالاسم العربي أو الإنجليزي أو المعرف النصي…',
@@ -138,6 +139,8 @@ return [
         'active_label' => 'نشط',
         'yes' => 'نعم',
         'no' => 'لا',
+        'drag_handle' => 'اسحب لإعادة الترتيب',
+        'reorder_success' => 'تم تحديث ترتيب التصنيفات.',
     ],
     'banners' => [
         'page_title' => 'الإعلانات',

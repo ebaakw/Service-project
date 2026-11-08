@@ -3,16 +3,24 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Platform\ReorderServiceCategoriesRequest;
 use App\Http\Requests\Platform\StoreServiceCategoryRequest;
 use App\Http\Requests\Platform\UpdateServiceCategoryRequest;
 use App\Models\ServiceCategory;
+use App\Services\Media\MediaUploadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ServiceCategoryController extends Controller
 {
+    public function __construct(
+        private readonly MediaUploadService $mediaUploadService,
+    ) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', ServiceCategory::class);
@@ -72,6 +80,42 @@ class ServiceCategoryController extends Controller
         ]);
     }
 
+    public function reorder(ReorderServiceCategoriesRequest $request): RedirectResponse
+    {
+        /** @var list<int> $ids */
+        $ids = array_map('intval', $request->validated('ids'));
+
+        $categories = ServiceCategory::query()
+            ->whereIn('id', $ids)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($ids as $id) {
+            /** @var ServiceCategory $category */
+            $category = $categories->get($id);
+            $this->authorize('update', $category);
+        }
+
+        $sortedOrders = $categories
+            ->pluck('sort_order')
+            ->map(fn ($order) => (int) $order)
+            ->sort()
+            ->values()
+            ->all();
+
+        DB::transaction(function () use ($ids, $sortedOrders): void {
+            foreach ($ids as $index => $id) {
+                ServiceCategory::query()
+                    ->whereKey($id)
+                    ->update(['sort_order' => $sortedOrders[$index]]);
+            }
+        });
+
+        return back()
+            ->with('type', 'success')
+            ->with('message', __('dashboard.service_categories.reorder_success'));
+    }
+
     public function create(): Response
     {
         $this->authorize('create', ServiceCategory::class);
@@ -83,7 +127,15 @@ class ServiceCategoryController extends Controller
     {
         $this->authorize('create', ServiceCategory::class);
 
-        ServiceCategory::query()->create($request->validated());
+        $data = $request->safe()->except(['icon']);
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        $category = ServiceCategory::query()->create($data);
+
+        if ($request->hasFile('icon')) {
+            $this->mediaUploadService->storeServiceCategoryIcon($category, $request->file('icon'));
+        }
 
         return redirect()
             ->route('platform.service-categories.index')
@@ -96,7 +148,17 @@ class ServiceCategoryController extends Controller
         $this->authorize('update', $service_category);
 
         return Inertia::render('Platform/ServiceCatalog/Categories/Edit', [
-            'category' => $service_category,
+            'category' => [
+                'id' => $service_category->id,
+                'name_ar' => $service_category->name_ar,
+                'name_en' => $service_category->name_en,
+                'slug' => $service_category->slug,
+                'description_ar' => $service_category->description_ar,
+                'description_en' => $service_category->description_en,
+                'sort_order' => $service_category->sort_order,
+                'is_active' => (bool) $service_category->is_active,
+                'icon_url' => $service_category->iconUrl(),
+            ],
         ]);
     }
 
@@ -104,7 +166,15 @@ class ServiceCategoryController extends Controller
     {
         $this->authorize('update', $service_category);
 
-        $service_category->update($request->validated());
+        $data = $request->safe()->except(['icon']);
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        $service_category->update($data);
+
+        if ($request->hasFile('icon')) {
+            $this->mediaUploadService->storeServiceCategoryIcon($service_category, $request->file('icon'));
+        }
 
         return redirect()
             ->route('platform.service-categories.index')
@@ -115,6 +185,10 @@ class ServiceCategoryController extends Controller
     public function destroy(ServiceCategory $service_category): RedirectResponse
     {
         $this->authorize('delete', $service_category);
+
+        if ($service_category->icon_path) {
+            Storage::disk('public')->delete($service_category->icon_path);
+        }
 
         $service_category->delete();
 

@@ -62,6 +62,58 @@ class ServiceCatalogAndPricingTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_platform_admin_can_reorder_service_categories(): void
+    {
+        $user = $this->makePlatformAdminWithServicesManage();
+
+        $first = ServiceCategory::factory()->create(['sort_order' => 10]);
+        $second = ServiceCategory::factory()->create(['sort_order' => 20]);
+        $third = ServiceCategory::factory()->create(['sort_order' => 30]);
+
+        $this->actingAs($user)
+            ->patch(route('platform.service-categories.reorder', absolute: false), [
+                'ids' => [$third->id, $first->id, $second->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(10, $third->fresh()->sort_order);
+        $this->assertSame(20, $first->fresh()->sort_order);
+        $this->assertSame(30, $second->fresh()->sort_order);
+    }
+
+    public function test_platform_admin_without_permission_cannot_reorder_service_categories(): void
+    {
+        $user = User::factory()->platformAdmin()->create();
+        $category = ServiceCategory::factory()->create(['sort_order' => 1]);
+
+        $this->actingAs($user)
+            ->patch(route('platform.service-categories.reorder', absolute: false), [
+                'ids' => [$category->id],
+            ])
+            ->assertForbidden();
+    }
+
+    protected function makePlatformAdminWithServicesManage(): User
+    {
+        $this->seed(PermissionSeeder::class);
+
+        $user = User::factory()->platformAdmin()->create();
+
+        $permission = Permission::query()->where('key', 'services.manage')->firstOrFail();
+
+        $role = Role::factory()->create([
+            'company_id' => null,
+            'scope' => RoleScope::Platform,
+            'name' => 'services_manager',
+            'display_name' => 'Services manager',
+        ]);
+
+        $role->permissions()->sync([$permission->id]);
+        $user->roles()->attach($role->id, ['company_id' => null]);
+
+        return $user;
+    }
+
     protected function makeCompanyUserWithPricingManage(Company $company): User
     {
         $this->seed(PermissionSeeder::class);

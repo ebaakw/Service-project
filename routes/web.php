@@ -122,6 +122,8 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::match(['post', 'patch'], '/portfolio-reviews/{portfolio_project}/approve', [PlatformPortfolioProjectReviewController::class, 'approve'])->name('portfolio-reviews.approve');
     Route::match(['post', 'patch'], '/portfolio-reviews/{portfolio_project}/reject', [PlatformPortfolioProjectReviewController::class, 'reject'])->name('portfolio-reviews.reject');
 
+    Route::patch('service-categories/reorder', [ServiceCategoryController::class, 'reorder'])
+        ->name('service-categories.reorder');
     Route::resource('service-categories', ServiceCategoryController::class);
     Route::resource('service-categories.problems', ServiceProblemController::class)
         ->scoped()
