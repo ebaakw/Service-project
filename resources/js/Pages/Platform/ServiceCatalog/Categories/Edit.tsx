@@ -1,4 +1,7 @@
-import ServiceCategoryForm, { type ServiceCategoryFormData } from '@/Pages/Platform/ServiceCatalog/Categories/Partials/ServiceCategoryForm';
+import ServiceCategoryForm, {
+    type ParentOption,
+    type ServiceCategoryFormData,
+} from '@/Pages/Platform/ServiceCatalog/Categories/Partials/ServiceCategoryForm';
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, useForm } from '@inertiajs/react';
@@ -6,6 +9,7 @@ import { useState } from 'react';
 
 type Category = {
     id: number;
+    parent_id: number | null;
     name_ar: string;
     name_en: string | null;
     slug: string;
@@ -16,11 +20,18 @@ type Category = {
     icon_url: string | null;
 };
 
-export default function PlatformServiceCategoriesEdit({ category }: { category: Category }) {
+export default function PlatformServiceCategoriesEdit({
+    category,
+    parentOptions = [],
+}: {
+    category: Category;
+    parentOptions?: ParentOption[];
+}) {
     const form = useForm<ServiceCategoryFormData>({
         name_ar: category.name_ar,
         name_en: category.name_en ?? '',
         slug: category.slug,
+        parent_id: category.parent_id ?? '',
         icon: null,
         description_ar: category.description_ar ?? '',
         description_en: category.description_en ?? '',
@@ -90,6 +101,7 @@ export default function PlatformServiceCategoriesEdit({ category }: { category: 
                 <ServiceCategoryForm
                     form={form}
                     iconUrl={category.icon_url}
+                    parentOptions={parentOptions}
                     clientRequiredErrors={clientRequiredErrors}
                     clearClientRequiredKey={clearClientRequiredKey}
                 />

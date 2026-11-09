@@ -17,6 +17,7 @@ class ServiceCategoryResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'parent_id' => $this->parent_id !== null ? (int) $this->parent_id : null,
             'slug' => $this->slug,
             'name_ar' => $this->name_ar,
             'name_en' => $this->name_en,

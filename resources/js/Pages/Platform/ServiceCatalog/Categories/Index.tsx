@@ -13,6 +13,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type CategoryRow = {
     id: number;
+    parent_id: number | null;
+    parent_name_ar: string | null;
     name_ar: string;
     name_en: string | null;
     slug: string;
@@ -164,6 +166,14 @@ export default function PlatformServiceCategoriesIndex({
                 header: __('dashboard.service_categories.col_name_en'),
                 render: (r) => <span>{r.name_en ?? '—'}</span>,
                 searchText: (r) => r.name_en ?? '',
+            },
+            {
+                id: 'parent',
+                key: 'parent',
+                label: __('dashboard.service_categories.col_parent'),
+                header: __('dashboard.service_categories.col_parent'),
+                render: (r) => <span>{r.parent_name_ar ?? __('dashboard.service_categories.parent_root')}</span>,
+                searchText: (r) => r.parent_name_ar ?? '',
             },
             {
                 id: 'slug',

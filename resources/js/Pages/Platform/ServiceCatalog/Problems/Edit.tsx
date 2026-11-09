@@ -13,6 +13,7 @@ type Problem = {
     is_other: boolean;
     sort_order: number;
     is_active: boolean;
+    icon_url: string | null;
 };
 
 export default function PlatformServiceProblemsEdit({
@@ -27,6 +28,7 @@ export default function PlatformServiceProblemsEdit({
         title_en: problem.title_en ?? '',
         description_ar: problem.description_ar ?? '',
         description_en: problem.description_en ?? '',
+        icon: null,
         is_other: problem.is_other,
         sort_order: problem.sort_order,
         is_active: problem.is_active,
@@ -34,7 +36,9 @@ export default function PlatformServiceProblemsEdit({
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.put(route('platform.service-categories.problems.update', [category.id, problem.id]), {
+        form.transform((data) => ({ ...data, _method: 'put' }));
+        form.post(route('platform.service-categories.problems.update', [category.id, problem.id]), {
+            forceFormData: true,
             preserveState: true,
             preserveScroll: true,
         });
@@ -62,7 +66,7 @@ export default function PlatformServiceProblemsEdit({
             </div>
 
             <form onSubmit={submit} noValidate>
-                <ServiceProblemForm categoryId={category.id} form={form} />
+                <ServiceProblemForm categoryId={category.id} form={form} iconUrl={problem.icon_url} />
             </form>
         </PlatformAdminLayout>
     );

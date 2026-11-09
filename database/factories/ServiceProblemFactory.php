@@ -21,6 +21,7 @@ class ServiceProblemFactory extends Factory
             'title_en' => fake()->optional()->sentence(3),
             'description_ar' => null,
             'description_en' => null,
+            'icon_path' => null,
             'is_other' => false,
             'sort_order' => 0,
             'is_active' => true,

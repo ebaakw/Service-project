@@ -115,7 +115,7 @@ Visit the URL `php artisan serve` prints (e.g. `http://127.0.0.1:8000`).
 | GET | `/api/v1/public/pages/{slug}` | CMS pages (e.g. `guarantees`) |
 | GET | `/api/v1/customer/home` | Home aggregate (auth-optional; guest gets catalog with null user fields) |
 | GET | `/api/v1/customer/search?q=` | Categories + companies + technicians (auth-optional) |
-| GET | `/api/v1/customer/service-categories` | Catalog browse (+ problems / intake-fields; auth-optional) |
+| GET | `/api/v1/customer/service-categories` | Root categories only; `/{id}/children`, `/{id}/problems`, intake-fields (auth-optional) |
 | GET | `/api/v1/customer/available-technicians` | Nearby available technicians (auth-optional) |
 | GET/PATCH | `/api/v1/customer/me` | Profile read/update (auth required) |
 | GET | `/api/v1/customer/notifications` | Inbox (+ `unread_count`) |

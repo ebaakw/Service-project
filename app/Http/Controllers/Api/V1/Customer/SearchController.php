@@ -31,6 +31,7 @@ class SearchController extends Controller
         $like = '%'.$q.'%';
 
         $categories = ServiceCategory::query()
+            ->whereNull('parent_id')
             ->where('is_active', true)
             ->where(function ($query) use ($like): void {
                 $query->where('name_ar', 'like', $like)

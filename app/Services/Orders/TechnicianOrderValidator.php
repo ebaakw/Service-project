@@ -22,7 +22,9 @@ class TechnicianOrderValidator
 
     public function assertHasServiceCategory(Technician $technician, ServiceCategory $category): void
     {
-        if (! $technician->serviceCategories()->whereKey($category->getKey())->exists()) {
+        $coverageIds = $category->coverageCategoryIds();
+
+        if (! $technician->serviceCategories()->whereIn('service_categories.id', $coverageIds)->exists()) {
             throw ValidationException::withMessages([
                 'technician_id' => __('The technician does not cover this service category.'),
             ]);

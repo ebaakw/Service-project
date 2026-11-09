@@ -56,6 +56,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/search', [CustomerSearchController::class, 'index']);
 
         Route::get('/service-categories', [CustomerServiceCategoryController::class, 'index']);
+        Route::get('/service-categories/{serviceCategory}/children', [CustomerServiceCategoryController::class, 'children']);
         Route::get('/service-categories/{serviceCategory}/problems', [CustomerServiceCategoryController::class, 'problems']);
         Route::get('/service-categories/{serviceCategory}/intake-fields', [CustomerServiceCategoryController::class, 'intakeFields']);
 

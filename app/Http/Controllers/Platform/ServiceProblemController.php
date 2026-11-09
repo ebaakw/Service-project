@@ -8,14 +8,20 @@ use App\Http\Requests\Platform\StoreServiceProblemRequest;
 use App\Http\Requests\Platform\UpdateServiceProblemRequest;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProblem;
+use App\Services\Media\MediaUploadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ServiceProblemController extends Controller
 {
+    public function __construct(
+        private readonly MediaUploadService $mediaUploadService,
+    ) {}
+
     public function index(Request $request, ServiceCategory $service_category): Response
     {
         $this->authorize('viewAny', ServiceProblem::class);
@@ -103,7 +109,12 @@ class ServiceProblemController extends Controller
     {
         $this->authorize('create', ServiceProblem::class);
 
-        $service_category->problems()->create($request->validated());
+        $data = $request->safe()->except(['icon']);
+        $problem = $service_category->problems()->create($data);
+
+        if ($request->hasFile('icon')) {
+            $this->mediaUploadService->storeServiceProblemIcon($problem, $request->file('icon'));
+        }
 
         return redirect()
             ->route('platform.service-categories.problems.index', $service_category)
@@ -117,7 +128,17 @@ class ServiceProblemController extends Controller
 
         return Inertia::render('Platform/ServiceCatalog/Problems/Edit', [
             'category' => $service_category,
-            'problem' => $problem,
+            'problem' => [
+                'id' => $problem->id,
+                'title_ar' => $problem->title_ar,
+                'title_en' => $problem->title_en,
+                'description_ar' => $problem->description_ar,
+                'description_en' => $problem->description_en,
+                'is_other' => (bool) $problem->is_other,
+                'sort_order' => $problem->sort_order,
+                'is_active' => (bool) $problem->is_active,
+                'icon_url' => $problem->iconUrl(),
+            ],
         ]);
     }
 
@@ -125,7 +146,12 @@ class ServiceProblemController extends Controller
     {
         $this->authorize('update', $problem);
 
-        $problem->update($request->validated());
+        $data = $request->safe()->except(['icon']);
+        $problem->update($data);
+
+        if ($request->hasFile('icon')) {
+            $this->mediaUploadService->storeServiceProblemIcon($problem, $request->file('icon'));
+        }
 
         return redirect()
             ->route('platform.service-categories.problems.index', $service_category)
@@ -136,6 +162,10 @@ class ServiceProblemController extends Controller
     public function destroy(ServiceCategory $service_category, ServiceProblem $problem): RedirectResponse
     {
         $this->authorize('delete', $problem);
+
+        if ($problem->icon_path) {
+            Storage::disk('public')->delete($problem->icon_path);
+        }
 
         $problem->delete();
 

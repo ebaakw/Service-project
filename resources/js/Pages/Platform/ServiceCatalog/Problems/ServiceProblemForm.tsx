@@ -8,6 +8,7 @@ export type ServiceProblemFormData = {
     title_en: string;
     description_ar: string;
     description_en: string;
+    icon: File | null;
     is_other: boolean;
     sort_order: number;
     is_active: boolean;
@@ -25,9 +26,11 @@ function RequiredMark() {
 export default function ServiceProblemForm({
     categoryId,
     form,
+    iconUrl,
 }: {
     categoryId: number;
     form: InertiaFormProps<ServiceProblemFormData>;
+    iconUrl?: string | null;
 }) {
     const { data, setData, errors, processing } = form;
     const anyErrors = errors as Record<string, string | undefined>;
@@ -101,6 +104,26 @@ export default function ServiceProblemForm({
                                 dir="ltr"
                             />
                             <FieldError error={anyErrors.description_en} />
+                        </div>
+                    </div>
+
+                    <div className="col-12 col-lg-6">
+                        <div className="form-group">
+                            <label htmlFor="icon">{__('dashboard.service_problems.icon')}</label>
+                            {iconUrl ? (
+                                <div className="mb-2">
+                                    <img src={iconUrl} alt="" style={{ maxHeight: 120, maxWidth: '100%' }} />
+                                </div>
+                            ) : null}
+                            <input
+                                id="icon"
+                                name="icon"
+                                type="file"
+                                accept="image/*"
+                                className={`form-control-file ${isInvalid('icon') ? 'is-invalid' : ''}`}
+                                onChange={(e) => setData('icon', e.target.files?.[0] ?? null)}
+                            />
+                            <FieldError error={anyErrors.icon} />
                         </div>
                     </div>
 

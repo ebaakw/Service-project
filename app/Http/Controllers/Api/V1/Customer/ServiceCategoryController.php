@@ -17,6 +17,7 @@ class ServiceCategoryController extends Controller
         $this->ensureGuestOrCustomer($request);
 
         $categories = ServiceCategory::query()
+            ->whereNull('parent_id')
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -24,6 +25,23 @@ class ServiceCategoryController extends Controller
 
         return response()->json([
             'data' => ServiceCategoryResource::collection($categories),
+        ]);
+    }
+
+    public function children(Request $request, ServiceCategory $serviceCategory): JsonResponse
+    {
+        $this->ensureGuestOrCustomer($request);
+
+        abort_unless($serviceCategory->is_active, 404);
+
+        $children = $serviceCategory->children()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'data' => ServiceCategoryResource::collection($children),
         ]);
     }
 

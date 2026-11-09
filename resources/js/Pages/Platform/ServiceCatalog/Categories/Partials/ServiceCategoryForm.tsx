@@ -8,11 +8,18 @@ export type ServiceCategoryFormData = {
     name_ar: string;
     name_en: string;
     slug: string;
+    parent_id: number | '';
     icon: File | null;
     description_ar: string;
     description_en: string;
     sort_order: number;
     is_active: boolean;
+};
+
+export type ParentOption = {
+    id: number;
+    name_ar: string;
+    name_en: string | null;
 };
 
 function FieldError({ error }: { error?: string }) {
@@ -27,11 +34,13 @@ function RequiredMark() {
 export default function ServiceCategoryForm({
     form,
     iconUrl,
+    parentOptions = [],
     clearClientRequiredKey,
     clientRequiredErrors,
 }: {
     form: InertiaFormProps<ServiceCategoryFormData>;
     iconUrl?: string | null;
+    parentOptions?: ParentOption[];
     clearClientRequiredKey?: (key: keyof ServiceCategoryFormData) => void;
     clientRequiredErrors?: Record<string, boolean>;
 }) {
@@ -58,11 +67,41 @@ export default function ServiceCategoryForm({
     const descriptionArLabel = __('dashboard.forms.description_ar');
     const descriptionEnLabel = __('dashboard.forms.description_en');
     const sortOrderLabel = __('dashboard.forms.sort_order');
+    const parentLabel = __('dashboard.service_categories.parent_label');
 
     return (
         <div className="card card-outline card-primary">
             <div className="card-body">
                 <div className="row">
+                    <div className="col-12">
+                        <div className="form-group">
+                            <label htmlFor="parent_id">{parentLabel}</label>
+                            <select
+                                id="parent_id"
+                                name="parent_id"
+                                className={`custom-select ${isInvalid('parent_id') ? 'is-invalid' : ''}`}
+                                value={data.parent_id === '' || data.parent_id === null ? '' : String(data.parent_id)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setData('parent_id', value === '' ? '' : Number(value));
+                                }}
+                                style={{ textAlign: align }}
+                            >
+                                <option value="">{__('dashboard.service_categories.parent_none')}</option>
+                                {parentOptions.map((option) => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.name_ar}
+                                        {option.name_en ? ` / ${option.name_en}` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            <FieldError error={anyErrors.parent_id} />
+                            <small className="form-text text-muted">
+                                {__('dashboard.service_categories.parent_help')}
+                            </small>
+                        </div>
+                    </div>
+
                     <div className="col-12 col-lg-6">
                         <div className="form-group">
                             <label htmlFor="name_ar">

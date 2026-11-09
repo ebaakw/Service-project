@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Media;
 use App\Models\PortfolioProject;
 use App\Models\ServiceCategory;
+use App\Models\ServiceProblem;
 use App\Models\Technician;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -33,6 +34,36 @@ class MediaUploadService
         Media::query()
             ->where('model_type', $category::class)
             ->where('model_id', $category->getKey())
+            ->where('collection_name', 'icon')
+            ->whereKeyNot($media->getKey())
+            ->get()
+            ->each(function (Media $old): void {
+                Storage::disk($old->disk)->delete($old->file_path);
+                $old->delete();
+            });
+
+        return $media->fresh();
+    }
+
+    public function storeServiceProblemIcon(ServiceProblem $problem, UploadedFile $file): Media
+    {
+        $path = $file->store("service-problems/{$problem->getKey()}", 'public');
+
+        $media = $problem->media()->create([
+            'collection_name' => 'icon',
+            'disk' => 'public',
+            'file_path' => $path,
+            'file_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'size' => $file->getSize(),
+            'sort_order' => 0,
+        ]);
+
+        $problem->forceFill(['icon_path' => $path])->save();
+
+        Media::query()
+            ->where('model_type', $problem::class)
+            ->where('model_id', $problem->getKey())
             ->where('collection_name', 'icon')
             ->whereKeyNot($media->getKey())
             ->get()

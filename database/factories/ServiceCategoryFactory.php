@@ -20,6 +20,7 @@ class ServiceCategoryFactory extends Factory
 
         return [
             'ulid' => (string) Str::ulid(),
+            'parent_id' => null,
             'name_ar' => $nameAr,
             'name_en' => $nameEn,
             'slug' => Str::slug($nameAr.'-'.fake()->unique()->numerify('###')),

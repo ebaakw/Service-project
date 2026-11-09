@@ -11,6 +11,7 @@ export default function PlatformServiceProblemsCreate({ category }: { category: 
         title_en: '',
         description_ar: '',
         description_en: '',
+        icon: null,
         is_other: false,
         sort_order: 0,
         is_active: true,
@@ -19,6 +20,7 @@ export default function PlatformServiceProblemsCreate({ category }: { category: 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         form.post(route('platform.service-categories.problems.store', category.id), {
+            forceFormData: true,
             preserveState: true,
             preserveScroll: true,
         });

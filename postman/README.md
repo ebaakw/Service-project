@@ -21,8 +21,9 @@
 ### عميل
 
 1. **Guest browse (بدون توكن):** Home / Search / Catalog / Available technicians تعمل مباشرة.
-2. **Customer / Auth → Register** أو **Login** (يحفظ `customer_token` تلقائيًا) لتخصيص Home والطلبات والدفع.
-3. Addresses → Orders → Pay/Invoice (تتطلب Bearer).
+2. **Choose service:** `GET /service-categories` (جذور) → `/{category_id}/children` (أنواع فرعية؛ فارغ = تخطَّ) → `/{child_category_id}/problems` ثم أنشئ الطلب بـ `service_category_id` = ورقة التصنيف.
+3. **Customer / Auth → Register** أو **Login** (يحفظ `customer_token` تلقائيًا) لتخصيص Home والطلبات والدفع.
+4. Addresses → Orders → Pay/Invoice (تتطلب Bearer). استخدم `child_category_id` للورقة عند وجود أنواع فرعية.
 
 ### فني
 

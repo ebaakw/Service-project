@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Services Mobile API v1",
-    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ problems / intake-fields), `/available-technicians` — valid Bearer enriches home user fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. POST /customer/register or /login → save token (personalized home)\n3. GET /service-categories → problems → intake-fields\n4. GET /available-technicians?service_category_id=\n5. POST /addresses (if needed)\n6. POST /orders\n7. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
+    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians` — valid Bearer enriches home user fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. POST /customer/register or /login → save token (personalized home)\n3. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n4. GET /available-technicians?service_category_id={leaf_id} (technician linked to root covers children)\n5. POST /addresses (if needed)\n6. POST /orders\n7. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -13,6 +13,18 @@
     {
       "key": "locale",
       "value": "ar"
+    },
+    {
+      "key": "category_id",
+      "value": "1"
+    },
+    {
+      "key": "child_category_id",
+      "value": "2"
+    },
+    {
+      "key": "problem_id",
+      "value": "1"
     }
   ],
   "item": [
@@ -1027,7 +1039,7 @@
     },
     {
       "name": "Customer / Catalog",
-      "description": "Auth-optional guest browse: service categories → problems → intake fields → available technicians. Orders/payments still require auth.",
+      "description": "Auth-optional guest browse for choose-service:\n1) GET /service-categories → root circles only (parent_id=null)\n2) GET /service-categories/{id}/children → subtypes for segmented bar ([] skips)\n3) GET /service-categories/{leaf_id}/problems → title + description_ar/en + icon_url\n4) GET intake-fields → available technicians → create order with service_category_id=leaf id.\nOrders/payments still require auth.",
       "item": [
         {
           "name": "List service categories",
@@ -1055,12 +1067,127 @@
                 "service-categories"
               ]
             },
-            "description": "Auth-optional. Active categories with icon_path/icon_url, localized names.",
+            "description": "Auth-optional. Returns **root** active categories only (parent_id=null) for circular picker. Includes parent_id, icon_path/icon_url, localized names.",
             "auth": {
               "type": "noauth"
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "List service categories — roots example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/customer/service-categories",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customer",
+                    "service-categories"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"parent_id\": null,\n      \"slug\": \"ac\",\n      \"name_ar\": \"تكييف\",\n      \"name_en\": \"AC\",\n      \"display_name\": \"تكييف\",\n      \"description_ar\": null,\n      \"description_en\": null,\n      \"display_description\": null,\n      \"icon_path\": null,\n      \"icon_url\": null,\n      \"sort_order\": 0,\n      \"is_active\": true\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Category children",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/service-categories/{{category_id}}/children",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "service-categories",
+                "{{category_id}}",
+                "children"
+              ]
+            },
+            "description": "Auth-optional. Active subtypes for a root category (segmented bar). Empty array means skip subtype step and load problems on the root itself.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "Category children — AC subtypes example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/customer/service-categories/{{category_id}}/children",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customer",
+                    "service-categories",
+                    "{{category_id}}",
+                    "children"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 2,\n      \"parent_id\": 1,\n      \"slug\": \"ac-central\",\n      \"name_ar\": \"تكييف مركزي\",\n      \"name_en\": \"Central AC\",\n      \"display_name\": \"تكييف مركزي\",\n      \"description_ar\": null,\n      \"description_en\": null,\n      \"display_description\": null,\n      \"icon_path\": null,\n      \"icon_url\": null,\n      \"sort_order\": 0,\n      \"is_active\": true\n    },\n    {\n      \"id\": 3,\n      \"parent_id\": 1,\n      \"slug\": \"ac-units\",\n      \"name_ar\": \"وحدات\",\n      \"name_en\": \"Split / Units\",\n      \"display_name\": \"وحدات\",\n      \"description_ar\": null,\n      \"description_en\": null,\n      \"display_description\": null,\n      \"icon_path\": null,\n      \"icon_url\": null,\n      \"sort_order\": 1,\n      \"is_active\": true\n    },\n    {\n      \"id\": 4,\n      \"parent_id\": 1,\n      \"slug\": \"ac-ventilation\",\n      \"name_ar\": \"تهوية\",\n      \"name_en\": \"Ventilation\",\n      \"display_name\": \"تهوية\",\n      \"description_ar\": null,\n      \"description_en\": null,\n      \"display_description\": null,\n      \"icon_path\": null,\n      \"icon_url\": null,\n      \"sort_order\": 2,\n      \"is_active\": true\n    }\n  ]\n}"
+            }
+          ]
         },
         {
           "name": "Category problems",
@@ -1077,7 +1204,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/customer/service-categories/{{category_id}}/problems",
+              "raw": "{{base_url}}/api/v1/customer/service-categories/{{child_category_id}}/problems",
               "host": [
                 "{{base_url}}"
               ],
@@ -1086,16 +1213,57 @@
                 "v1",
                 "customer",
                 "service-categories",
-                "{{category_id}}",
+                "{{child_category_id}}",
                 "problems"
               ]
             },
-            "description": "Auth-optional. Problems for choose-service screen.",
+            "description": "Auth-optional. Problems for the selected leaf category (subtype if present, else root). Each problem includes title_*, description_ar/description_en (null if missing), icon_path/icon_url.",
             "auth": {
               "type": "noauth"
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "Category problems — leaf example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/customer/service-categories/{{child_category_id}}/problems",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customer",
+                    "service-categories",
+                    "{{child_category_id}}",
+                    "problems"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"service_category_id\": 2,\n      \"title_ar\": \"لا يبرد\",\n      \"title_en\": \"Not cooling\",\n      \"display_title\": \"لا يبرد\",\n      \"description_ar\": \"التكييف المركزي يعمل لكن الهواء غير بارد كفاية.\",\n      \"description_en\": \"Central AC is running but air is not cold enough.\",\n      \"display_description\": \"التكييف المركزي يعمل لكن الهواء غير بارد كفاية.\",\n      \"icon_path\": null,\n      \"icon_url\": null,\n      \"is_other\": false,\n      \"sort_order\": 0,\n      \"is_active\": true\n    }\n  ]\n}"
+            }
+          ]
         },
         {
           "name": "Category intake fields",
@@ -1112,7 +1280,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/customer/service-categories/{{category_id}}/intake-fields",
+              "raw": "{{base_url}}/api/v1/customer/service-categories/{{child_category_id}}/intake-fields",
               "host": [
                 "{{base_url}}"
               ],
@@ -1121,11 +1289,11 @@
                 "v1",
                 "customer",
                 "service-categories",
-                "{{category_id}}",
+                "{{child_category_id}}",
                 "intake-fields"
               ]
             },
-            "description": "Auth-optional. Extra intake questions for order creation.",
+            "description": "Auth-optional. Extra intake questions for the leaf category used when creating the order.",
             "auth": {
               "type": "noauth"
             }
@@ -1147,7 +1315,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/customer/available-technicians?service_category_id={{category_id}}&lat=29.2775&lng=47.9586",
+              "raw": "{{base_url}}/api/v1/customer/available-technicians?service_category_id={{child_category_id}}&lat=29.2775&lng=47.9586",
               "host": [
                 "{{base_url}}"
               ],
@@ -1160,7 +1328,7 @@
               "query": [
                 {
                   "key": "service_category_id",
-                  "value": "{{category_id}}",
+                  "value": "{{child_category_id}}",
                   "description": ""
                 },
                 {
@@ -1175,7 +1343,7 @@
                 }
               ]
             },
-            "description": "Auth-optional. Required service_category_id. Optional lat,lng for distance sort. Only available approved technicians with coordinates.",
+            "description": "Auth-optional. Required service_category_id (prefer leaf id). Technicians linked to the category or its parent root are included. Optional lat,lng for distance sort.",
             "auth": {
               "type": "noauth"
             }
@@ -1257,7 +1425,7 @@
                 "orders"
               ]
             },
-            "description": "Required: technician_id, customer_address_id, service_category_id. Optional: service_problem_id, custom_problem_text, customer_notes, intake_answers[]. Creates inspection payment placeholder.",
+            "description": "Required: technician_id, customer_address_id, service_category_id (leaf category id — subtype or root without children). Optional: service_problem_id, custom_problem_text, customer_notes, intake_answers[]. Creates inspection payment placeholder.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1270,7 +1438,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"technician_id\": \"{{technician_id}}\",\n  \"customer_address_id\": \"{{address_id}}\",\n  \"service_category_id\": \"{{category_id}}\",\n  \"service_problem_id\": null,\n  \"custom_problem_text\": null,\n  \"customer_notes\": \"يرجى الاتصال قبل الوصول\",\n  \"intake_answers\": [\n    {\n      \"service_intake_field_id\": 1,\n      \"value\": \"صباحاً\"\n    }\n  ]\n}",
+              "raw": "{\n  \"technician_id\": \"{{technician_id}}\",\n  \"customer_address_id\": \"{{address_id}}\",\n  \"service_category_id\": \"{{child_category_id}}\",\n  \"service_problem_id\": null,\n  \"custom_problem_text\": null,\n  \"customer_notes\": \"يرجى الاتصال قبل الوصول\",\n  \"intake_answers\": [\n    {\n      \"service_intake_field_id\": 1,\n      \"value\": \"صباحاً\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"

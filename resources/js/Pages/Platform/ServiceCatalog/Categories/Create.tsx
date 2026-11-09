@@ -1,14 +1,22 @@
-import ServiceCategoryForm, { type ServiceCategoryFormData } from '@/Pages/Platform/ServiceCatalog/Categories/Partials/ServiceCategoryForm';
+import ServiceCategoryForm, {
+    type ParentOption,
+    type ServiceCategoryFormData,
+} from '@/Pages/Platform/ServiceCatalog/Categories/Partials/ServiceCategoryForm';
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function PlatformServiceCategoriesCreate() {
+export default function PlatformServiceCategoriesCreate({
+    parentOptions = [],
+}: {
+    parentOptions?: ParentOption[];
+}) {
     const form = useForm<ServiceCategoryFormData>({
         name_ar: '',
         name_en: '',
         slug: '',
+        parent_id: '',
         icon: null,
         description_ar: '',
         description_en: '',
@@ -76,6 +84,7 @@ export default function PlatformServiceCategoriesCreate() {
             <form onSubmit={submit} noValidate>
                 <ServiceCategoryForm
                     form={form}
+                    parentOptions={parentOptions}
                     clientRequiredErrors={clientRequiredErrors}
                     clearClientRequiredKey={clearClientRequiredKey}
                 />

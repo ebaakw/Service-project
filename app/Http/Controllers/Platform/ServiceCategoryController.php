@@ -36,7 +36,10 @@ class ServiceCategoryController extends Controller
             $perPage = 10;
         }
 
-        $query = ServiceCategory::query()->orderBy('sort_order')->orderBy('id');
+        $query = ServiceCategory::query()
+            ->with('parent:id,name_ar,name_en')
+            ->orderBy('sort_order')
+            ->orderBy('id');
 
         if ($search !== '') {
             $query->where(function ($q) use ($search): void {
@@ -57,6 +60,8 @@ class ServiceCategoryController extends Controller
         $categories->through(function (ServiceCategory $category) use ($actor): array {
             return [
                 'id' => $category->id,
+                'parent_id' => $category->parent_id,
+                'parent_name_ar' => $category->parent?->name_ar,
                 'name_ar' => $category->name_ar,
                 'name_en' => $category->name_en,
                 'slug' => $category->slug,
@@ -120,7 +125,9 @@ class ServiceCategoryController extends Controller
     {
         $this->authorize('create', ServiceCategory::class);
 
-        return Inertia::render('Platform/ServiceCatalog/Categories/Create');
+        return Inertia::render('Platform/ServiceCatalog/Categories/Create', [
+            'parentOptions' => $this->rootParentOptions(),
+        ]);
     }
 
     public function store(StoreServiceCategoryRequest $request): RedirectResponse
@@ -130,6 +137,7 @@ class ServiceCategoryController extends Controller
         $data = $request->safe()->except(['icon']);
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
         $data['is_active'] = $request->boolean('is_active', true);
+        $data['parent_id'] = $data['parent_id'] ?? null;
 
         $category = ServiceCategory::query()->create($data);
 
@@ -150,6 +158,7 @@ class ServiceCategoryController extends Controller
         return Inertia::render('Platform/ServiceCatalog/Categories/Edit', [
             'category' => [
                 'id' => $service_category->id,
+                'parent_id' => $service_category->parent_id,
                 'name_ar' => $service_category->name_ar,
                 'name_en' => $service_category->name_en,
                 'slug' => $service_category->slug,
@@ -159,6 +168,7 @@ class ServiceCategoryController extends Controller
                 'is_active' => (bool) $service_category->is_active,
                 'icon_url' => $service_category->iconUrl(),
             ],
+            'parentOptions' => $this->rootParentOptions($service_category->getKey()),
         ]);
     }
 
@@ -169,6 +179,7 @@ class ServiceCategoryController extends Controller
         $data = $request->safe()->except(['icon']);
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
         $data['is_active'] = $request->boolean('is_active', true);
+        $data['parent_id'] = $data['parent_id'] ?? null;
 
         $service_category->update($data);
 
@@ -196,5 +207,29 @@ class ServiceCategoryController extends Controller
             ->route('platform.service-categories.index')
             ->with('type', 'success')
             ->with('message', __('Saved.'));
+    }
+
+    /**
+     * @return list<array{id: int, name_ar: string, name_en: string|null}>
+     */
+    private function rootParentOptions(?int $excludeId = null): array
+    {
+        $query = ServiceCategory::query()
+            ->whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id');
+
+        if ($excludeId !== null) {
+            $query->whereKeyNot($excludeId);
+        }
+
+        return $query->get(['id', 'name_ar', 'name_en'])
+            ->map(fn (ServiceCategory $category): array => [
+                'id' => (int) $category->id,
+                'name_ar' => $category->name_ar,
+                'name_en' => $category->name_en,
+            ])
+            ->all();
     }
 }

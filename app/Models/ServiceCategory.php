@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLocalizedFields;
+use Database\Factories\ServiceCategoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -14,7 +16,7 @@ use Illuminate\Support\Str;
 
 class ServiceCategory extends Model
 {
-    /** @use HasFactory<\Database\Factories\ServiceCategoryFactory> */
+    /** @use HasFactory<ServiceCategoryFactory> */
     use HasFactory, HasLocalizedFields, SoftDeletes;
 
     protected static function booted(): void
@@ -28,6 +30,7 @@ class ServiceCategory extends Model
 
     protected $fillable = [
         'ulid',
+        'parent_id',
         'name_ar',
         'name_en',
         'slug',
@@ -41,6 +44,7 @@ class ServiceCategory extends Model
     protected function casts(): array
     {
         return [
+            'parent_id' => 'integer',
             'sort_order' => 'integer',
             'is_active' => 'boolean',
         ];
@@ -49,6 +53,38 @@ class ServiceCategory extends Model
     public function media(): MorphMany
     {
         return $this->morphMany(Media::class, 'model');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function isRoot(): bool
+    {
+        return $this->parent_id === null;
+    }
+
+    /**
+     * Category IDs that cover this category for technician assignment matching:
+     * the category itself plus its parent (one-level hierarchy).
+     *
+     * @return list<int>
+     */
+    public function coverageCategoryIds(): array
+    {
+        $ids = [(int) $this->getKey()];
+
+        if ($this->parent_id !== null) {
+            $ids[] = (int) $this->parent_id;
+        }
+
+        return array_values(array_unique($ids));
     }
 
     public function iconUrl(): ?string

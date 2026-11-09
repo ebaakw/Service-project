@@ -5,6 +5,7 @@ namespace App\Services\Mobile;
 use App\Enums\CompanyStatus;
 use App\Enums\TechnicianAvailabilityStatus;
 use App\Enums\UserStatus;
+use App\Models\ServiceCategory;
 use App\Models\Technician;
 use Illuminate\Support\Collection;
 
@@ -12,12 +13,17 @@ class AvailableTechnicianService
 {
     /**
      * Technicians eligible for mobile booking: active company, active technician,
-     * assigned category, marked available, with coordinates for distance sorting.
+     * assigned category (exact or ancestor), marked available, with coordinates for distance sorting.
      *
      * @return Collection<int, Technician>
      */
     public function query(int $serviceCategoryId, ?float $lat, ?float $lng): Collection
     {
+        $category = ServiceCategory::query()->find($serviceCategoryId);
+        $coverageIds = $category !== null
+            ? $category->coverageCategoryIds()
+            : [$serviceCategoryId];
+
         $query = Technician::query()
             ->select('technicians.*')
             ->join('companies', 'companies.id', '=', 'technicians.company_id')
@@ -28,9 +34,10 @@ class AvailableTechnicianService
             ->where('technicians.is_active', true)
             ->where('technicians.review_status', 'approved')
             ->where('technicians.availability_status', TechnicianAvailabilityStatus::Available)
-            ->where('technician_service_categories.service_category_id', $serviceCategoryId)
+            ->whereIn('technician_service_categories.service_category_id', $coverageIds)
             ->whereNotNull('technicians.current_lat')
-            ->whereNotNull('technicians.current_lng');
+            ->whereNotNull('technicians.current_lng')
+            ->distinct();
 
         /** @var Collection<int, Technician> $technicians */
         $technicians = $query->with(['company:id,name', 'user:id,name'])->get();

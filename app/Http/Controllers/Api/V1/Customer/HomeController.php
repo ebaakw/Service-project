@@ -34,6 +34,7 @@ class HomeController extends Controller
             ->get());
 
         $categories = ServiceCategory::query()
+            ->whereNull('parent_id')
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')

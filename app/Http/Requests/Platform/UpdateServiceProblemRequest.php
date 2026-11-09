@@ -21,6 +21,7 @@ class UpdateServiceProblemRequest extends FormRequest
             'title_en' => ['nullable', 'string', 'max:255'],
             'description_ar' => ['nullable', 'string'],
             'description_en' => ['nullable', 'string'],
+            'icon' => ['nullable', 'image', 'max:5120'],
             'is_other' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['boolean'],
