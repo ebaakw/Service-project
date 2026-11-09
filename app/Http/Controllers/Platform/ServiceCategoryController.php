@@ -8,9 +8,9 @@ use App\Http\Requests\Platform\StoreServiceCategoryRequest;
 use App\Http\Requests\Platform\UpdateServiceCategoryRequest;
 use App\Models\ServiceCategory;
 use App\Services\Media\MediaUploadService;
+use App\Support\SequentialSortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -62,6 +62,8 @@ class ServiceCategoryController extends Controller
                 'id' => $category->id,
                 'parent_id' => $category->parent_id,
                 'parent_name_ar' => $category->parent?->name_ar,
+                'parent_name_en' => $category->parent?->name_en,
+                'parent_display_name' => $category->parent?->localized('name'),
                 'name_ar' => $category->name_ar,
                 'name_en' => $category->name_en,
                 'slug' => $category->slug,
@@ -101,19 +103,10 @@ class ServiceCategoryController extends Controller
             $this->authorize('update', $category);
         }
 
-        $sortedOrders = $categories
-            ->pluck('sort_order')
-            ->map(fn ($order) => (int) $order)
-            ->sort()
-            ->values()
-            ->all();
-
-        DB::transaction(function () use ($ids, $sortedOrders): void {
-            foreach ($ids as $index => $id) {
-                ServiceCategory::query()
-                    ->whereKey($id)
-                    ->update(['sort_order' => $sortedOrders[$index]]);
-            }
+        SequentialSortOrder::assign($ids, function (int $id, int $index): void {
+            ServiceCategory::query()
+                ->whereKey($id)
+                ->update(['sort_order' => $index]);
         });
 
         return back()

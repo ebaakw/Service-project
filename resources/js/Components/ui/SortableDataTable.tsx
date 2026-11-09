@@ -33,7 +33,15 @@ function SortableRow<Row>({
     disabled?: boolean;
     dragHandleLabel: string;
 }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        setActivatorNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
         id: rowId,
         disabled,
     });
@@ -49,6 +57,7 @@ function SortableRow<Row>({
             <td className="text-center align-middle" style={{ width: 40 }}>
                 <button
                     type="button"
+                    ref={setActivatorNodeRef}
                     className="btn btn-link btn-sm p-0 text-muted"
                     aria-label={dragHandleLabel}
                     disabled={disabled}
@@ -104,12 +113,12 @@ export default function SortableDataTable<Row>({
         }
 
         const { active, over } = event;
-        if (!over || active.id === over.id) {
+        if (!over || String(active.id) === String(over.id)) {
             return;
         }
 
-        const oldIndex = ids.findIndex((id) => id === active.id);
-        const newIndex = ids.findIndex((id) => id === over.id);
+        const oldIndex = ids.findIndex((id) => String(id) === String(active.id));
+        const newIndex = ids.findIndex((id) => String(id) === String(over.id));
         if (oldIndex < 0 || newIndex < 0) {
             return;
         }

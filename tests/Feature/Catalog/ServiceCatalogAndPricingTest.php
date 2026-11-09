@@ -78,9 +78,40 @@ class ServiceCatalogAndPricingTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame(10, $third->fresh()->sort_order);
-        $this->assertSame(20, $first->fresh()->sort_order);
-        $this->assertSame(30, $second->fresh()->sort_order);
+        $this->assertSame(0, $third->fresh()->sort_order);
+        $this->assertSame(1, $first->fresh()->sort_order);
+        $this->assertSame(2, $second->fresh()->sort_order);
+    }
+
+    public function test_platform_admin_can_reorder_service_categories_when_all_sort_orders_are_zero(): void
+    {
+        $user = $this->makePlatformAdminWithServicesManage();
+
+        $first = ServiceCategory::factory()->create(['sort_order' => 0]);
+        $second = ServiceCategory::factory()->create(['sort_order' => 0]);
+        $third = ServiceCategory::factory()->create(['sort_order' => 0]);
+
+        $orderedIds = [$third->id, $first->id, $second->id];
+
+        $this->actingAs($user)
+            ->patch(route('platform.service-categories.reorder', absolute: false), [
+                'ids' => $orderedIds,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(0, $third->fresh()->sort_order);
+        $this->assertSame(1, $first->fresh()->sort_order);
+        $this->assertSame(2, $second->fresh()->sort_order);
+
+        $this->assertSame(
+            $orderedIds,
+            ServiceCategory::query()
+                ->whereIn('id', $orderedIds)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('id')
+                ->all(),
+        );
     }
 
     public function test_platform_admin_without_permission_cannot_reorder_service_categories(): void
@@ -119,9 +150,50 @@ class ServiceCatalogAndPricingTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame(10, $third->fresh()->sort_order);
-        $this->assertSame(20, $first->fresh()->sort_order);
-        $this->assertSame(30, $second->fresh()->sort_order);
+        $this->assertSame(0, $third->fresh()->sort_order);
+        $this->assertSame(1, $first->fresh()->sort_order);
+        $this->assertSame(2, $second->fresh()->sort_order);
+    }
+
+    public function test_platform_admin_can_reorder_service_problems_when_all_sort_orders_are_zero(): void
+    {
+        $user = $this->makePlatformAdminWithServicesManage();
+        $category = ServiceCategory::factory()->create();
+
+        $first = ServiceProblem::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 0,
+        ]);
+        $second = ServiceProblem::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 0,
+        ]);
+        $third = ServiceProblem::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 0,
+        ]);
+
+        $orderedIds = [$third->id, $first->id, $second->id];
+
+        $this->actingAs($user)
+            ->patch(route('platform.service-categories.problems.reorder', $category, absolute: false), [
+                'ids' => $orderedIds,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(0, $third->fresh()->sort_order);
+        $this->assertSame(1, $first->fresh()->sort_order);
+        $this->assertSame(2, $second->fresh()->sort_order);
+
+        $this->assertSame(
+            $orderedIds,
+            $category->problems()
+                ->whereIn('id', $orderedIds)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('id')
+                ->all(),
+        );
     }
 
     public function test_platform_admin_without_permission_cannot_reorder_service_problems(): void
@@ -164,9 +236,50 @@ class ServiceCatalogAndPricingTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame(10, $third->fresh()->sort_order);
-        $this->assertSame(20, $first->fresh()->sort_order);
-        $this->assertSame(30, $second->fresh()->sort_order);
+        $this->assertSame(0, $third->fresh()->sort_order);
+        $this->assertSame(1, $first->fresh()->sort_order);
+        $this->assertSame(2, $second->fresh()->sort_order);
+    }
+
+    public function test_platform_admin_can_reorder_service_intake_fields_when_all_sort_orders_are_zero(): void
+    {
+        $user = $this->makePlatformAdminWithServicesManage();
+        $category = ServiceCategory::factory()->create();
+
+        $first = ServiceIntakeField::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 0,
+        ]);
+        $second = ServiceIntakeField::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 0,
+        ]);
+        $third = ServiceIntakeField::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 0,
+        ]);
+
+        $orderedIds = [$third->id, $first->id, $second->id];
+
+        $this->actingAs($user)
+            ->patch(route('platform.service-categories.intake-fields.reorder', $category, absolute: false), [
+                'ids' => $orderedIds,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(0, $third->fresh()->sort_order);
+        $this->assertSame(1, $first->fresh()->sort_order);
+        $this->assertSame(2, $second->fresh()->sort_order);
+
+        $this->assertSame(
+            $orderedIds,
+            $category->intakeFields()
+                ->whereIn('id', $orderedIds)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('id')
+                ->all(),
+        );
     }
 
     public function test_platform_admin_without_permission_cannot_reorder_service_intake_fields(): void

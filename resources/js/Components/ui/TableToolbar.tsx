@@ -84,7 +84,12 @@ export default function TableToolbar<Row>({
                     if (Array.isArray(stored) && stored.length > 0) {
                         const allowed = new Set(allIds);
                         const filtered = stored.map(String).filter((id: string) => allowed.has(String(id)));
-                        if (filtered.length > 0) ids = filtered;
+                        if (filtered.length > 0) {
+                            // Keep saved visibility, but surface any columns added after the last save.
+                            const known = new Set(filtered);
+                            const added = allIds.filter((id) => !known.has(id));
+                            ids = [...filtered, ...added];
+                        }
                     }
                 }
             } catch {

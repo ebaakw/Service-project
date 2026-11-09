@@ -8,9 +8,9 @@ use App\Http\Requests\Platform\StoreServiceIntakeFieldRequest;
 use App\Http\Requests\Platform\UpdateServiceIntakeFieldRequest;
 use App\Models\ServiceCategory;
 use App\Models\ServiceIntakeField;
+use App\Support\SequentialSortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -80,19 +80,10 @@ class ServiceIntakeFieldController extends Controller
             $this->authorize('update', $field);
         }
 
-        $sortedOrders = $fields
-            ->pluck('sort_order')
-            ->map(fn ($order) => (int) $order)
-            ->sort()
-            ->values()
-            ->all();
-
-        DB::transaction(function () use ($ids, $sortedOrders, $service_category): void {
-            foreach ($ids as $index => $id) {
-                $service_category->intakeFields()
-                    ->whereKey($id)
-                    ->update(['sort_order' => $sortedOrders[$index]]);
-            }
+        SequentialSortOrder::assign($ids, function (int $id, int $index) use ($service_category): void {
+            $service_category->intakeFields()
+                ->whereKey($id)
+                ->update(['sort_order' => $index]);
         });
 
         return back()

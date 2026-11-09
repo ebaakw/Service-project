@@ -52,8 +52,12 @@ export default function PlatformServiceProblemsIndex({
     const [isReordering, setIsReordering] = useState(false);
 
     useEffect(() => {
+        if (isReordering) {
+            return;
+        }
+
         setRows(problems.data);
-    }, [problems.data]);
+    }, [isReordering, problems.data]);
 
     const hasActiveFilters = Boolean(
         (filters.search ?? '').trim() || ((filters.status ?? 'all') !== 'all' && (filters.status ?? '') !== ''),
@@ -75,10 +79,9 @@ export default function PlatformServiceProblemsIndex({
                 return;
             }
 
-            const previousOrders = rows.map((row) => row.sort_order).sort((a, b) => a - b);
             const withUpdatedOrders = nextRows.map((row, index) => ({
                 ...row,
-                sort_order: previousOrders[index] ?? row.sort_order,
+                sort_order: index,
             }));
 
             setRows(withUpdatedOrders);

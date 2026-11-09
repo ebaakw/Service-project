@@ -58,8 +58,12 @@ export default function PlatformIntakeFieldsIndex({
     const [isReordering, setIsReordering] = useState(false);
 
     useEffect(() => {
+        if (isReordering) {
+            return;
+        }
+
         setRows(fields.data);
-    }, [fields.data]);
+    }, [fields.data, isReordering]);
 
     const hasActiveFilters = Boolean(
         (filters.search ?? '').trim()
@@ -83,10 +87,9 @@ export default function PlatformIntakeFieldsIndex({
                 return;
             }
 
-            const previousOrders = rows.map((row) => row.sort_order).sort((a, b) => a - b);
             const withUpdatedOrders = nextRows.map((row, index) => ({
                 ...row,
-                sort_order: previousOrders[index] ?? row.sort_order,
+                sort_order: index,
             }));
 
             setRows(withUpdatedOrders);

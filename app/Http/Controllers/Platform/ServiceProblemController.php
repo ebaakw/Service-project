@@ -9,9 +9,9 @@ use App\Http\Requests\Platform\UpdateServiceProblemRequest;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProblem;
 use App\Services\Media\MediaUploadService;
+use App\Support\SequentialSortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -76,19 +76,10 @@ class ServiceProblemController extends Controller
             $this->authorize('update', $problem);
         }
 
-        $sortedOrders = $problems
-            ->pluck('sort_order')
-            ->map(fn ($order) => (int) $order)
-            ->sort()
-            ->values()
-            ->all();
-
-        DB::transaction(function () use ($ids, $sortedOrders, $service_category): void {
-            foreach ($ids as $index => $id) {
-                $service_category->problems()
-                    ->whereKey($id)
-                    ->update(['sort_order' => $sortedOrders[$index]]);
-            }
+        SequentialSortOrder::assign($ids, function (int $id, int $index) use ($service_category): void {
+            $service_category->problems()
+                ->whereKey($id)
+                ->update(['sort_order' => $index]);
         });
 
         return back()

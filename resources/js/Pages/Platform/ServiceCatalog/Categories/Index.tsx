@@ -15,6 +15,8 @@ type CategoryRow = {
     id: number;
     parent_id: number | null;
     parent_name_ar: string | null;
+    parent_name_en?: string | null;
+    parent_display_name?: string | null;
     name_ar: string;
     name_en: string | null;
     slug: string;
@@ -58,8 +60,12 @@ export default function PlatformServiceCategoriesIndex({
     const [isReordering, setIsReordering] = useState(false);
 
     useEffect(() => {
+        if (isReordering) {
+            return;
+        }
+
         setRows(categories.data);
-    }, [categories.data]);
+    }, [categories.data, isReordering]);
 
     const canReorder = rows.some((r) => r.can_update);
 
@@ -83,10 +89,9 @@ export default function PlatformServiceCategoriesIndex({
                 return;
             }
 
-            const previousOrders = rows.map((row) => row.sort_order).sort((a, b) => a - b);
             const withUpdatedOrders = nextRows.map((row, index) => ({
                 ...row,
-                sort_order: previousOrders[index] ?? row.sort_order,
+                sort_order: index,
             }));
 
             setRows(withUpdatedOrders);
@@ -172,8 +177,16 @@ export default function PlatformServiceCategoriesIndex({
                 key: 'parent',
                 label: __('dashboard.service_categories.col_parent'),
                 header: __('dashboard.service_categories.col_parent'),
-                render: (r) => <span>{r.parent_name_ar ?? __('dashboard.service_categories.parent_root')}</span>,
-                searchText: (r) => r.parent_name_ar ?? '',
+                render: (r) => (
+                    <span>
+                        {r.parent_display_name
+                            ?? r.parent_name_ar
+                            ?? r.parent_name_en
+                            ?? __('dashboard.service_categories.parent_root')}
+                    </span>
+                ),
+                searchText: (r) =>
+                    r.parent_display_name ?? r.parent_name_ar ?? r.parent_name_en ?? '',
             },
             {
                 id: 'slug',
@@ -340,7 +353,7 @@ export default function PlatformServiceCategoriesIndex({
                         columns={tableColumns}
                         showSearch={false}
                         exportFilename="platform-service-categories"
-                        persistKey="platform.service_categories.index"
+                        persistKey="platform.service_categories.index.v2"
                         onVisibleColumnIdsChange={(ids) => setVisibleColumnIds(ids)}
                         showPerPage
                         perPage={perPage}
