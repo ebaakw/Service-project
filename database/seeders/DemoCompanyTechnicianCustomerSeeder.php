@@ -56,7 +56,7 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
         );
 
         $categoryIds = ServiceCategory::query()
-            ->whereIn('slug', ['ac', 'refrigerators'])
+            ->where('slug', 'ac')
             ->orderBy('sort_order')
             ->pluck('id')
             ->all();
