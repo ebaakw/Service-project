@@ -327,6 +327,8 @@ return [
         'required_label' => 'إلزامي',
         'delete_confirm' => 'حذف هذا الحقل؟',
         'empty' => 'لا توجد بيانات إضافية.',
+        'drag_handle' => 'اسحب لإعادة الترتيب',
+        'reorder_success' => 'تم تحديث ترتيب الحقول.',
         'field_types' => [
             'text' => 'نص',
             'textarea' => 'نص طويل',

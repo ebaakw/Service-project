@@ -1,5 +1,5 @@
-import DataTable from '@/Components/ui/DataTable';
 import Pagination from '@/Components/ui/Pagination';
+import SortableDataTable from '@/Components/ui/SortableDataTable';
 import StatusBadge from '@/Components/ui/StatusBadge';
 import TableCard from '@/Components/ui/TableCard';
 import type { TableToolbarColumn } from '@/Components/ui/TableToolbar';
@@ -8,7 +8,7 @@ import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
 import type { PageProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Category = { id: number; name_ar: string; slug: string };
 type ProblemOption = { id: number; title_ar: string };
@@ -54,11 +54,55 @@ export default function PlatformIntakeFieldsIndex({
     const [perPage, setPerPage] = useState<number>(Number(filters.per_page ?? 10) || 10);
     const [isFiltering, setIsFiltering] = useState(false);
     const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
+    const [rows, setRows] = useState<FieldRow[]>(fields.data);
+    const [isReordering, setIsReordering] = useState(false);
+
+    useEffect(() => {
+        setRows(fields.data);
+    }, [fields.data]);
 
     const hasActiveFilters = Boolean(
         (filters.search ?? '').trim()
             || ((filters.status ?? 'all') !== 'all' && (filters.status ?? '') !== '')
             || (filters.problem_id ?? ''),
+    );
+
+    const handleReorder = useCallback(
+        (orderedIds: Array<string | number>) => {
+            if (isReordering) {
+                return;
+            }
+
+            const idOrder = orderedIds.map((id) => Number(id));
+            const byId = new Map(rows.map((row) => [row.id, row]));
+            const nextRows = idOrder
+                .map((id) => byId.get(id))
+                .filter((row): row is FieldRow => row !== undefined);
+
+            if (nextRows.length !== rows.length) {
+                return;
+            }
+
+            const previousOrders = rows.map((row) => row.sort_order).sort((a, b) => a - b);
+            const withUpdatedOrders = nextRows.map((row, index) => ({
+                ...row,
+                sort_order: previousOrders[index] ?? row.sort_order,
+            }));
+
+            setRows(withUpdatedOrders);
+            setIsReordering(true);
+
+            router.patch(
+                route('platform.service-categories.intake-fields.reorder', category.id),
+                { ids: idOrder },
+                {
+                    preserveScroll: true,
+                    onFinish: () => setIsReordering(false),
+                    onError: () => setRows(fields.data),
+                },
+            );
+        },
+        [category.id, fields.data, isReordering, rows],
     );
 
     const applyFilters = () => {
@@ -314,7 +358,7 @@ export default function PlatformIntakeFieldsIndex({
             >
                 <div className="p-3 border-bottom">
                     <TableToolbar<FieldRow>
-                        rows={fields.data}
+                        rows={rows}
                         columns={tableColumns}
                         showSearch={false}
                         exportFilename="platform-service-intake-fields"
@@ -346,11 +390,14 @@ export default function PlatformIntakeFieldsIndex({
                     />
                 </div>
 
-                <DataTable<FieldRow>
+                <SortableDataTable<FieldRow>
                     columns={visibleTableColumns}
-                    rows={fields.data}
+                    rows={rows}
                     rowKey={(row) => row.id}
                     emptyTitle={__('dashboard.service_intake_fields.empty')}
+                    dragHandleLabel={__('dashboard.service_intake_fields.drag_handle')}
+                    disabled={isReordering}
+                    onReorder={handleReorder}
                 />
                 <div className="px-3 pb-3">
                     <Pagination

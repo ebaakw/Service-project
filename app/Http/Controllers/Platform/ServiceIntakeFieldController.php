@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Platform\ReorderServiceIntakeFieldsRequest;
 use App\Http\Requests\Platform\StoreServiceIntakeFieldRequest;
 use App\Http\Requests\Platform\UpdateServiceIntakeFieldRequest;
 use App\Models\ServiceCategory;
 use App\Models\ServiceIntakeField;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -60,6 +62,42 @@ class ServiceIntakeFieldController extends Controller
                 'per_page' => $perPage,
             ],
         ]);
+    }
+
+    public function reorder(ReorderServiceIntakeFieldsRequest $request, ServiceCategory $service_category): RedirectResponse
+    {
+        /** @var list<int> $ids */
+        $ids = array_map('intval', $request->validated('ids'));
+
+        $fields = $service_category->intakeFields()
+            ->whereIn('id', $ids)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($ids as $id) {
+            /** @var ServiceIntakeField $field */
+            $field = $fields->get($id);
+            $this->authorize('update', $field);
+        }
+
+        $sortedOrders = $fields
+            ->pluck('sort_order')
+            ->map(fn ($order) => (int) $order)
+            ->sort()
+            ->values()
+            ->all();
+
+        DB::transaction(function () use ($ids, $sortedOrders, $service_category): void {
+            foreach ($ids as $index => $id) {
+                $service_category->intakeFields()
+                    ->whereKey($id)
+                    ->update(['sort_order' => $sortedOrders[$index]]);
+            }
+        });
+
+        return back()
+            ->with('type', 'success')
+            ->with('message', __('dashboard.service_intake_fields.reorder_success'));
     }
 
     public function create(ServiceCategory $service_category): Response

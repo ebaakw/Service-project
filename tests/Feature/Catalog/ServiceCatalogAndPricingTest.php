@@ -13,6 +13,7 @@ use App\Models\CompanyMember;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\ServiceCategory;
+use App\Models\ServiceIntakeField;
 use App\Models\ServiceProblem;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -135,6 +136,51 @@ class ServiceCatalogAndPricingTest extends TestCase
         $this->actingAs($user)
             ->patch(route('platform.service-categories.problems.reorder', $category, absolute: false), [
                 'ids' => [$problem->id],
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_platform_admin_can_reorder_service_intake_fields(): void
+    {
+        $user = $this->makePlatformAdminWithServicesManage();
+        $category = ServiceCategory::factory()->create();
+
+        $first = ServiceIntakeField::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 10,
+        ]);
+        $second = ServiceIntakeField::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 20,
+        ]);
+        $third = ServiceIntakeField::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 30,
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('platform.service-categories.intake-fields.reorder', $category, absolute: false), [
+                'ids' => [$third->id, $first->id, $second->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(10, $third->fresh()->sort_order);
+        $this->assertSame(20, $first->fresh()->sort_order);
+        $this->assertSame(30, $second->fresh()->sort_order);
+    }
+
+    public function test_platform_admin_without_permission_cannot_reorder_service_intake_fields(): void
+    {
+        $user = User::factory()->platformAdmin()->create();
+        $category = ServiceCategory::factory()->create();
+        $field = ServiceIntakeField::factory()->create([
+            'service_category_id' => $category->id,
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('platform.service-categories.intake-fields.reorder', $category, absolute: false), [
+                'ids' => [$field->id],
             ])
             ->assertForbidden();
     }

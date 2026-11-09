@@ -327,6 +327,8 @@ return [
         'required_label' => 'Required',
         'delete_confirm' => 'Delete this field?',
         'empty' => 'No additional data fields found.',
+        'drag_handle' => 'Drag to reorder',
+        'reorder_success' => 'Field order updated.',
         'field_types' => [
             'text' => 'Text',
             'textarea' => 'Textarea',

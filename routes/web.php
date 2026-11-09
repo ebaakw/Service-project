@@ -130,6 +130,8 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::resource('service-categories.problems', ServiceProblemController::class)
         ->scoped()
         ->except(['show']);
+    Route::patch('service-categories/{service_category}/intake-fields/reorder', [ServiceIntakeFieldController::class, 'reorder'])
+        ->name('service-categories.intake-fields.reorder');
     Route::resource('service-categories.intake-fields', ServiceIntakeFieldController::class)
         ->scoped()
         ->except(['show']);
