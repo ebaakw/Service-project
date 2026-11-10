@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Customer\AuthController as CustomerAuthControlle
 use App\Http\Controllers\Api\V1\Customer\AvailableTechnicianController;
 use App\Http\Controllers\Api\V1\Customer\ComplaintController as CustomerComplaintController;
 use App\Http\Controllers\Api\V1\Customer\DeviceController as CustomerDeviceController;
+use App\Http\Controllers\Api\V1\Customer\FavoriteTechnicianController as CustomerFavoriteTechnicianController;
 use App\Http\Controllers\Api\V1\Customer\FeedbackController as CustomerFeedbackController;
 use App\Http\Controllers\Api\V1\Customer\HomeController as CustomerHomeController;
 use App\Http\Controllers\Api\V1\Customer\NotificationController as CustomerNotificationController;
@@ -78,6 +79,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/addresses/{address}', [CustomerAddressController::class, 'show']);
             Route::patch('/addresses/{address}', [CustomerAddressController::class, 'update']);
             Route::delete('/addresses/{address}', [CustomerAddressController::class, 'destroy']);
+
+            Route::get('/favorite-technicians', [CustomerFavoriteTechnicianController::class, 'index']);
+            Route::post('/favorite-technicians/{technician}', [CustomerFavoriteTechnicianController::class, 'store']);
+            Route::delete('/favorite-technicians/{technician}', [CustomerFavoriteTechnicianController::class, 'destroy']);
 
             Route::get('/orders', [CustomerOrderController::class, 'index']);
             Route::post('/orders', [CustomerOrderController::class, 'store']);

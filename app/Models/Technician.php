@@ -174,4 +174,10 @@ class Technician extends Model
     {
         return $this->hasMany(OrderOffer::class);
     }
+
+    public function favoritedByCustomers(): BelongsToMany
+    {
+        return $this->belongsToMany(Customer::class, 'customer_favorite_technicians')
+            ->withTimestamps();
+    }
 }

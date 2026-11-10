@@ -209,4 +209,24 @@ class User extends Authenticatable
     {
         return $this->morphMany(Media::class, 'model');
     }
+
+    public function avatarUrl(): ?string
+    {
+        $avatarPath = trim((string) $this->avatar_path);
+
+        if ($avatarPath === '') {
+            return null;
+        }
+
+        if (str_starts_with($avatarPath, 'http://') || str_starts_with($avatarPath, 'https://')) {
+            return $avatarPath;
+        }
+
+        $avatarPath = ltrim($avatarPath, '/');
+        if (str_starts_with($avatarPath, 'storage/')) {
+            $avatarPath = substr($avatarPath, strlen('storage/'));
+        }
+
+        return asset('storage/'.$avatarPath);
+    }
 }

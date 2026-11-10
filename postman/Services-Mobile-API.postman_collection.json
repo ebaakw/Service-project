@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Services Mobile API v1",
-    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians` — valid Bearer enriches home user fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. POST /customer/register or /login → save token (personalized home)\n3. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n4. GET /available-technicians?service_category_id={leaf_id} (technician linked to root covers children)\n5. POST /addresses (if needed)\n6. POST /orders\n7. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
+    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians` — valid Bearer enriches home user fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, favorite-technicians, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Technician list / favorites\n- `GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites`\n  - `available` (default): available + GPS + approved\n  - `all`: approved + GPS (includes busy/offline/on_break)\n  - `favorites`: auth required; favorites for the category coverage\n- Response fields: `rating_average`, `rating_count`, `availability_status`, `distance_km`, `is_favorite`, `user.avatar_url`, `company.display_name`\n- **No ETA fields from API** — mobile computes arrival minutes from `distance_km` later\n- Favorites CRUD: `GET/POST/DELETE /customer/favorite-technicians` (auth required)\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. POST /customer/register or /login → save token (personalized home)\n3. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n4. GET /available-technicians?service_category_id={leaf_id}&filter=available|all|favorites (technician linked to root covers children)\n5. POST /favorite-technicians/{id} (optional heart)\n6. POST /addresses (if needed)\n7. POST /orders\n8. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -1315,7 +1315,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/customer/available-technicians?service_category_id={{child_category_id}}&lat=29.2775&lng=47.9586",
+              "raw": "{{base_url}}/api/v1/customer/available-technicians?service_category_id={{child_category_id}}&lat=29.3758590&lng=47.9774050&filter=available",
               "host": [
                 "{{base_url}}"
               ],
@@ -1329,23 +1329,167 @@
                 {
                   "key": "service_category_id",
                   "value": "{{child_category_id}}",
-                  "description": ""
+                  "description": "Prefer leaf category id"
                 },
                 {
                   "key": "lat",
-                  "value": "29.2775",
-                  "description": ""
+                  "value": "29.3758590",
+                  "description": "Customer lat for distance_km sort"
                 },
                 {
                   "key": "lng",
-                  "value": "47.9586",
-                  "description": ""
+                  "value": "47.9774050",
+                  "description": "Customer lng for distance_km sort"
+                },
+                {
+                  "key": "filter",
+                  "value": "available",
+                  "description": "available (default) | all | favorites (favorites requires customer Bearer)"
                 }
               ]
             },
-            "description": "Auth-optional. Required service_category_id (prefer leaf id). Technicians linked to the category or its parent root are included. Optional lat,lng for distance sort.",
+            "description": "Auth-optional (except filter=favorites → 401 without token). Returns TechnicianResource with rating_*, availability_status, distance_km, is_favorite, user.avatar_url. No ETA from server — mobile derives minutes from distance_km.",
             "auth": {
               "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Customer / Favorites",
+      "item": [
+        {
+          "name": "List favorite technicians",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/favorite-technicians?lat=29.3758590&lng=47.9774050",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "favorite-technicians"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "29.3758590",
+                  "description": "Optional"
+                },
+                {
+                  "key": "lng",
+                  "value": "47.9774050",
+                  "description": "Optional"
+                }
+              ]
+            },
+            "description": "Auth required. Lists favorited approved active technicians. Optional lat/lng for distance_km.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add favorite technician",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/favorite-technicians/{{technician_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "favorite-technicians",
+                "{{technician_id}}"
+              ]
+            },
+            "description": "Auth required. Technician must be active and approved. Idempotent attach.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove favorite technician",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/favorite-technicians/{{technician_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "favorite-technicians",
+                "{{technician_id}}"
+              ]
+            },
+            "description": "Auth required. Detach favorite; returns { ok: true }.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
             }
           },
           "response": []

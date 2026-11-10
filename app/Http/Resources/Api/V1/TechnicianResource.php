@@ -33,6 +33,7 @@ class TechnicianResource extends JsonResource
             'is_active' => (bool) $this->is_active,
             'rating_average' => $this->rating_average !== null ? (float) $this->rating_average : null,
             'rating_count' => (int) $this->rating_count,
+            'is_favorite' => (bool) ($this->is_favorite ?? false),
             'distance_km' => $this->when(isset($this->distance_km), fn () => round((float) $this->distance_km, 4)),
         ];
     }

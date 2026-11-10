@@ -8,6 +8,7 @@ use App\Models\ServiceCategory;
 use App\Services\Mobile\AvailableTechnicianService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AvailableTechnicianController extends Controller
 {
@@ -26,7 +27,23 @@ class AvailableTechnicianController extends Controller
             'service_category_id' => ['required', 'integer', 'exists:service_categories,id'],
             'lat' => ['nullable', 'numeric'],
             'lng' => ['nullable', 'numeric'],
+            'filter' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    AvailableTechnicianService::FILTER_AVAILABLE,
+                    AvailableTechnicianService::FILTER_ALL,
+                    AvailableTechnicianService::FILTER_FAVORITES,
+                ]),
+            ],
         ]);
+
+        $filter = $validated['filter'] ?? AvailableTechnicianService::FILTER_AVAILABLE;
+        $customer = $user?->customerProfile;
+
+        if ($filter === AvailableTechnicianService::FILTER_FAVORITES) {
+            abort_if($user === null || $customer === null, 401);
+        }
 
         $category = ServiceCategory::query()->findOrFail($validated['service_category_id']);
         abort_unless($category->is_active, 422);
@@ -38,6 +55,8 @@ class AvailableTechnicianController extends Controller
             (int) $validated['service_category_id'],
             $lat,
             $lng,
+            $filter,
+            $customer,
         );
 
         return response()->json([
