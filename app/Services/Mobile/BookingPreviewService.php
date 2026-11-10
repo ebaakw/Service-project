@@ -14,6 +14,7 @@ use App\Models\ServiceProblem;
 use App\Models\Technician;
 use App\Services\Orders\InspectionFeeService;
 use App\Services\Settings\SettingsService;
+use App\Support\ArabicSearch;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -201,16 +202,11 @@ class BookingPreviewService
             $query->where('company_price_list_id', $priceList->getKey());
         }
 
-        $q = trim((string) $search);
-        if ($q !== '') {
-            $like = '%'.$q.'%';
-            $query->where(function ($inner) use ($like): void {
-                $inner->where('name_ar', 'like', $like)
-                    ->orWhere('name_en', 'like', $like)
-                    ->orWhere('description_ar', 'like', $like)
-                    ->orWhere('description_en', 'like', $like);
-            });
-        }
+        ArabicSearch::applyContains(
+            $query,
+            ['name_ar', 'name_en', 'description_ar', 'description_en'],
+            (string) $search,
+        );
 
         return $query->get();
     }

@@ -18,6 +18,7 @@ use App\Models\CompanyPriceList;
 use App\Models\Technician;
 use App\Services\Mobile\AvailableTechnicianService;
 use App\Services\Settings\SettingsService;
+use App\Support\ArabicSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\AbstractPaginator;
@@ -64,14 +65,7 @@ class PublicCompanyController extends Controller
                     ->limit(1);
             }]);
 
-        if ($q !== '') {
-            $like = '%'.$q.'%';
-            $query->where(function ($inner) use ($like): void {
-                $inner->where('name_ar', 'like', $like)
-                    ->orWhere('name_en', 'like', $like)
-                    ->orWhere('slug', 'like', $like);
-            });
-        }
+        ArabicSearch::applyContains($query, ['name_ar', 'name_en', 'slug'], $q);
 
         if ($categoryId !== null) {
             $query->where(function ($inner) use ($categoryId): void {
@@ -216,16 +210,12 @@ class PublicCompanyController extends Controller
             $query->where('availability_status', TechnicianAvailabilityStatus::Available);
         }
 
-        if ($q !== '') {
-            $like = '%'.$q.'%';
-            $query->where(function ($inner) use ($like): void {
-                $inner->where('display_name_ar', 'like', $like)
-                    ->orWhere('display_name_en', 'like', $like)
-                    ->orWhereHas('user', function ($user) use ($like): void {
-                        $user->where('name', 'like', $like)
-                            ->orWhere('name_ar', 'like', $like)
-                            ->orWhere('name_en', 'like', $like);
-                    });
+        if (ArabicSearch::normalize($q) !== '') {
+            $query->where(function ($inner) use ($q): void {
+                ArabicSearch::applyContains($inner, ['display_name_ar', 'display_name_en'], $q);
+                $inner->orWhereHas('user', function ($user) use ($q): void {
+                    ArabicSearch::applyContains($user, ['name', 'name_ar', 'name_en'], $q);
+                });
             });
         }
 
@@ -316,15 +306,11 @@ class PublicCompanyController extends Controller
             $itemsQuery->where('service_category_id', $categoryId);
         }
 
-        if ($q !== '') {
-            $like = '%'.$q.'%';
-            $itemsQuery->where(function ($inner) use ($like): void {
-                $inner->where('name_ar', 'like', $like)
-                    ->orWhere('name_en', 'like', $like)
-                    ->orWhere('description_ar', 'like', $like)
-                    ->orWhere('description_en', 'like', $like);
-            });
-        }
+        ArabicSearch::applyContains(
+            $itemsQuery,
+            ['name_ar', 'name_en', 'description_ar', 'description_en'],
+            $q,
+        );
 
         $items = isset($validated['page'])
             ? $itemsQuery->paginate(50)

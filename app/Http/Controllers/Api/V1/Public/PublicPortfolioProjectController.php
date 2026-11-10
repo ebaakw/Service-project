@@ -7,6 +7,7 @@ use App\Enums\PortfolioProjectReviewStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\PortfolioProjectResource;
 use App\Models\PortfolioProject;
+use App\Support\ArabicSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -30,16 +31,12 @@ class PublicPortfolioProjectController extends Controller
         $query = $this->publicProjectsQuery()
             ->with($this->defaultWith());
 
-        if ($q !== '') {
-            $like = '%'.$q.'%';
-            $query->where(function ($inner) use ($like): void {
-                $inner->where('title_ar', 'like', $like)
-                    ->orWhere('title_en', 'like', $like)
-                    ->orWhereHas('company', function ($company) use ($like): void {
-                        $company->where('name_ar', 'like', $like)
-                            ->orWhere('name_en', 'like', $like)
-                            ->orWhere('slug', 'like', $like);
-                    });
+        if (ArabicSearch::normalize($q) !== '') {
+            $query->where(function ($inner) use ($q): void {
+                ArabicSearch::applyContains($inner, ['title_ar', 'title_en'], $q);
+                $inner->orWhereHas('company', function ($company) use ($q): void {
+                    ArabicSearch::applyContains($company, ['name_ar', 'name_en', 'slug'], $q);
+                });
             });
         }
 

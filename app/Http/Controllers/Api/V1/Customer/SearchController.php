@@ -11,6 +11,7 @@ use App\Http\Resources\Api\V1\TechnicianResource;
 use App\Models\Company;
 use App\Models\ServiceCategory;
 use App\Models\Technician;
+use App\Support\ArabicSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,27 +29,18 @@ class SearchController extends Controller
         ]);
 
         $q = trim($validated['q']);
-        $like = '%'.$q.'%';
 
         $categories = ServiceCategory::query()
             ->whereNull('parent_id')
             ->where('is_active', true)
-            ->where(function ($query) use ($like): void {
-                $query->where('name_ar', 'like', $like)
-                    ->orWhere('name_en', 'like', $like)
-                    ->orWhere('slug', 'like', $like);
-            })
+            ->tap(fn ($query) => ArabicSearch::applyContains($query, ['name_ar', 'name_en', 'slug'], $q))
             ->orderBy('sort_order')
             ->limit(10)
             ->get();
 
         $companies = Company::query()
             ->where('status', CompanyStatus::Active)
-            ->where(function ($query) use ($like): void {
-                $query->where('name_ar', 'like', $like)
-                    ->orWhere('name_en', 'like', $like)
-                    ->orWhere('slug', 'like', $like);
-            })
+            ->tap(fn ($query) => ArabicSearch::applyContains($query, ['name_ar', 'name_en', 'slug'], $q))
             ->orderByDesc('is_featured')
             ->orderBy('name_ar')
             ->limit(10)
@@ -58,10 +50,8 @@ class SearchController extends Controller
             ->with(['user:id,name,name_ar,name_en', 'company:id,name_ar,name_en,slug,logo_path,is_featured,status'])
             ->where('is_active', true)
             ->where('review_status', TechnicianReviewStatus::Approved)
-            ->whereHas('user', function ($query) use ($like): void {
-                $query->where('name', 'like', $like)
-                    ->orWhere('name_ar', 'like', $like)
-                    ->orWhere('name_en', 'like', $like);
+            ->whereHas('user', function ($query) use ($q): void {
+                ArabicSearch::applyContains($query, ['name', 'name_ar', 'name_en'], $q);
             })
             ->limit(10)
             ->get();
