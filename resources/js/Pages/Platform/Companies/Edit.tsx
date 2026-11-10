@@ -1,6 +1,7 @@
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import CompanyForm from '@/Pages/Platform/Companies/Partials/CompanyForm';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
+import { firstMultipartErrorKey, submitMultipartUpdate } from '@/Utility/submitMultipartUpdate';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -145,13 +146,17 @@ export default function PlatformCompaniesEdit({
         }
 
         setClientRequiredErrors({});
-        form.put(route('platform.companies.update', company.id), {
-            forceFormData: true,
+        submitMultipartUpdate(form, route('platform.companies.update', company.id), {
             preserveState: true,
             preserveScroll: true,
-            onError: (errs) => {
-                const firstKey = Object.keys(errs ?? {})[0];
-                if (firstKey) focusField(firstKey);
+            onError: (errs: Record<string, unknown>) => {
+                const focusKey = firstMultipartErrorKey(errs, [
+                    'logo',
+                    'license_files',
+                    'signature_authorization_files',
+                    'additional_documents_files',
+                ]);
+                if (focusKey) focusField(focusKey);
             },
         });
     };

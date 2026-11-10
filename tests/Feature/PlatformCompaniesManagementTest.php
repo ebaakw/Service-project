@@ -175,6 +175,81 @@ class PlatformCompaniesManagementTest extends TestCase
         ]);
     }
 
+    public function test_platform_admin_can_update_company_logo_via_method_spoofed_post(): void
+    {
+        $publicRoot = sys_get_temp_dir().'/services-company-logo-'.uniqid('', true);
+        mkdir($publicRoot, 0777, true);
+        config(['filesystems.disks.public.root' => $publicRoot]);
+
+        $this->seed(PermissionSeeder::class);
+        $admin = User::factory()->platformAdmin()->create();
+        Artisan::call('permissions:repair-dashboard-access');
+
+        $company = Company::factory()->create([
+            'status' => CompanyStatus::Active,
+            'subscription_status' => SubscriptionStatus::Active,
+            'logo_path' => null,
+        ]);
+
+        $logo = UploadedFile::fake()->image('company-logo.png', 120, 120);
+
+        // Mirrors the edit screen: POST multipart + _method=put (real PUT drops files in PHP).
+        $this->actingAs($admin)
+            ->post(route('platform.companies.update', $company), [
+                '_method' => 'put',
+                'name_ar' => $company->name_ar,
+                'name_en' => $company->name_en,
+                'slug' => $company->slug,
+                'status' => CompanyStatus::Active->value,
+                'subscription_status' => SubscriptionStatus::Active->value,
+                'is_featured' => false,
+                'allow_final_invoice_without_items' => false,
+                'logo' => $logo,
+            ])
+            ->assertRedirect(route('platform.companies.edit', $company));
+
+        $company->refresh();
+
+        $this->assertNotNull($company->logo_path);
+        $this->assertFileExists($publicRoot.'/'.$company->logo_path);
+        $this->assertDatabaseHas('media', [
+            'model_type' => Company::class,
+            'model_id' => $company->id,
+            'collection_name' => 'logo',
+            'file_name' => 'company-logo.png',
+        ]);
+    }
+
+    public function test_platform_admin_company_logo_update_rejects_invalid_file(): void
+    {
+        $this->seed(PermissionSeeder::class);
+        $admin = User::factory()->platformAdmin()->create();
+        Artisan::call('permissions:repair-dashboard-access');
+
+        $company = Company::factory()->create([
+            'status' => CompanyStatus::Active,
+            'subscription_status' => SubscriptionStatus::Active,
+        ]);
+
+        $invalid = UploadedFile::fake()->create('not-an-image.txt', 10, 'text/plain');
+
+        $this->actingAs($admin)
+            ->from(route('platform.companies.edit', $company))
+            ->post(route('platform.companies.update', $company), [
+                '_method' => 'put',
+                'name_ar' => $company->name_ar,
+                'name_en' => $company->name_en,
+                'slug' => $company->slug,
+                'status' => CompanyStatus::Active->value,
+                'subscription_status' => SubscriptionStatus::Active->value,
+                'is_featured' => false,
+                'allow_final_invoice_without_items' => false,
+                'logo' => $invalid,
+            ])
+            ->assertRedirect(route('platform.companies.edit', $company))
+            ->assertSessionHasErrors('logo');
+    }
+
     public function test_platform_admin_can_delete_company(): void
     {
         $this->seed(PermissionSeeder::class);

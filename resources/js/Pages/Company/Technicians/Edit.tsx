@@ -2,6 +2,7 @@ import TableCard from '@/Components/ui/TableCard';
 import StatusBadge from '@/Components/ui/StatusBadge';
 import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
+import { submitMultipartUpdate } from '@/Utility/submitMultipartUpdate';
 import type { PageProps } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -220,14 +221,14 @@ export default function CompanyTechniciansEdit({
             return;
         }
 
-        transform((payload) => ({
-            ...payload,
-            _method: 'patch',
-        }));
-        post(route('company.technicians.update', technician.id), {
-            forceFormData: true,
-            onError: (errs) => focusFirstError(errs as any),
-        });
+        submitMultipartUpdate(
+            { transform, post },
+            route('company.technicians.update', technician.id),
+            {
+                onError: (errs: Record<string, unknown>) => focusFirstError(errs as any),
+            },
+            'patch',
+        );
     };
 
     const submitReset = (e: React.FormEvent) => {

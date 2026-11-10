@@ -1,6 +1,7 @@
 import BannerForm, { type BannerFormData } from '@/Pages/Platform/Banners/Partials/BannerForm';
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
+import { firstMultipartErrorKey, submitMultipartUpdate } from '@/Utility/submitMultipartUpdate';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -67,14 +68,12 @@ export default function PlatformBannersEdit({ banner, linkTypes }: { banner: Ban
         }
 
         setClientRequiredErrors({});
-        form.transform((data) => ({ ...data, _method: 'put' }));
-        form.post(route('platform.banners.update', banner.id), {
-            forceFormData: true,
+        submitMultipartUpdate(form, route('platform.banners.update', banner.id), {
             preserveState: true,
             preserveScroll: true,
-            onError: (errs) => {
-                const firstKey = Object.keys(errs ?? {})[0];
-                if (firstKey) focusField(firstKey);
+            onError: (errs: Record<string, unknown>) => {
+                const focusKey = firstMultipartErrorKey(errs, ['image']);
+                if (focusKey) focusField(focusKey);
             },
         });
     };

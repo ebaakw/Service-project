@@ -1,6 +1,7 @@
 import ServiceProblemForm, { type ServiceProblemFormData } from '@/Pages/Platform/ServiceCatalog/Problems/ServiceProblemForm';
 import PlatformAdminLayout from '@/Layouts/PlatformAdminLayout';
 import { __ } from '@/Utility/Hooks/useTranslate.jsx';
+import { firstMultipartErrorKey, submitMultipartUpdate } from '@/Utility/submitMultipartUpdate';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 type Category = { id: number; name_ar: string };
@@ -34,13 +35,25 @@ export default function PlatformServiceProblemsEdit({
         is_active: problem.is_active,
     });
 
+    const focusField = (name: string) => {
+        const el = document.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+            `[name="${CSS.escape(name)}"]`,
+        );
+        if (!el) return;
+        el.classList.add('is-invalid');
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.focus();
+    };
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.transform((data) => ({ ...data, _method: 'put' }));
-        form.post(route('platform.service-categories.problems.update', [category.id, problem.id]), {
-            forceFormData: true,
+        submitMultipartUpdate(form, route('platform.service-categories.problems.update', [category.id, problem.id]), {
             preserveState: true,
             preserveScroll: true,
+            onError: (errs: Record<string, unknown>) => {
+                const focusKey = firstMultipartErrorKey(errs, ['icon']);
+                if (focusKey) focusField(focusKey);
+            },
         });
     };
 
