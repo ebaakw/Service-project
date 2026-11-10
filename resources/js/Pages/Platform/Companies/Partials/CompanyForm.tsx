@@ -74,7 +74,7 @@ const emptyContact = (): ContactRow => ({ name: '', phone: '', position: '' });
 
 function FieldError({ error }: { error?: string }) {
     if (!error) return null;
-    return <div className="invalid-feedback d-block">{error}</div>;
+    return <div className="text-danger small mt-1">{error}</div>;
 }
 
 function RequiredMark() {
@@ -147,14 +147,23 @@ export default function CompanyForm({
     documents?: CompanyDocuments;
 }) {
     const { data, setData, errors, processing } = form;
-    const anyErrors = errors as Record<string, string | undefined>;
+    const anyErrors = errors as Record<string, string | string[] | undefined>;
     const requiredClient = clientRequiredErrors ?? {};
 
-    const isInvalid = (key: keyof CompanyFormData) => Boolean((errors as any)?.[key] || requiredClient[String(key)]);
-    const fieldError = (key: keyof CompanyFormData) => {
-        const server = (errors as any)?.[key] as string | undefined;
+    const resolveErrorMessage = (value: string | string[] | undefined): string | undefined => {
+        if (typeof value === 'string' && value.trim() !== '') return value;
+        if (Array.isArray(value)) {
+            const first = value.find((item) => typeof item === 'string' && item.trim() !== '');
+            return first;
+        }
+        return undefined;
+    };
+
+    const isInvalid = (key: string) => Boolean(resolveErrorMessage(anyErrors[key]) || requiredClient[key]);
+    const fieldError = (key: string) => {
+        const server = resolveErrorMessage(anyErrors[key]);
         if (server) return server;
-        return requiredClient[String(key)] ? __('tenant.field_required') : undefined;
+        return requiredClient[key] ? __('tenant.field_required') : undefined;
     };
     const hasPrimaryUser = Boolean(primaryUser && primaryUser.id);
     const showOwnerFields =
@@ -262,7 +271,7 @@ export default function CompanyForm({
                                 dir="ltr"
                                 style={placeholderAlignStyle}
                             />
-                            <FieldError error={errors.name_en} />
+                            <FieldError error={fieldError('name_en')} />
                         </div>
 
                         <div className="form-group">
@@ -277,7 +286,7 @@ export default function CompanyForm({
                                 dir="ltr"
                                 style={placeholderAlignStyle}
                             />
-                            <FieldError error={errors.slug} />
+                            <FieldError error={fieldError('slug')} />
                         </div>
 
                         <div className="form-group">
@@ -300,7 +309,7 @@ export default function CompanyForm({
                                 className={`form-control ${isInvalid('logo') ? 'is-invalid' : ''}`}
                                 onChange={(e) => setData('logo', e.target.files?.[0] ?? null)}
                             />
-                            <FieldError error={anyErrors.logo} />
+                            <FieldError error={fieldError('logo')} />
                         </div>
 
                         <div className="row">
@@ -317,7 +326,7 @@ export default function CompanyForm({
                                         dir="ltr"
                                         style={placeholderAlignStyle}
                                     />
-                                    <FieldError error={errors.phone} />
+                                    <FieldError error={fieldError('phone')} />
                                 </div>
                             </div>
                             <div className="col-12 col-md-6">
@@ -333,7 +342,7 @@ export default function CompanyForm({
                                         dir="ltr"
                                         style={placeholderAlignStyle}
                                     />
-                                    <FieldError error={errors.email} />
+                                    <FieldError error={fieldError('email')} />
                                 </div>
                             </div>
                         </div>
@@ -403,7 +412,7 @@ export default function CompanyForm({
                                         onChange={(e) => setData('subscription_starts_at', e.target.value)}
                                         dir="ltr"
                                     />
-                                    <FieldError error={errors.subscription_starts_at} />
+                                    <FieldError error={fieldError('subscription_starts_at')} />
                                 </div>
                             </div>
                             <div className="col-12 col-md-6">
@@ -418,7 +427,7 @@ export default function CompanyForm({
                                         onChange={(e) => setData('subscription_ends_at', e.target.value)}
                                         dir="ltr"
                                     />
-                                    <FieldError error={errors.subscription_ends_at} />
+                                    <FieldError error={fieldError('subscription_ends_at')} />
                                 </div>
                             </div>
                         </div>
@@ -437,7 +446,7 @@ export default function CompanyForm({
                                         dir="ltr"
                                         style={placeholderAlignStyle}
                                     />
-                                    <FieldError error={errors.default_inspection_fee} />
+                                    <FieldError error={fieldError('default_inspection_fee')} />
                                 </div>
                             </div>
                             <div className="col-12 col-md-6">
@@ -471,7 +480,7 @@ export default function CompanyForm({
                                     {__('tenant.companies.allowFinalInvoiceWithoutItems')}
                                 </label>
                             </div>
-                            <FieldError error={errors.allow_final_invoice_without_items} />
+                            <FieldError error={fieldError('allow_final_invoice_without_items')} />
                         </div>
                     </div>
                 </div>
@@ -494,7 +503,7 @@ export default function CompanyForm({
                                 style={placeholderAlignStyle}
                                 rows={2}
                             />
-                            <FieldError error={errors.short_description_ar} />
+                            <FieldError error={fieldError('short_description_ar')} />
                         </div>
                         <div className="form-group">
                             <textarea
@@ -509,7 +518,7 @@ export default function CompanyForm({
                                 style={placeholderAlignStyle}
                                 rows={4}
                             />
-                            <FieldError error={errors.description_ar} />
+                            <FieldError error={fieldError('description_ar')} />
                         </div>
                     </div>
                     <div className="col-12 col-lg-6">
@@ -526,7 +535,7 @@ export default function CompanyForm({
                                 style={placeholderAlignStyle}
                                 rows={2}
                             />
-                            <FieldError error={errors.short_description_en} />
+                            <FieldError error={fieldError('short_description_en')} />
                         </div>
                         <div className="form-group">
                             <textarea
@@ -541,7 +550,7 @@ export default function CompanyForm({
                                 style={placeholderAlignStyle}
                                 rows={4}
                             />
-                            <FieldError error={errors.description_en} />
+                            <FieldError error={fieldError('description_en')} />
                         </div>
                     </div>
                 </div>
@@ -566,14 +575,14 @@ export default function CompanyForm({
                                     <input
                                         id={`contacts_${index}_name`}
                                         name={`contacts[${index}][name]`}
-                                        className={`form-control ${anyErrors[`contacts.${index}.name`] ? 'is-invalid' : ''}`}
+                                        className={`form-control ${isInvalid(`contacts.${index}.name`) ? 'is-invalid' : ''}`}
                                         value={contact.name}
                                         onChange={(e) => updateContact(index, 'name', e.target.value)}
                                         placeholder={contactNameLabel}
                                         aria-label={contactNameLabel}
                                         style={placeholderAlignStyle}
                                     />
-                                    <FieldError error={anyErrors[`contacts.${index}.name`]} />
+                                    <FieldError error={fieldError(`contacts.${index}.name`)} />
                                 </div>
                             </div>
                             <div className="col-12 col-md-4">
@@ -581,7 +590,7 @@ export default function CompanyForm({
                                     <input
                                         id={`contacts_${index}_phone`}
                                         name={`contacts[${index}][phone]`}
-                                        className={`form-control ${anyErrors[`contacts.${index}.phone`] ? 'is-invalid' : ''}`}
+                                        className={`form-control ${isInvalid(`contacts.${index}.phone`) ? 'is-invalid' : ''}`}
                                         value={contact.phone}
                                         onChange={(e) => updateContact(index, 'phone', e.target.value)}
                                         placeholder={contactPhoneLabel}
@@ -589,7 +598,7 @@ export default function CompanyForm({
                                         dir="ltr"
                                         style={placeholderAlignStyle}
                                     />
-                                    <FieldError error={anyErrors[`contacts.${index}.phone`]} />
+                                    <FieldError error={fieldError(`contacts.${index}.phone`)} />
                                 </div>
                             </div>
                             <div className="col-12 col-md-4">
@@ -597,14 +606,14 @@ export default function CompanyForm({
                                     <input
                                         id={`contacts_${index}_position`}
                                         name={`contacts[${index}][position]`}
-                                        className={`form-control ${anyErrors[`contacts.${index}.position`] ? 'is-invalid' : ''}`}
+                                        className={`form-control ${isInvalid(`contacts.${index}.position`) ? 'is-invalid' : ''}`}
                                         value={contact.position}
                                         onChange={(e) => updateContact(index, 'position', e.target.value)}
                                         placeholder={contactPositionLabel}
                                         aria-label={contactPositionLabel}
                                         style={placeholderAlignStyle}
                                     />
-                                    <FieldError error={anyErrors[`contacts.${index}.position`]} />
+                                    <FieldError error={fieldError(`contacts.${index}.position`)} />
                                 </div>
                             </div>
                         </div>
@@ -615,7 +624,7 @@ export default function CompanyForm({
                         <i className="fas fa-plus mr-1" />
                         {__('tenant.companies.addContact')}
                     </button>
-                    <FieldError error={anyErrors.contacts} />
+                    <FieldError error={fieldError('contacts')} />
                 </div>
 
                 <hr className="my-4" />
@@ -635,7 +644,7 @@ export default function CompanyForm({
                                 style={placeholderAlignStyle}
                                 rows={3}
                             />
-                            <FieldError error={anyErrors.address} />
+                            <FieldError error={fieldError('address')} />
                         </div>
                     </div>
                     <div className="col-12 col-lg-6">
@@ -651,7 +660,7 @@ export default function CompanyForm({
                                 style={placeholderAlignStyle}
                                 rows={3}
                             />
-                            <FieldError error={anyErrors.working_hours} />
+                            <FieldError error={fieldError('working_hours')} />
                         </div>
                     </div>
                 </div>
@@ -690,18 +699,18 @@ export default function CompanyForm({
                                     type="file"
                                     multiple
                                     accept="image/*,application/pdf,.pdf"
-                                    className={`form-control ${anyErrors[section.filesKey] ? 'is-invalid' : ''}`}
+                                    className={`form-control ${isInvalid(section.filesKey) ? 'is-invalid' : ''}`}
                                     onChange={(e) =>
                                         setData(section.filesKey, Array.from(e.target.files ?? []) as any)
                                     }
                                 />
-                                <FieldError error={anyErrors[section.filesKey]} />
-                                <FieldError error={anyErrors[`${section.filesKey}.0`]} />
+                                <FieldError error={fieldError(section.filesKey)} />
+                                <FieldError error={fieldError(`${section.filesKey}.0`)} />
                             </div>
                         </div>
                     ))}
                 </div>
-                <FieldError error={anyErrors.remove_document_ids} />
+                <FieldError error={fieldError('remove_document_ids')} />
 
                 <hr className="my-4" />
 
@@ -720,7 +729,7 @@ export default function CompanyForm({
                                 dir="ltr"
                                 style={placeholderAlignStyle}
                             />
-                            <FieldError error={anyErrors.iban} />
+                            <FieldError error={fieldError('iban')} />
                         </div>
                     </div>
                     <div className="col-12 col-md-6">
@@ -735,7 +744,7 @@ export default function CompanyForm({
                                 aria-label={bankNameLabel}
                                 style={placeholderAlignStyle}
                             />
-                            <FieldError error={anyErrors.bank_name} />
+                            <FieldError error={fieldError('bank_name')} />
                         </div>
                     </div>
                 </div>
@@ -792,7 +801,7 @@ export default function CompanyForm({
                                             <input
                                                 id="owner_name_ar"
                                                 name="owner_name_ar"
-                                                className={`form-control ${requiredClient.owner_name_ar || anyErrors.owner_name_ar ? 'is-invalid' : ''}`}
+                                                className={`form-control ${isInvalid('owner_name_ar') ? 'is-invalid' : ''}`}
                                                 value={data.owner_name_ar ?? ''}
                                                 onChange={(e) => setData('owner_name_ar', e.target.value)}
                                                 placeholder={ownerFieldsRequired ? undefined : ownerNameArLabel}
@@ -800,7 +809,7 @@ export default function CompanyForm({
                                                 dir="rtl"
                                                 style={ownerFieldsRequired ? undefined : placeholderAlignStyle}
                                             />
-                                            <FieldError error={anyErrors.owner_name_ar} />
+                                            <FieldError error={fieldError('owner_name_ar')} />
                                         </div>
 
                                         <div className="form-group">
@@ -813,7 +822,7 @@ export default function CompanyForm({
                                             <input
                                                 id="owner_email"
                                                 name="owner_email"
-                                                className={`form-control ${requiredClient.owner_email || anyErrors.owner_email ? 'is-invalid' : ''}`}
+                                                className={`form-control ${isInvalid('owner_email') ? 'is-invalid' : ''}`}
                                                 value={data.owner_email ?? ''}
                                                 onChange={(e) => setData('owner_email', e.target.value)}
                                                 placeholder={ownerFieldsRequired ? undefined : ownerEmailLabel}
@@ -821,14 +830,14 @@ export default function CompanyForm({
                                                 dir="ltr"
                                                 style={ownerFieldsRequired ? undefined : placeholderAlignStyle}
                                             />
-                                            <FieldError error={anyErrors.owner_email} />
+                                            <FieldError error={fieldError('owner_email')} />
                                         </div>
 
                                         <div className="form-group">
                                             <input
                                                 id="owner_phone"
                                                 name="owner_phone"
-                                                className={`form-control ${requiredClient.owner_phone || anyErrors.owner_phone ? 'is-invalid' : ''}`}
+                                                className={`form-control ${isInvalid('owner_phone') ? 'is-invalid' : ''}`}
                                                 value={data.owner_phone ?? ''}
                                                 onChange={(e) => setData('owner_phone', e.target.value)}
                                                 placeholder={ownerPhoneLabel}
@@ -836,7 +845,7 @@ export default function CompanyForm({
                                                 dir="ltr"
                                                 style={placeholderAlignStyle}
                                             />
-                                            <FieldError error={anyErrors.owner_phone} />
+                                            <FieldError error={fieldError('owner_phone')} />
                                         </div>
 
                                         {mode === 'edit' && hasPrimaryUser ? (
@@ -845,7 +854,7 @@ export default function CompanyForm({
                                                 <select
                                                     id="owner_status"
                                                     name="owner_status"
-                                                    className={`custom-select ${requiredClient.owner_status || anyErrors.owner_status ? 'is-invalid' : ''}`}
+                                                    className={`custom-select ${isInvalid('owner_status') ? 'is-invalid' : ''}`}
                                                     value={data.owner_status ?? 'active'}
                                                     onChange={(e) => setData('owner_status', e.target.value)}
                                                 >
@@ -855,7 +864,7 @@ export default function CompanyForm({
                                                         </option>
                                                     ))}
                                                 </select>
-                                                <FieldError error={anyErrors.owner_status} />
+                                                <FieldError error={fieldError('owner_status')} />
                                             </div>
                                         ) : null}
                                     </div>
@@ -865,7 +874,7 @@ export default function CompanyForm({
                                             <input
                                                 id="owner_name_en"
                                                 name="owner_name_en"
-                                                className={`form-control ${requiredClient.owner_name_en || anyErrors.owner_name_en ? 'is-invalid' : ''}`}
+                                                className={`form-control ${isInvalid('owner_name_en') ? 'is-invalid' : ''}`}
                                                 value={data.owner_name_en ?? ''}
                                                 onChange={(e) => setData('owner_name_en', e.target.value)}
                                                 placeholder={ownerNameEnLabel}
@@ -873,7 +882,7 @@ export default function CompanyForm({
                                                 dir="ltr"
                                                 style={placeholderAlignStyle}
                                             />
-                                            <FieldError error={anyErrors.owner_name_en} />
+                                            <FieldError error={fieldError('owner_name_en')} />
                                         </div>
 
                                         <div className="form-group">
@@ -889,11 +898,11 @@ export default function CompanyForm({
                                                 name="owner_password"
                                                 value={data.owner_password ?? ''}
                                                 onChange={(v) => setData('owner_password', v)}
-                                                isInvalid={Boolean(requiredClient.owner_password || anyErrors.owner_password)}
+                                                isInvalid={isInvalid('owner_password')}
                                                 autoComplete="new-password"
                                                 required={passwordRequired}
                                             />
-                                            <FieldError error={anyErrors.owner_password} />
+                                            <FieldError error={fieldError('owner_password')} />
                                         </div>
 
                                         <div className="form-group">
@@ -906,11 +915,11 @@ export default function CompanyForm({
                                                 name="owner_password_confirmation"
                                                 value={data.owner_password_confirmation ?? ''}
                                                 onChange={(v) => setData('owner_password_confirmation', v)}
-                                                isInvalid={Boolean(requiredClient.owner_password_confirmation || anyErrors.owner_password_confirmation)}
+                                                isInvalid={isInvalid('owner_password_confirmation')}
                                                 autoComplete="new-password"
                                                 required={passwordRequired}
                                             />
-                                            <FieldError error={anyErrors.owner_password_confirmation} />
+                                            <FieldError error={fieldError('owner_password_confirmation')} />
                                         </div>
                                     </div>
                                 </div>
