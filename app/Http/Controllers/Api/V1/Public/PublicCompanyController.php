@@ -4,15 +4,32 @@ namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Enums\CompanyStatus;
 use App\Enums\PortfolioProjectReviewStatus;
+use App\Enums\TechnicianAvailabilityStatus;
+use App\Enums\TechnicianReviewStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\CompanyPriceItemResource;
+use App\Http\Resources\Api\V1\CompanyPriceListResource;
 use App\Http\Resources\Api\V1\CompanyResource;
 use App\Http\Resources\Api\V1\PortfolioProjectResource;
+use App\Http\Resources\Api\V1\TechnicianResource;
 use App\Models\Company;
+use App\Models\CompanyPriceItem;
+use App\Models\CompanyPriceList;
+use App\Models\Technician;
+use App\Services\Mobile\AvailableTechnicianService;
+use App\Services\Settings\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\AbstractPaginator;
+use Illuminate\Validation\Rule;
 
 class PublicCompanyController extends Controller
 {
+    public function __construct(
+        private readonly AvailableTechnicianService $availableTechnicianService,
+        private readonly SettingsService $settingsService,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -27,6 +44,13 @@ class PublicCompanyController extends Controller
 
         $query = Company::query()
             ->where('status', CompanyStatus::Active)
+            ->withExists([
+                'technicians as has_available_technician' => function ($q): void {
+                    $q->where('is_active', true)
+                        ->where('review_status', TechnicianReviewStatus::Approved)
+                        ->where('availability_status', TechnicianAvailabilityStatus::Available);
+                },
+            ])
             ->with(['discounts' => function ($q): void {
                 $now = now();
                 $q->where('is_active', true)
@@ -87,6 +111,14 @@ class PublicCompanyController extends Controller
     {
         abort_unless($company->status === CompanyStatus::Active, 404);
 
+        $company->loadExists([
+            'technicians as has_available_technician' => function ($q): void {
+                $q->where('is_active', true)
+                    ->where('review_status', TechnicianReviewStatus::Approved)
+                    ->where('availability_status', TechnicianAvailabilityStatus::Available);
+            },
+        ]);
+
         $company->load(['discounts' => function ($q): void {
             $now = now();
             $q->where('is_active', true)
@@ -109,8 +141,10 @@ class PublicCompanyController extends Controller
 
         $projects = $company->portfolioProjects()
             ->with([
-                'portfolioImages:id,model_type,model_id,disk,file_path,file_name,mime_type,size,sort_order',
-                'technicians.user:id,name',
+                'portfolioImages:id,model_type,model_id,disk,file_path,file_name,mime_type,size,sort_order,collection_name',
+                'company:id,name,name_ar,name_en,slug,logo_path,status,is_featured,rating_average,rating_count',
+                'technician.user:id,name,name_ar,name_en,avatar_path',
+                'technicians.user:id,name,name_ar,name_en,avatar_path',
             ])
             ->where('is_active', true)
             ->where('review_status', PortfolioProjectReviewStatus::Approved->value)
@@ -119,5 +153,221 @@ class PublicCompanyController extends Controller
             ->paginate(20);
 
         return PortfolioProjectResource::collection($projects)->response();
+    }
+
+    public function technicians(Request $request, Company $company): JsonResponse
+    {
+        abort_unless($company->status === CompanyStatus::Active, 404);
+
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'filter' => ['nullable', 'string', Rule::in(['available', 'all'])],
+            'lat' => ['nullable', 'numeric'],
+            'lng' => ['nullable', 'numeric'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $q = trim((string) ($validated['q'] ?? ''));
+        $filter = $validated['filter'] ?? 'all';
+        $lat = isset($validated['lat']) ? (float) $validated['lat'] : null;
+        $lng = isset($validated['lng']) ? (float) $validated['lng'] : null;
+
+        $query = Technician::query()
+            ->with([
+                'user:id,name,name_ar,name_en,avatar_path',
+                'company' => function ($companyQuery) use ($company): void {
+                    $companyQuery->whereKey($company->getKey())
+                        ->select([
+                            'id',
+                            'ulid',
+                            'name',
+                            'name_ar',
+                            'name_en',
+                            'slug',
+                            'logo_path',
+                            'status',
+                            'subscription_status',
+                            'is_featured',
+                            'rating_average',
+                            'rating_count',
+                            'default_inspection_fee',
+                            'warranty_note_ar',
+                            'warranty_note_en',
+                        ])
+                        ->with(['discounts' => function ($dq): void {
+                            $now = now();
+                            $dq->where('is_active', true)
+                                ->where(function ($inner) use ($now): void {
+                                    $inner->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                                })
+                                ->where(function ($inner) use ($now): void {
+                                    $inner->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+                                })
+                                ->orderByDesc('discount_value')
+                                ->limit(1);
+                        }]);
+                },
+            ])
+            ->where('company_id', $company->getKey())
+            ->where('is_active', true)
+            ->where('review_status', TechnicianReviewStatus::Approved);
+
+        if ($filter === 'available') {
+            $query->where('availability_status', TechnicianAvailabilityStatus::Available);
+        }
+
+        if ($q !== '') {
+            $like = '%'.$q.'%';
+            $query->where(function ($inner) use ($like): void {
+                $inner->where('display_name_ar', 'like', $like)
+                    ->orWhere('display_name_en', 'like', $like)
+                    ->orWhereHas('user', function ($user) use ($like): void {
+                        $user->where('name', 'like', $like)
+                            ->orWhere('name_ar', 'like', $like)
+                            ->orWhere('name_en', 'like', $like);
+                    });
+            });
+        }
+
+        $paginator = $query
+            ->orderByDesc('rating_average')
+            ->orderBy('display_name_ar')
+            ->paginate(20);
+
+        $favoriteIds = collect();
+        $user = $request->user();
+        if ($user !== null && $user->isCustomer() && $user->customerProfile !== null) {
+            $favoriteIds = $user->customerProfile
+                ->favoriteTechnicians()
+                ->pluck('technicians.id');
+        }
+
+        $paginator->getCollection()->transform(function (Technician $technician) use ($favoriteIds, $lat, $lng): Technician {
+            $technician->setAttribute('is_favorite', $favoriteIds->contains($technician->getKey()));
+
+            if ($lat !== null && $lng !== null
+                && $technician->current_lat !== null
+                && $technician->current_lng !== null
+            ) {
+                $distance = $this->availableTechnicianService->distanceKm(
+                    $lat,
+                    $lng,
+                    (float) $technician->current_lat,
+                    (float) $technician->current_lng,
+                );
+                $technician->setAttribute('distance_km', round($distance, 4));
+            }
+
+            return $technician;
+        });
+
+        return TechnicianResource::collection($paginator)->response();
+    }
+
+    public function priceList(Request $request, Company $company): JsonResponse
+    {
+        abort_unless($company->status === CompanyStatus::Active, 404);
+
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'service_category_id' => ['nullable', 'integer', 'exists:service_categories,id'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $q = trim((string) ($validated['q'] ?? ''));
+        $categoryId = isset($validated['service_category_id']) ? (int) $validated['service_category_id'] : null;
+
+        $company->loadExists([
+            'technicians as has_available_technician' => function ($tq): void {
+                $tq->where('is_active', true)
+                    ->where('review_status', TechnicianReviewStatus::Approved)
+                    ->where('availability_status', TechnicianAvailabilityStatus::Available);
+            },
+        ]);
+
+        $company->load(['discounts' => function ($dq): void {
+            $now = now();
+            $dq->where('is_active', true)
+                ->where(function ($inner) use ($now): void {
+                    $inner->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                })
+                ->where(function ($inner) use ($now): void {
+                    $inner->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+                })
+                ->orderByDesc('discount_value')
+                ->limit(1);
+        }]);
+
+        $priceList = $this->resolveActivePriceList($company);
+        $currency = (string) ($this->settingsService->getGlobal('currency', 'KWD') ?? 'KWD');
+
+        $itemsQuery = CompanyPriceItem::query()
+            ->where('company_id', $company->getKey())
+            ->where('is_active', true)
+            ->with('priceList')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+
+        if ($priceList !== null) {
+            $itemsQuery->where('company_price_list_id', $priceList->getKey());
+        }
+
+        if ($categoryId !== null) {
+            $itemsQuery->where('service_category_id', $categoryId);
+        }
+
+        if ($q !== '') {
+            $like = '%'.$q.'%';
+            $itemsQuery->where(function ($inner) use ($like): void {
+                $inner->where('name_ar', 'like', $like)
+                    ->orWhere('name_en', 'like', $like)
+                    ->orWhere('description_ar', 'like', $like)
+                    ->orWhere('description_en', 'like', $like);
+            });
+        }
+
+        $items = isset($validated['page'])
+            ? $itemsQuery->paginate(50)
+            : $itemsQuery->get();
+
+        $priceItems = collect($items instanceof AbstractPaginator ? $items->items() : $items)
+            ->map(fn (CompanyPriceItem $item) => (new CompanyPriceItemResource($item))
+                ->additional(['currency' => $currency])
+                ->resolve())
+            ->values();
+
+        $inspectionFee = $company->default_inspection_fee !== null
+            ? (string) $company->default_inspection_fee
+            : null;
+
+        return response()->json([
+            'data' => [
+                'company' => (new CompanyResource($company))->resolve(),
+                'price_list' => $priceList !== null
+                    ? (new CompanyPriceListResource($priceList))->resolve()
+                    : null,
+                'price_items' => $priceItems,
+                'inspection_fee' => $inspectionFee,
+                'currency' => $currency,
+            ],
+        ]);
+    }
+
+    private function resolveActivePriceList(Company $company): ?CompanyPriceList
+    {
+        $now = now();
+
+        return CompanyPriceList::query()
+            ->where('company_id', $company->getKey())
+            ->where('is_active', true)
+            ->where(function ($q) use ($now): void {
+                $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+            })
+            ->where(function ($q) use ($now): void {
+                $q->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+            })
+            ->orderByDesc('is_default')
+            ->orderBy('id')
+            ->first();
     }
 }

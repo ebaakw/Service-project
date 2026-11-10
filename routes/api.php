@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\PaymentCompletionController;
 use App\Http\Controllers\Api\V1\Public\PublicBannerController;
 use App\Http\Controllers\Api\V1\Public\PublicCompanyController;
 use App\Http\Controllers\Api\V1\Public\PublicContentPageController;
+use App\Http\Controllers\Api\V1\Public\PublicPortfolioProjectController;
 use App\Http\Controllers\Api\V1\Technician\AuthController as TechnicianAuthController;
 use App\Http\Controllers\Api\V1\Technician\AvailabilityController as TechnicianAvailabilityController;
 use App\Http\Controllers\Api\V1\Technician\DeviceController as TechnicianDeviceController;
@@ -40,6 +41,11 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/companies', [PublicCompanyController::class, 'index']);
         Route::get('/companies/{company}', [PublicCompanyController::class, 'show']);
         Route::get('/companies/{company}/portfolio', [PublicCompanyController::class, 'portfolio']);
+        Route::get('/companies/{company}/technicians', [PublicCompanyController::class, 'technicians'])
+            ->middleware('auth.optional.sanctum');
+        Route::get('/companies/{company}/price-list', [PublicCompanyController::class, 'priceList']);
+        Route::get('/portfolio-projects', [PublicPortfolioProjectController::class, 'index']);
+        Route::get('/portfolio-projects/{portfolio_project}', [PublicPortfolioProjectController::class, 'show']);
         Route::get('/pages/{slug}', [PublicContentPageController::class, 'show']);
     });
 

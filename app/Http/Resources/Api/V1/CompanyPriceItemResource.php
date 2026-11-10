@@ -30,6 +30,10 @@ class CompanyPriceItemResource extends JsonResource
             'discount_value' => $this->effective_discount_value,
             'inspection_fee' => $this->inspection_fee !== null ? (string) $this->inspection_fee : null,
             'duration_minutes' => $this->duration_minutes !== null ? (int) $this->duration_minutes : null,
+            'service_category_id' => $this->service_category_id !== null ? (int) $this->service_category_id : null,
+            'warranty_days' => $this->warranty_days !== null ? (int) $this->warranty_days : null,
+            'warranty_description_ar' => $this->warranty_description_ar,
+            'warranty_description_en' => $this->warranty_description_en,
             'sort_order' => (int) $this->sort_order,
             'is_active' => (bool) $this->is_active,
         ];

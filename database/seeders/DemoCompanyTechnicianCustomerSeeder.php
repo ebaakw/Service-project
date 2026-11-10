@@ -6,6 +6,7 @@ use App\Enums\CompanyMemberStatus;
 use App\Enums\CompanyStatus;
 use App\Enums\DiscountScope;
 use App\Enums\DiscountType;
+use App\Enums\PortfolioProjectReviewStatus;
 use App\Enums\PriceType;
 use App\Enums\SocialLoginProvider;
 use App\Enums\SubscriptionStatus;
@@ -20,6 +21,8 @@ use App\Models\CompanyPriceList;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
 use App\Models\Discount;
+use App\Models\Media;
+use App\Models\PortfolioProject;
 use App\Models\ServiceCategory;
 use App\Models\SocialAccount;
 use App\Models\Technician;
@@ -33,16 +36,25 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
         $company = Company::query()->updateOrCreate(
             ['slug' => 'demo-services-co'],
             [
-                'name' => 'إباء للحلول الحاسوبية المتكاملة',
-                'name_ar' => 'إباء للحلول الحاسوبية المتكاملة',
-                'name_en' => 'Ebaa Integrated Computer Solutions',
+                'name' => 'شركة إباء للحلول الحاسوبية',
+                'name_ar' => 'شركة إباء للحلول الحاسوبية',
+                'name_en' => 'Ebaa Computer Solutions',
+                'short_description' => 'شركة متخصصة في أعمال التكييف و التهوية',
+                'short_description_ar' => 'شركة متخصصة في أعمال التكييف و التهوية',
+                'short_description_en' => 'Specialized company for AC and ventilation works',
+                'description' => 'نقدم خدمات صيانة وتركيب التكييف والسباكة والخزانات بفريق فنيين معتمدين.',
+                'description_ar' => 'نقدم خدمات صيانة وتركيب التكييف والسباكة والخزانات بفريق فنيين معتمدين.',
+                'description_en' => 'We provide AC, plumbing, and water-tank maintenance with certified technicians.',
+                'warranty_note_ar' => 'الشركة تعطي كفالة تصل إلى 6 شهور على بعض قطع الغيار',
+                'warranty_note_en' => 'The company provides up to 6 months warranty on selected spare parts',
                 'status' => CompanyStatus::Active,
                 'subscription_status' => SubscriptionStatus::Active,
                 'subscription_starts_at' => now(),
-                'rating_average' => 4.6,
-                'rating_count' => 48,
+                'is_featured' => true,
+                'rating_average' => 4.5,
+                'rating_count' => 15,
                 'default_inspection_fee' => 5.000,
-                'logo_path' => null,
+                'logo_path' => 'https://picsum.photos/seed/ebaa-demo-logo/200/200',
             ]
         );
 
@@ -69,7 +81,14 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
             ]
         );
 
-        $acRoot = ServiceCategory::query()->where('slug', 'ac')->first();
+        $catalogCategories = ServiceCategory::query()
+            ->whereIn('slug', ['ac', 'ac-units', 'water-tanks', 'sanitary', 'electrical'])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->keyBy('slug');
+
+        $acRoot = $catalogCategories->get('ac');
         $pricingCategoryIds = [];
         if ($acRoot !== null) {
             $pricingCategoryIds = ServiceCategory::query()
@@ -83,9 +102,11 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
                 ->all();
         }
 
-        $categoryIds = $acRoot !== null
-            ? [(int) $acRoot->getKey()]
-            : [];
+        $categoryIds = $catalogCategories
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
 
         if ($categoryIds === []) {
             $categoryIds = ServiceCategory::query()
@@ -298,6 +319,8 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
         ];
 
         $favoriteIds = [];
+        /** @var list<Technician> $seededTechnicians */
+        $seededTechnicians = [];
 
         foreach ($demoTechnicians as $demo) {
             $displayNameAr = Technician::composeFullName(
@@ -359,6 +382,8 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
                 $technician->serviceCategories()->syncWithoutDetaching($categoryIds);
             }
 
+            $seededTechnicians[] = $technician;
+
             if ($demo['favorite'] === true) {
                 $favoriteIds[] = $technician->getKey();
             }
@@ -367,6 +392,8 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
         if ($favoriteIds !== []) {
             $customer->favoriteTechnicians()->syncWithoutDetaching($favoriteIds);
         }
+
+        $this->seedDemoPortfolio($company, $seededTechnicians, $catalogCategories->values()->all() ?: $categoryIds);
     }
 
     /**
@@ -422,46 +449,133 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
         $priceList->serviceCategories()->sync($categoryIds);
 
         $catalog = [
-            ['name_ar' => 'كمبريسر 2.5 طن وكالة', 'name_en' => 'Compressor 2.5 ton original', 'price' => '100.000'],
-            ['name_ar' => 'كمبريسر 1.5 طن وكالة', 'name_en' => 'Compressor 1.5 ton original', 'price' => '85.000'],
-            ['name_ar' => 'لوحة تحكم إلكترونية', 'name_en' => 'Electronic control board', 'price' => '45.000'],
-            ['name_ar' => 'مروحة خارجية', 'name_en' => 'Outdoor fan motor', 'price' => '35.000'],
-            ['name_ar' => 'غاز فريون R410', 'name_en' => 'R410 refrigerant gas', 'price' => '25.000'],
-            ['name_ar' => 'صيانة دورية وحدة سبليت', 'name_en' => 'Split unit periodic maintenance', 'price' => '20.000'],
-            ['name_ar' => 'غسيل وحدة داخلية', 'name_en' => 'Indoor unit cleaning', 'price' => '15.000'],
-            ['name_ar' => 'تركيب حامل خارجي', 'name_en' => 'Outdoor bracket installation', 'price' => '30.000'],
-            ['name_ar' => 'تبديل ترموستات', 'name_en' => 'Thermostat replacement', 'price' => '18.000'],
+            ['name_ar' => 'كمبريسر 2.5 طن وكالة', 'name_en' => 'Compressor 2.5 ton original', 'price' => '100.000', 'duration' => 120, 'warranty' => 180],
+            ['name_ar' => 'كمبريسر 1.5 طن وكالة', 'name_en' => 'Compressor 1.5 ton original', 'price' => '85.000', 'duration' => 90, 'warranty' => 180],
+            ['name_ar' => 'لوحة تحكم إلكترونية', 'name_en' => 'Electronic control board', 'price' => '45.000', 'duration' => 60, 'warranty' => 90],
+            ['name_ar' => 'مروحة خارجية', 'name_en' => 'Outdoor fan motor', 'price' => '35.000', 'duration' => 45, 'warranty' => 90],
+            ['name_ar' => 'غاز فريون R410', 'name_en' => 'R410 refrigerant gas', 'price' => '25.000', 'duration' => 40, 'warranty' => 30],
+            ['name_ar' => 'صيانة دورية وحدة سبليت', 'name_en' => 'Split unit periodic maintenance', 'price' => '20.000', 'duration' => 60, 'warranty' => null],
+            ['name_ar' => 'غسيل وحدة داخلية', 'name_en' => 'Indoor unit cleaning', 'price' => '15.000', 'duration' => 45, 'warranty' => null],
+            ['name_ar' => 'تركيب حامل خارجي', 'name_en' => 'Outdoor bracket installation', 'price' => '30.000', 'duration' => 75, 'warranty' => 60],
+            ['name_ar' => 'تبديل ترموستات', 'name_en' => 'Thermostat replacement', 'price' => '18.000', 'duration' => 30, 'warranty' => 90],
+            ['name_ar' => 'فحص وتشخيص أعطال', 'name_en' => 'Fault diagnosis inspection', 'price' => '12.000', 'duration' => 30, 'warranty' => null],
+            ['name_ar' => 'تنظيف مجاري الهواء', 'name_en' => 'Air duct cleaning', 'price' => '40.000', 'duration' => 90, 'warranty' => 30],
         ];
 
-        foreach ($categoryIds as $categoryId) {
-            foreach ($catalog as $index => $row) {
-                CompanyPriceItem::query()->updateOrCreate(
-                    [
-                        'company_price_list_id' => $priceList->getKey(),
-                        'service_category_id' => $categoryId,
-                        'name_ar' => $row['name_ar'],
-                    ],
-                    [
-                        'company_id' => $company->getKey(),
-                        'service_problem_id' => null,
-                        'name_en' => $row['name_en'],
-                        'description_ar' => null,
-                        'description_en' => null,
-                        'price_type' => PriceType::Fixed,
-                        'price' => $row['price'],
-                        'minimum_price' => null,
-                        'discount_type' => null,
-                        'discount_value' => null,
-                        'inspection_fee' => '5.000',
-                        'warranty_days' => 90,
-                        'warranty_description_ar' => 'ضمان 90 يوم',
-                        'warranty_description_en' => '90-day warranty',
-                        'duration_minutes' => 60,
-                        'sort_order' => $index,
-                        'is_active' => true,
-                    ]
-                );
+        // Seed a representative set once against the first category to keep the public price-list readable.
+        $primaryCategoryId = (int) $categoryIds[0];
+
+        foreach ($catalog as $index => $row) {
+            CompanyPriceItem::query()->updateOrCreate(
+                [
+                    'company_price_list_id' => $priceList->getKey(),
+                    'service_category_id' => $primaryCategoryId,
+                    'name_ar' => $row['name_ar'],
+                ],
+                [
+                    'company_id' => $company->getKey(),
+                    'service_problem_id' => null,
+                    'name_en' => $row['name_en'],
+                    'description_ar' => null,
+                    'description_en' => null,
+                    'price_type' => PriceType::Fixed,
+                    'price' => $row['price'],
+                    'minimum_price' => null,
+                    'discount_type' => null,
+                    'discount_value' => null,
+                    'inspection_fee' => '5.000',
+                    'warranty_days' => $row['warranty'],
+                    'warranty_description_ar' => $row['warranty'] !== null ? 'ضمان '.$row['warranty'].' يوم' : null,
+                    'warranty_description_en' => $row['warranty'] !== null ? $row['warranty'].'-day warranty' : null,
+                    'duration_minutes' => $row['duration'],
+                    'sort_order' => $index,
+                    'is_active' => true,
+                ]
+            );
+        }
+    }
+
+    /**
+     * @param  list<Technician>  $technicians
+     * @param  list<ServiceCategory|int>  $categories
+     */
+    private function seedDemoPortfolio(Company $company, array $technicians, array $categories): void
+    {
+        if ($technicians === [] || $categories === []) {
+            return;
+        }
+
+        $categoryModels = collect($categories)->map(function ($category): ?ServiceCategory {
+            if ($category instanceof ServiceCategory) {
+                return $category;
             }
+
+            return ServiceCategory::query()->find($category);
+        })->filter()->values();
+
+        if ($categoryModels->isEmpty()) {
+            return;
+        }
+
+        $projects = [
+            ['title_ar' => 'تركيب تكييف سبليت غرفة معيشة', 'title_en' => 'Living room split AC install', 'featured' => true, 'location_ar' => 'السالمية'],
+            ['title_ar' => 'صيانة وحدة تكييف مركزية', 'title_en' => 'Central AC unit maintenance', 'featured' => true, 'location_ar' => 'حولي'],
+            ['title_ar' => 'تعبئة فريون وإصلاح تسريب', 'title_en' => 'Refrigerant refill and leak fix', 'featured' => false, 'location_ar' => 'الفروانية'],
+            ['title_ar' => 'تنظيف خزان مياه علوي', 'title_en' => 'Rooftop water tank cleaning', 'featured' => true, 'location_ar' => 'الجابرية'],
+            ['title_ar' => 'استبدال مضخة خزان', 'title_en' => 'Water tank pump replacement', 'featured' => false, 'location_ar' => 'الرقعي'],
+            ['title_ar' => 'إصلاح تسريب أنابيب صحي', 'title_en' => 'Plumbing pipe leak repair', 'featured' => false, 'location_ar' => 'بيان'],
+            ['title_ar' => 'فتح انسداد مجاري مطبخ', 'title_en' => 'Kitchen drain unclogging', 'featured' => false, 'location_ar' => 'الشامية'],
+            ['title_ar' => 'تركيب وحدات تكييف مكتبية', 'title_en' => 'Office AC units installation', 'featured' => true, 'location_ar' => 'الشرق'],
+            ['title_ar' => 'صيانة دورية لشبكة التهوية', 'title_en' => 'Ventilation network service', 'featured' => false, 'location_ar' => 'الجهراء'],
+            ['title_ar' => 'تغيير كمبريسر 2.5 طن', 'title_en' => '2.5 ton compressor replacement', 'featured' => true, 'location_ar' => 'العديلية'],
+            ['title_ar' => 'تركيب خلاطات وأدوات صحية', 'title_en' => 'Faucet and sanitary fixtures', 'featured' => false, 'location_ar' => 'كيفان'],
+            ['title_ar' => 'عزل خزان أرضي ضد التسريب', 'title_en' => 'Ground tank waterproofing', 'featured' => false, 'location_ar' => 'الصباحية'],
+        ];
+
+        foreach ($projects as $index => $row) {
+            $category = $categoryModels[$index % $categoryModels->count()];
+            $technician = $technicians[$index % count($technicians)];
+
+            $project = PortfolioProject::query()->updateOrCreate(
+                [
+                    'company_id' => $company->getKey(),
+                    'title_ar' => $row['title_ar'],
+                ],
+                [
+                    'service_category_id' => $category->getKey(),
+                    'technician_id' => $technician->getKey(),
+                    'title_en' => $row['title_en'],
+                    'description_ar' => 'عمل منفذ بواسطة فريق شركة إباء للحلول الحاسوبية في '.$row['location_ar'].'.',
+                    'description_en' => 'Completed project by Ebaa Computer Solutions team in '.$row['location_ar'].'.',
+                    'location' => $row['location_ar'],
+                    'location_ar' => $row['location_ar'],
+                    'location_en' => $row['location_ar'],
+                    'completed_at' => now()->subDays($index + 1),
+                    'is_featured' => $row['featured'],
+                    'is_active' => true,
+                    'review_status' => PortfolioProjectReviewStatus::Approved,
+                    'reviewed_at' => now()->subDays($index),
+                    'rejection_reason' => null,
+                ]
+            );
+
+            $project->technicians()->sync([$technician->getKey()]);
+
+            Media::query()->updateOrCreate(
+                [
+                    'model_type' => PortfolioProject::class,
+                    'model_id' => $project->getKey(),
+                    'collection_name' => 'portfolio',
+                    'sort_order' => 0,
+                ],
+                [
+                    'disk' => 'public',
+                    'file_path' => 'https://picsum.photos/seed/ebaa-portfolio-'.($index + 1).'/800/800',
+                    'file_name' => 'portfolio-'.($index + 1).'.jpg',
+                    'mime_type' => 'image/jpeg',
+                    'size' => 120000 + ($index * 1000),
+                ]
+            );
         }
     }
 }

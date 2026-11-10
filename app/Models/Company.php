@@ -47,6 +47,8 @@ class Company extends Model
         'description',
         'description_ar',
         'description_en',
+        'warranty_note_ar',
+        'warranty_note_en',
         'phone',
         'email',
         'contacts',

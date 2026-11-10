@@ -12,6 +12,11 @@ class TechnicianResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $avatarUrl = null;
+        if ($this->relationLoaded('user') && $this->user !== null) {
+            $avatarUrl = $this->user->avatarUrl();
+        }
+
         return [
             'id' => $this->id,
             'user' => $this->whenLoaded('user', fn () => new UserResource($this->user)),
@@ -27,6 +32,7 @@ class TechnicianResource extends JsonResource
             'display_job_title' => $this->localized('job_title'),
             'availability_status' => $this->availability_status?->value,
             'availability_status_label' => $this->availability_status?->label(),
+            'avatar_url' => $avatarUrl,
             'current_lat' => $this->current_lat !== null ? (float) $this->current_lat : null,
             'current_lng' => $this->current_lng !== null ? (float) $this->current_lng : null,
             'last_location_at' => $this->last_location_at?->toIso8601String(),

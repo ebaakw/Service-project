@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Services Mobile API v1",
-    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians`, `/booking-preview` — valid Bearer enriches home/favorite fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, favorite-technicians, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Technician list / favorites\n- `GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites`\n  - `available` (default): available + GPS + approved\n  - `all`: approved + GPS (includes busy/offline/on_break)\n  - `favorites`: auth required; favorites for the category coverage\n- Response fields: `rating_average`, `rating_count`, `availability_status`, `distance_km`, `is_favorite`, `user.avatar_url`, `company.display_name`\n- **No ETA fields from API** — mobile computes arrival minutes from `distance_km` later\n- Favorites CRUD: `GET/POST/DELETE /customer/favorite-technicians` (auth required)\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n3. GET /available-technicians?service_category_id={leaf_id}&filter=available|all|favorites (technician linked to root covers children)\n4. GET /booking-preview?technician_id=&service_category_id= (guest OK: technician card + company discount + price list + inspection_fee)\n5. POST /customer/register or /login → save token (needed before create order / favorites mutation / pay)\n6. POST /favorite-technicians/{id} (optional heart)\n7. POST /addresses (if needed)\n8. POST /orders\n9. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
+    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, portfolio-projects browse/details, company technicians/price-list, CMS pages (no auth; optional Bearer on technicians for is_favorite)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians`, `/booking-preview` — valid Bearer enriches home/favorite fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, favorite-technicians, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Technician list / favorites\n- `GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites`\n  - `available` (default): available + GPS + approved\n  - `all`: approved + GPS (includes busy/offline/on_break)\n  - `favorites`: auth required; favorites for the category coverage\n- Response fields: `rating_average`, `rating_count`, `availability_status`, `distance_km`, `is_favorite`, `user.avatar_url`, `company.display_name`\n- **No ETA fields from API** — mobile computes arrival minutes from `distance_km` later\n- Favorites CRUD: `GET/POST/DELETE /customer/favorite-technicians` (auth required)\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n3. GET /available-technicians?service_category_id={leaf_id}&filter=available|all|favorites (technician linked to root covers children)\n4. GET /booking-preview?technician_id=&service_category_id= (guest OK: technician card + company discount + price list + inspection_fee)\n5. POST /customer/register or /login → save token (needed before create order / favorites mutation / pay)\n6. POST /favorite-technicians/{id} (optional heart)\n7. POST /addresses (if needed)\n8. POST /orders\n9. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -74,7 +74,7 @@
     },
     {
       "name": "Public",
-      "description": "No auth. Home ads, companies browse, CMS pages.",
+      "description": "No auth (except optional Bearer on company technicians for is_favorite). Home ads, companies, portfolio browse/details, company technicians/price-list, CMS pages. Companies explore gallery uses portfolio-projects. No ETA from server — mobile derives minutes from distance_km.",
       "item": [
         {
           "name": "List banners",
@@ -154,7 +154,7 @@
                 }
               ]
             },
-            "description": "Active companies. Query: q (search), category_id, sort=featured|name|offers. Includes is_featured, logo_url, offer_text when discounts loaded."
+            "description": "Active companies. Query: q (search name/slug), category_id, sort=featured|name|offers. Returns logo_url, offer_text when discounts loaded, availability_status when computed. Note: Companies tab browse gallery uses List portfolio projects (browse), not this list alone."
           },
           "response": []
         },
@@ -185,7 +185,7 @@
                 "{{company_id}}"
               ]
             },
-            "description": "Company details + active discounts/offer_text."
+            "description": "Company details for Active companies only (404 otherwise). withoutWrapping: logo_url, display_name, display_short_description, display_description, display_warranty_note, offer_text, active_discount_type/value, rating_*, is_featured, availability_status (available if any approved+active technician is available) at top level."
           },
           "response": []
         },
@@ -217,7 +217,193 @@
                 "portfolio"
               ]
             },
-            "description": "Approved active portfolio projects (paginated)."
+            "description": "Approved active portfolio projects for the company (paginated). Each item includes image_url (first absolute image), images[].url, technician summary, and company when loaded."
+          },
+          "response": []
+        },
+        {
+          "name": "Company technicians",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/technicians?q=&filter=all&lat=&lng=&locale={{locale}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "companies",
+                "{{company_id}}",
+                "technicians"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search technician display name / user name"
+                },
+                {
+                  "key": "filter",
+                  "value": "all",
+                  "description": "all | available"
+                },
+                {
+                  "key": "lat",
+                  "value": "",
+                  "description": "Optional. Enables distance_km"
+                },
+                {
+                  "key": "lng",
+                  "value": "",
+                  "description": "Optional. Enables distance_km"
+                },
+                {
+                  "key": "locale",
+                  "value": "{{locale}}",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Approved+active technicians for a company. Query: q, filter=all|available, lat?, lng?, page. TechnicianResource: display_name, rating_average, rating_count, availability_status, avatar_url / user.avatar_url, company.{id,display_name,logo_url}, distance_km when lat/lng, is_favorite when customer Bearer present. No ETA from server — mobile derives minutes from distance_km."
+          },
+          "response": []
+        },
+        {
+          "name": "Company price-list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/price-list?q=&service_category_id=&locale={{locale}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "companies",
+                "{{company_id}}",
+                "price-list"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search price item name"
+                },
+                {
+                  "key": "service_category_id",
+                  "value": "",
+                  "description": "Optional category filter"
+                },
+                {
+                  "key": "locale",
+                  "value": "{{locale}}",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Default/active company price list + price_items. Response data: company, price_list, price_items[{id,display_name,name_ar/en,price,discounted_price,currency:KWD,duration_minutes,service_category_id,warranty_days,warranty_description_ar/en}], inspection_fee (company.default_inspection_fee; demo seed = 5.000), currency. Query: q, service_category_id?, page?."
+          },
+          "response": []
+        },
+        {
+          "name": "List portfolio projects (browse)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/public/portfolio-projects?q=&service_category_id=&locale={{locale}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "portfolio-projects"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search project title or company name/slug"
+                },
+                {
+                  "key": "service_category_id",
+                  "value": "",
+                  "description": "Filter by category (alias: category_id)"
+                },
+                {
+                  "key": "locale",
+                  "value": "{{locale}}",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Public works browse for the Companies explore gallery (search + category chips). Approved+active projects for Active companies. Query: q, service_category_id|category_id, page. Each item: id, display_title/title_ar/en, image_url, images[], service_category_id, company{id,display_name,name_ar/en,logo_url}, technician{display_name,rating_*,availability_status,avatar_url}. Sorted is_featured desc then completed_at desc. This endpoint powers browse — not list companies alone."
+          },
+          "response": []
+        },
+        {
+          "name": "Show portfolio project (image details)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/public/portfolio-projects/{{portfolio_project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "portfolio-projects",
+                "{{portfolio_project_id}}"
+              ]
+            },
+            "description": "Work/image details. App uses JsonResource::withoutWrapping(), so project fields are top-level (id, display_title, image_url, description/location, technician, company) and similar_works[] is in the same payload. similar_works = other approved+active works with same service_category_id (else same company_id), exclude current, max 12, with image_url. 404 if not approved/active or company not Active. No ETA from API."
           },
           "response": []
         },
