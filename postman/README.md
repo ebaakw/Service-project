@@ -20,12 +20,13 @@
 
 ### عميل
 
-1. **Guest browse (بدون توكن):** Home / Search / Catalog / Available technicians تعمل مباشرة.
-2. **Choose service:** `GET /service-categories` (جذور) → `/{category_id}/children` (أنواع فرعية؛ فارغ = تخطَّ) → `/{child_category_id}/problems` ثم أنشئ الطلب بـ `service_category_id` = ورقة التصنيف.
-3. **Customer / Auth → Register** أو **Login** (يحفظ `customer_token` تلقائيًا) لتخصيص Home والطلبات والدفع.
-4. **Available technicians** مع `filter=available|all|favorites` (و`lat`/`lng` لـ `distance_km`). لا يوجد ETA من السيرفر.
-5. **Customer / Favorites** لإضافة/حذف/عرض المفضلة (Bearer).
-6. Addresses → Orders → Pay/Invoice (تتطلب Bearer). استخدم `child_category_id` للورقة عند وجود أنواع فرعية.
+1. **Guest browse (بدون توكن):** Home / Search / Catalog / Available technicians / **Booking preview** تعمل مباشرة.
+2. **Choose service:** `GET /service-categories` (جذور) → `/{category_id}/children` (أنواع فرعية؛ فارغ = تخطَّ) → `/{child_category_id}/problems`.
+3. **Available technicians** مع `filter=available|all|favorites` (و`lat`/`lng` لـ `distance_km`). لا يوجد ETA من السيرفر.
+4. **Booking preview (guest):** `GET /customer/booking-preview?technician_id=&service_category_id=` يعيد بطاقة الفني + الشركة/الخصم + قائمة الأسعار + `inspection_fee`. بحث البنود عبر `q`. الدفع/إنشاء الطلب ما زال يحتاج توكن.
+5. **Customer / Auth → Register** أو **Login** (يحفظ `customer_token` تلقائيًا) قبل الطلبات والدفع والمفضلة.
+6. **Customer / Favorites** لإضافة/حذف/عرض المفضلة (Bearer).
+7. Addresses → Orders → Pay/Invoice (تتطلب Bearer). استخدم `child_category_id` للورقة عند وجود أنواع فرعية.
 
 ### حسابات الديمو (بعد `php artisan db:seed`)
 

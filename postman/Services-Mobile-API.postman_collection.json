@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Services Mobile API v1",
-    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians` — valid Bearer enriches home user fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, favorite-technicians, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Technician list / favorites\n- `GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites`\n  - `available` (default): available + GPS + approved\n  - `all`: approved + GPS (includes busy/offline/on_break)\n  - `favorites`: auth required; favorites for the category coverage\n- Response fields: `rating_average`, `rating_count`, `availability_status`, `distance_km`, `is_favorite`, `user.avatar_url`, `company.display_name`\n- **No ETA fields from API** — mobile computes arrival minutes from `distance_km` later\n- Favorites CRUD: `GET/POST/DELETE /customer/favorite-technicians` (auth required)\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. POST /customer/register or /login → save token (personalized home)\n3. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n4. GET /available-technicians?service_category_id={leaf_id}&filter=available|all|favorites (technician linked to root covers children)\n5. POST /favorite-technicians/{id} (optional heart)\n6. POST /addresses (if needed)\n7. POST /orders\n8. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
+    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, CMS pages (no auth)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians`, `/booking-preview` — valid Bearer enriches home/favorite fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, favorite-technicians, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Technician list / favorites\n- `GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites`\n  - `available` (default): available + GPS + approved\n  - `all`: approved + GPS (includes busy/offline/on_break)\n  - `favorites`: auth required; favorites for the category coverage\n- Response fields: `rating_average`, `rating_count`, `availability_status`, `distance_km`, `is_favorite`, `user.avatar_url`, `company.display_name`\n- **No ETA fields from API** — mobile computes arrival minutes from `distance_km` later\n- Favorites CRUD: `GET/POST/DELETE /customer/favorite-technicians` (auth required)\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n3. GET /available-technicians?service_category_id={leaf_id}&filter=available|all|favorites (technician linked to root covers children)\n4. GET /booking-preview?technician_id=&service_category_id= (guest OK: technician card + company discount + price list + inspection_fee)\n5. POST /customer/register or /login → save token (needed before create order / favorites mutation / pay)\n6. POST /favorite-technicians/{id} (optional heart)\n7. POST /addresses (if needed)\n8. POST /orders\n9. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -1039,7 +1039,7 @@
     },
     {
       "name": "Customer / Catalog",
-      "description": "Auth-optional guest browse for choose-service:\n1) GET /service-categories → root circles only (parent_id=null)\n2) GET /service-categories/{id}/children → subtypes for segmented bar ([] skips)\n3) GET /service-categories/{leaf_id}/problems → title + description_ar/en + icon_url\n4) GET intake-fields → available technicians → create order with service_category_id=leaf id.\nOrders/payments still require auth.",
+      "description": "Auth-optional guest browse for choose-service:\n1) GET /service-categories → root circles only (parent_id=null)\n2) GET /service-categories/{id}/children → subtypes for segmented bar ([] skips)\n3) GET /service-categories/{leaf_id}/problems → title + description_ar/en + icon_url\n4) GET intake-fields → available technicians\n5) GET /booking-preview?technician_id=&service_category_id= → technician + company + price list + inspection_fee (guest OK; optional q search)\n6) Create order / pay inspection still require auth (Bearer).",
       "item": [
         {
           "name": "List service categories",
@@ -1348,7 +1348,73 @@
                 }
               ]
             },
-            "description": "Auth-optional (except filter=favorites → 401 without token). Returns TechnicianResource with rating_*, availability_status, distance_km, is_favorite, user.avatar_url. No ETA from server — mobile derives minutes from distance_km.",
+            "description": "Auth-optional (except filter=favorites → 401 without token). Returns TechnicianResource with rating_*, availability_status, distance_km, is_favorite, user.avatar_url, company.logo_url + active_discount_*. No ETA from server — mobile derives minutes from distance_km.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Booking preview (guest)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/booking-preview?technician_id={{technician_id}}&service_category_id={{child_category_id}}&service_problem_id={{problem_id}}&q=&lat=29.3758590&lng=47.9774050",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "booking-preview"
+              ],
+              "query": [
+                {
+                  "key": "technician_id",
+                  "value": "{{technician_id}}",
+                  "description": "Required. Technician chosen from available-technicians"
+                },
+                {
+                  "key": "service_category_id",
+                  "value": "{{child_category_id}}",
+                  "description": "Required. Prefer leaf category id"
+                },
+                {
+                  "key": "service_problem_id",
+                  "value": "{{problem_id}}",
+                  "description": "Optional. Used when resolving inspection_fee for a specific problem",
+                  "disabled": true
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Optional search within price list item names/descriptions"
+                },
+                {
+                  "key": "lat",
+                  "value": "29.3758590",
+                  "description": "Optional. Enables technician.distance_km"
+                },
+                {
+                  "key": "lng",
+                  "value": "47.9774050",
+                  "description": "Optional. Enables technician.distance_km"
+                }
+              ]
+            },
+            "description": "Auth-optional guest screen for technician card + company offer + searchable price list + inspection fee CTA.\n\nResponse `data`:\n- `technician` — TechnicianResource (display_name, rating_*, availability_status, distance_km, user.avatar_url, is_favorite)\n- `company` — CompanyResource (display_name, logo_url, offer_text, active_discount_type/value)\n- `price_list` — active/default list meta (nullable)\n- `price_items[]` — display_name, price, discounted_price, currency, duration_minutes\n- `inspection_fee` — resolved fee string (demo seed = 5.000)\n- `currency` — e.g. KWD\n- `is_favorite` — false for guests; real value when customer Bearer present\n\nNo ETA from API — derive arrival minutes from `distance_km` on mobile.\nPay inspection / create order still require `Authorization: Bearer {{customer_token}}`.",
             "auth": {
               "type": "noauth"
             }

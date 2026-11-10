@@ -68,7 +68,19 @@ class AvailableTechnicianService
         /** @var Collection<int, Technician> $technicians */
         $technicians = $query
             ->with([
-                'company:id,name,name_ar,name_en',
+                'company:id,name,name_ar,name_en,logo_path,rating_average,rating_count',
+                'company.discounts' => function ($q): void {
+                    $now = now();
+                    $q->where('is_active', true)
+                        ->where(function ($inner) use ($now): void {
+                            $inner->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                        })
+                        ->where(function ($inner) use ($now): void {
+                            $inner->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+                        })
+                        ->orderByDesc('discount_value')
+                        ->limit(1);
+                },
                 'user:id,name,name_ar,name_en,avatar_path',
             ])
             ->get();
@@ -121,7 +133,19 @@ class AvailableTechnicianService
         /** @var Collection<int, Technician> $technicians */
         $technicians = $query
             ->with([
-                'company:id,name,name_ar,name_en',
+                'company:id,name,name_ar,name_en,logo_path,rating_average,rating_count',
+                'company.discounts' => function ($q): void {
+                    $now = now();
+                    $q->where('is_active', true)
+                        ->where(function ($inner) use ($now): void {
+                            $inner->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
+                        })
+                        ->where(function ($inner) use ($now): void {
+                            $inner->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
+                        })
+                        ->orderByDesc('discount_value')
+                        ->limit(1);
+                },
                 'user:id,name,name_ar,name_en,avatar_path',
             ])
             ->get();
@@ -168,7 +192,7 @@ class AvailableTechnicianService
         return $customer->favoriteTechnicians()->pluck('technicians.id');
     }
 
-    private function distanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    public function distanceKm(float $lat1, float $lng1, float $lat2, float $lng2): float
     {
         $earthRadius = 6371;
         $lat1Rad = deg2rad($lat1);

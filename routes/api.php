@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\CurrentUserController;
 use App\Http\Controllers\Api\V1\Customer\AddressController as CustomerAddressController;
 use App\Http\Controllers\Api\V1\Customer\AuthController as CustomerAuthController;
 use App\Http\Controllers\Api\V1\Customer\AvailableTechnicianController;
+use App\Http\Controllers\Api\V1\Customer\BookingPreviewController;
 use App\Http\Controllers\Api\V1\Customer\ComplaintController as CustomerComplaintController;
 use App\Http\Controllers\Api\V1\Customer\DeviceController as CustomerDeviceController;
 use App\Http\Controllers\Api\V1\Customer\FavoriteTechnicianController as CustomerFavoriteTechnicianController;
@@ -62,6 +63,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/service-categories/{serviceCategory}/intake-fields', [CustomerServiceCategoryController::class, 'intakeFields']);
 
         Route::get('/available-technicians', [AvailableTechnicianController::class, 'index']);
+        Route::get('/booking-preview', [BookingPreviewController::class, 'show']);
     });
 
     Route::middleware('auth:sanctum')->group(function (): void {

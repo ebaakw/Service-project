@@ -4,6 +4,9 @@ namespace Database\Seeders;
 
 use App\Enums\CompanyMemberStatus;
 use App\Enums\CompanyStatus;
+use App\Enums\DiscountScope;
+use App\Enums\DiscountType;
+use App\Enums\PriceType;
 use App\Enums\SocialLoginProvider;
 use App\Enums\SubscriptionStatus;
 use App\Enums\TechnicianAvailabilityStatus;
@@ -12,8 +15,11 @@ use App\Enums\UserStatus;
 use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\CompanyMember;
+use App\Models\CompanyPriceItem;
+use App\Models\CompanyPriceList;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
+use App\Models\Discount;
 use App\Models\ServiceCategory;
 use App\Models\SocialAccount;
 use App\Models\Technician;
@@ -35,6 +41,8 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
                 'subscription_starts_at' => now(),
                 'rating_average' => 4.6,
                 'rating_count' => 48,
+                'default_inspection_fee' => 5.000,
+                'logo_path' => null,
             ]
         );
 
@@ -61,11 +69,23 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
             ]
         );
 
-        $categoryIds = ServiceCategory::query()
-            ->where('slug', 'ac')
-            ->orderBy('sort_order')
-            ->pluck('id')
-            ->all();
+        $acRoot = ServiceCategory::query()->where('slug', 'ac')->first();
+        $pricingCategoryIds = [];
+        if ($acRoot !== null) {
+            $pricingCategoryIds = ServiceCategory::query()
+                ->where(function ($q) use ($acRoot): void {
+                    $q->where('parent_id', $acRoot->getKey())
+                        ->orWhere('id', $acRoot->getKey());
+                })
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->pluck('id')
+                ->all();
+        }
+
+        $categoryIds = $acRoot !== null
+            ? [(int) $acRoot->getKey()]
+            : [];
 
         if ($categoryIds === []) {
             $categoryIds = ServiceCategory::query()
@@ -74,7 +94,10 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
                 ->limit(3)
                 ->pluck('id')
                 ->all();
+            $pricingCategoryIds = $categoryIds;
         }
+
+        $this->seedDemoPricing($company, $pricingCategoryIds !== [] ? $pricingCategoryIds : $categoryIds);
 
         $customerUser = User::query()->firstOrCreate(
             ['email' => 'customer-demo@example.test'],
@@ -343,6 +366,102 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
 
         if ($favoriteIds !== []) {
             $customer->favoriteTechnicians()->syncWithoutDetaching($favoriteIds);
+        }
+    }
+
+    /**
+     * @param  list<int>  $categoryIds
+     */
+    private function seedDemoPricing(Company $company, array $categoryIds): void
+    {
+        if ($categoryIds === []) {
+            return;
+        }
+
+        Discount::query()->updateOrCreate(
+            [
+                'company_id' => $company->getKey(),
+                'name_ar' => 'يوجد خصم 20%',
+            ],
+            [
+                'name' => 'يوجد خصم 20%',
+                'name_en' => '20% discount available',
+                'description' => 'خصم 20% على قائمة الأسعار',
+                'description_ar' => 'خصم 20% على قائمة الأسعار',
+                'description_en' => '20% off the price list',
+                'discount_type' => DiscountType::Percentage,
+                'discount_value' => 20,
+                'discount_scope' => DiscountScope::FullMenu,
+                'starts_at' => null,
+                'ends_at' => null,
+                'is_active' => true,
+                'used_count' => 0,
+            ]
+        );
+
+        $priceList = CompanyPriceList::query()->updateOrCreate(
+            [
+                'company_id' => $company->getKey(),
+                'name_ar' => 'قائمة الأسعار',
+            ],
+            [
+                'name' => 'قائمة الأسعار',
+                'name_en' => 'Price List',
+                'description' => 'قائمة أسعار خدمات التكييف التجريبية',
+                'description_ar' => 'قائمة أسعار خدمات التكييف التجريبية',
+                'description_en' => 'Demo AC services price list',
+                'is_default' => true,
+                'starts_at' => null,
+                'ends_at' => null,
+                'discount_type' => null,
+                'discount_value' => null,
+                'is_active' => true,
+            ]
+        );
+
+        $priceList->serviceCategories()->sync($categoryIds);
+
+        $catalog = [
+            ['name_ar' => 'كمبريسر 2.5 طن وكالة', 'name_en' => 'Compressor 2.5 ton original', 'price' => '100.000'],
+            ['name_ar' => 'كمبريسر 1.5 طن وكالة', 'name_en' => 'Compressor 1.5 ton original', 'price' => '85.000'],
+            ['name_ar' => 'لوحة تحكم إلكترونية', 'name_en' => 'Electronic control board', 'price' => '45.000'],
+            ['name_ar' => 'مروحة خارجية', 'name_en' => 'Outdoor fan motor', 'price' => '35.000'],
+            ['name_ar' => 'غاز فريون R410', 'name_en' => 'R410 refrigerant gas', 'price' => '25.000'],
+            ['name_ar' => 'صيانة دورية وحدة سبليت', 'name_en' => 'Split unit periodic maintenance', 'price' => '20.000'],
+            ['name_ar' => 'غسيل وحدة داخلية', 'name_en' => 'Indoor unit cleaning', 'price' => '15.000'],
+            ['name_ar' => 'تركيب حامل خارجي', 'name_en' => 'Outdoor bracket installation', 'price' => '30.000'],
+            ['name_ar' => 'تبديل ترموستات', 'name_en' => 'Thermostat replacement', 'price' => '18.000'],
+        ];
+
+        foreach ($categoryIds as $categoryId) {
+            foreach ($catalog as $index => $row) {
+                CompanyPriceItem::query()->updateOrCreate(
+                    [
+                        'company_price_list_id' => $priceList->getKey(),
+                        'service_category_id' => $categoryId,
+                        'name_ar' => $row['name_ar'],
+                    ],
+                    [
+                        'company_id' => $company->getKey(),
+                        'service_problem_id' => null,
+                        'name_en' => $row['name_en'],
+                        'description_ar' => null,
+                        'description_en' => null,
+                        'price_type' => PriceType::Fixed,
+                        'price' => $row['price'],
+                        'minimum_price' => null,
+                        'discount_type' => null,
+                        'discount_value' => null,
+                        'inspection_fee' => '5.000',
+                        'warranty_days' => 90,
+                        'warranty_description_ar' => 'ضمان 90 يوم',
+                        'warranty_description_en' => '90-day warranty',
+                        'duration_minutes' => 60,
+                        'sort_order' => $index,
+                        'is_active' => true,
+                    ]
+                );
+            }
         }
     }
 }

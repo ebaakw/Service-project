@@ -14,12 +14,18 @@ class CompanyResource extends JsonResource
     public function toArray(Request $request): array
     {
         $offerText = null;
+        $activeDiscountType = null;
+        $activeDiscountValue = null;
         if ($this->relationLoaded('discounts')) {
             $discount = $this->discounts->first();
             if ($discount !== null) {
                 $offerText = $discount->localized('name')
                     ?: $discount->localized('description')
                     ?: null;
+                $activeDiscountType = $discount->discount_type?->value;
+                $activeDiscountValue = $discount->discount_value !== null
+                    ? (string) $discount->discount_value
+                    : null;
             }
         }
 
@@ -47,6 +53,8 @@ class CompanyResource extends JsonResource
                 ? Storage::disk('public')->url($this->logo_path)
                 : null,
             'offer_text' => $offerText,
+            'active_discount_type' => $activeDiscountType,
+            'active_discount_value' => $activeDiscountValue,
             'rating_average' => $this->rating_average !== null ? (float) $this->rating_average : null,
             'rating_count' => isset($this->rating_count) ? (int) $this->rating_count : null,
         ];
