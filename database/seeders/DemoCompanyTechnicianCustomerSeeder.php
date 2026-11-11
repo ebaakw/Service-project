@@ -28,6 +28,7 @@ use App\Models\SocialAccount;
 use App\Models\Technician;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 
 class DemoCompanyTechnicianCustomerSeeder extends Seeder
 {
@@ -82,7 +83,19 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
         );
 
         $catalogCategories = ServiceCategory::query()
-            ->whereIn('slug', ['ac', 'ac-units', 'water-tanks', 'sanitary', 'electrical'])
+            ->whereIn('slug', [
+                'ac',
+                'ac-units',
+                'ac-central',
+                'ac-ventilation',
+                'water-tanks',
+                'sanitary',
+                'electrical',
+                'elevators',
+                'satellite',
+                'cameras',
+                'carpentry',
+            ])
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get()
@@ -393,7 +406,7 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
             $customer->favoriteTechnicians()->syncWithoutDetaching($favoriteIds);
         }
 
-        $this->seedDemoPortfolio($company, $seededTechnicians, $catalogCategories->values()->all() ?: $categoryIds);
+        $this->seedDemoPortfolio($company, $seededTechnicians, $catalogCategories);
     }
 
     /**
@@ -497,44 +510,189 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
 
     /**
      * @param  list<Technician>  $technicians
-     * @param  list<ServiceCategory|int>  $categories
+     * @param  Collection<string, ServiceCategory>|iterable<int|string, ServiceCategory|int>  $categories
      */
-    private function seedDemoPortfolio(Company $company, array $technicians, array $categories): void
+    private function seedDemoPortfolio(Company $company, array $technicians, iterable $categories): void
     {
-        if ($technicians === [] || $categories === []) {
+        if ($technicians === []) {
             return;
         }
 
-        $categoryModels = collect($categories)->map(function ($category): ?ServiceCategory {
-            if ($category instanceof ServiceCategory) {
-                return $category;
-            }
+        $categoryBySlug = collect($categories)
+            ->map(function ($category): ?ServiceCategory {
+                if ($category instanceof ServiceCategory) {
+                    return $category;
+                }
 
-            return ServiceCategory::query()->find($category);
-        })->filter()->values();
+                return ServiceCategory::query()->find($category);
+            })
+            ->filter()
+            ->keyBy(fn (ServiceCategory $category): string => (string) $category->slug);
 
-        if ($categoryModels->isEmpty()) {
+        if ($categoryBySlug->isEmpty()) {
+            $categoryBySlug = ServiceCategory::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get()
+                ->keyBy('slug');
+        }
+
+        if ($categoryBySlug->isEmpty()) {
             return;
         }
+
+        $fallbackCategory = $categoryBySlug->first();
 
         $projects = [
-            ['title_ar' => 'تركيب تكييف سبليت غرفة معيشة', 'title_en' => 'Living room split AC install', 'featured' => true, 'location_ar' => 'السالمية'],
-            ['title_ar' => 'صيانة وحدة تكييف مركزية', 'title_en' => 'Central AC unit maintenance', 'featured' => true, 'location_ar' => 'حولي'],
-            ['title_ar' => 'تعبئة فريون وإصلاح تسريب', 'title_en' => 'Refrigerant refill and leak fix', 'featured' => false, 'location_ar' => 'الفروانية'],
-            ['title_ar' => 'تنظيف خزان مياه علوي', 'title_en' => 'Rooftop water tank cleaning', 'featured' => true, 'location_ar' => 'الجابرية'],
-            ['title_ar' => 'استبدال مضخة خزان', 'title_en' => 'Water tank pump replacement', 'featured' => false, 'location_ar' => 'الرقعي'],
-            ['title_ar' => 'إصلاح تسريب أنابيب صحي', 'title_en' => 'Plumbing pipe leak repair', 'featured' => false, 'location_ar' => 'بيان'],
-            ['title_ar' => 'فتح انسداد مجاري مطبخ', 'title_en' => 'Kitchen drain unclogging', 'featured' => false, 'location_ar' => 'الشامية'],
-            ['title_ar' => 'تركيب وحدات تكييف مكتبية', 'title_en' => 'Office AC units installation', 'featured' => true, 'location_ar' => 'الشرق'],
-            ['title_ar' => 'صيانة دورية لشبكة التهوية', 'title_en' => 'Ventilation network service', 'featured' => false, 'location_ar' => 'الجهراء'],
-            ['title_ar' => 'تغيير كمبريسر 2.5 طن', 'title_en' => '2.5 ton compressor replacement', 'featured' => true, 'location_ar' => 'العديلية'],
-            ['title_ar' => 'تركيب خلاطات وأدوات صحية', 'title_en' => 'Faucet and sanitary fixtures', 'featured' => false, 'location_ar' => 'كيفان'],
-            ['title_ar' => 'عزل خزان أرضي ضد التسريب', 'title_en' => 'Ground tank waterproofing', 'featured' => false, 'location_ar' => 'الصباحية'],
+            [
+                'title_ar' => 'تركيب تكييف سبليت غرفة معيشة',
+                'title_en' => 'Living room split AC install',
+                'category_slugs' => ['ac-units', 'ac'],
+                'image_theme' => 'ac',
+                'featured' => true,
+                'location_ar' => 'السالمية',
+            ],
+            [
+                'title_ar' => 'صيانة وحدة تكييف مركزية',
+                'title_en' => 'Central AC unit maintenance',
+                'category_slugs' => ['ac-central', 'ac'],
+                'image_theme' => 'ac',
+                'featured' => true,
+                'location_ar' => 'حولي',
+            ],
+            [
+                'title_ar' => 'تعبئة فريون وإصلاح تسريب',
+                'title_en' => 'Refrigerant refill and leak fix',
+                'category_slugs' => ['ac', 'ac-units'],
+                'image_theme' => 'ac',
+                'featured' => false,
+                'location_ar' => 'الفروانية',
+            ],
+            [
+                'title_ar' => 'تنظيف خزان مياه علوي',
+                'title_en' => 'Rooftop water tank cleaning',
+                'category_slugs' => ['water-tanks'],
+                'image_theme' => 'water-tanks',
+                'featured' => true,
+                'location_ar' => 'الجابرية',
+            ],
+            [
+                'title_ar' => 'استبدال مضخة خزان',
+                'title_en' => 'Water tank pump replacement',
+                'category_slugs' => ['water-tanks'],
+                'image_theme' => 'water-tanks',
+                'featured' => false,
+                'location_ar' => 'الرقعي',
+            ],
+            [
+                'title_ar' => 'إصلاح تسريب أنابيب صحي',
+                'title_en' => 'Plumbing pipe leak repair',
+                'category_slugs' => ['sanitary'],
+                'image_theme' => 'sanitary',
+                'featured' => false,
+                'location_ar' => 'بيان',
+            ],
+            [
+                'title_ar' => 'فتح انسداد مجاري مطبخ',
+                'title_en' => 'Kitchen drain unclogging',
+                'category_slugs' => ['sanitary'],
+                'image_theme' => 'sanitary',
+                'featured' => false,
+                'location_ar' => 'الشامية',
+            ],
+            [
+                'title_ar' => 'تركيب وحدات تكييف مكتبية',
+                'title_en' => 'Office AC units installation',
+                'category_slugs' => ['ac-units', 'ac'],
+                'image_theme' => 'ac',
+                'featured' => true,
+                'location_ar' => 'الشرق',
+            ],
+            [
+                'title_ar' => 'صيانة دورية لشبكة التهوية',
+                'title_en' => 'Ventilation network service',
+                'category_slugs' => ['ac-ventilation', 'ac'],
+                'image_theme' => 'ventilation',
+                'featured' => false,
+                'location_ar' => 'الجهراء',
+            ],
+            [
+                'title_ar' => 'تغيير كمبريسر 2.5 طن',
+                'title_en' => '2.5 ton compressor replacement',
+                'category_slugs' => ['ac', 'ac-central'],
+                'image_theme' => 'ac',
+                'featured' => true,
+                'location_ar' => 'العديلية',
+            ],
+            [
+                'title_ar' => 'تركيب خلاطات وأدوات صحية',
+                'title_en' => 'Faucet and sanitary fixtures',
+                'category_slugs' => ['sanitary'],
+                'image_theme' => 'sanitary',
+                'featured' => false,
+                'location_ar' => 'كيفان',
+            ],
+            [
+                'title_ar' => 'عزل خزان أرضي ضد التسريب',
+                'title_en' => 'Ground tank waterproofing',
+                'category_slugs' => ['water-tanks'],
+                'image_theme' => 'water-tanks',
+                'featured' => false,
+                'location_ar' => 'الصباحية',
+            ],
+            [
+                'title_ar' => 'صيانة لوحة كهرباء منزلية',
+                'title_en' => 'Home electrical panel service',
+                'category_slugs' => ['electrical'],
+                'image_theme' => 'electrical',
+                'featured' => true,
+                'location_ar' => 'الروضة',
+            ],
+            [
+                'title_ar' => 'إصلاح أعطال مصعد سكني',
+                'title_en' => 'Residential elevator repair',
+                'category_slugs' => ['elevators'],
+                'image_theme' => 'elevators',
+                'featured' => false,
+                'location_ar' => 'المرقاب',
+            ],
+            [
+                'title_ar' => 'ضبط طبق ستلايت وإصلاح الإشارة',
+                'title_en' => 'Satellite dish alignment',
+                'category_slugs' => ['satellite'],
+                'image_theme' => 'satellite',
+                'featured' => false,
+                'location_ar' => 'الفنطاس',
+            ],
+            [
+                'title_ar' => 'تركيب كاميرات مراقبة CCTV',
+                'title_en' => 'CCTV camera installation',
+                'category_slugs' => ['cameras'],
+                'image_theme' => 'cameras',
+                'featured' => true,
+                'location_ar' => 'السلام',
+            ],
+            [
+                'title_ar' => 'إصلاح أبواب وخزائن خشبية',
+                'title_en' => 'Door and cabinet carpentry',
+                'category_slugs' => ['carpentry'],
+                'image_theme' => 'carpentry',
+                'featured' => false,
+                'location_ar' => 'الأحمدي',
+            ],
         ];
 
         foreach ($projects as $index => $row) {
-            $category = $categoryModels[$index % $categoryModels->count()];
+            $category = $fallbackCategory;
+            foreach ($row['category_slugs'] as $slug) {
+                if ($categoryBySlug->has($slug)) {
+                    $category = $categoryBySlug->get($slug);
+                    break;
+                }
+            }
+
             $technician = $technicians[$index % count($technicians)];
+            $imageUrls = $this->thematicPortfolioImages($row['image_theme'], $index);
 
             $project = PortfolioProject::query()->updateOrCreate(
                 [
@@ -561,21 +719,87 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
 
             $project->technicians()->sync([$technician->getKey()]);
 
-            Media::query()->updateOrCreate(
-                [
-                    'model_type' => PortfolioProject::class,
-                    'model_id' => $project->getKey(),
-                    'collection_name' => 'portfolio',
-                    'sort_order' => 0,
-                ],
-                [
-                    'disk' => 'public',
-                    'file_path' => 'https://picsum.photos/seed/ebaa-portfolio-'.($index + 1).'/800/800',
-                    'file_name' => 'portfolio-'.($index + 1).'.jpg',
-                    'mime_type' => 'image/jpeg',
-                    'size' => 120000 + ($index * 1000),
-                ]
-            );
+            foreach ($imageUrls as $sortOrder => $imageUrl) {
+                Media::query()->updateOrCreate(
+                    [
+                        'model_type' => PortfolioProject::class,
+                        'model_id' => $project->getKey(),
+                        'collection_name' => 'portfolio',
+                        'sort_order' => $sortOrder,
+                    ],
+                    [
+                        'disk' => 'public',
+                        'file_path' => $imageUrl,
+                        'file_name' => $row['image_theme'].'-'.($index + 1).'-'.($sortOrder + 1).'.jpg',
+                        'mime_type' => 'image/jpeg',
+                        'size' => 140000 + ($index * 1000) + ($sortOrder * 500),
+                    ]
+                );
+            }
         }
+    }
+
+    /**
+     * Thematic Wikimedia Commons images keyed by service activity.
+     *
+     * @return list<string>
+     */
+    private function thematicPortfolioImages(string $theme, int $index): array
+    {
+        $catalog = [
+            'ac' => [
+                $this->commonsImage('Air_conditioner.jpg'),
+                $this->commonsImage('Window_air_conditioner.jpg'),
+                $this->commonsImage('DAIKIN AIR CONDITIONER OUTDOOR UNIT & Panasonic AIR CONDITIONER OUTDOOR UNIT.jpg'),
+                $this->commonsImage('Panasonic AIR CONDITIONER INDOOR UNIT CS-C10KJ2 (2).jpg'),
+            ],
+            'ventilation' => [
+                $this->commonsImage('HVAC.jpg'),
+                $this->commonsImage('Air_duct.jpg'),
+            ],
+            'water-tanks' => [
+                $this->commonsImage('Blue plastic water tank 2.jpg'),
+                $this->commonsImage('Water Tank Kerala House.JPG'),
+                $this->commonsImage('Water_tank.jpg'),
+                $this->commonsImage('Water_tower.jpg'),
+            ],
+            'sanitary' => [
+                $this->commonsImage('Plumbing pipes.jpg'),
+                $this->commonsImage('Plumbing.jpg'),
+                $this->commonsImage('Bathroom_sink.jpg'),
+                $this->commonsImage('Water_tap.jpg'),
+            ],
+            'electrical' => [
+                $this->commonsImage('Electrical_panel.jpg'),
+                $this->commonsImage('Circuit_breaker.jpg'),
+            ],
+            'elevators' => [
+                $this->commonsImage('Elevator.jpg'),
+                $this->commonsImage('Buenos Aires - Art Nouveau elevator - 7028.jpg'),
+            ],
+            'satellite' => [
+                $this->commonsImage('Akash DTH Satellite dish.jpg'),
+                $this->commonsImage('Satellite dish in Austria.JPG'),
+            ],
+            'cameras' => [
+                $this->commonsImage('Security_camera.jpg'),
+                $this->commonsImage('CCTV.jpg'),
+            ],
+            'carpentry' => [
+                $this->commonsImage('Carpentry.jpg'),
+                $this->commonsImage('Woodwork.jpg'),
+            ],
+        ];
+
+        $pool = $catalog[$theme] ?? $catalog['ac'];
+        $primary = $pool[$index % count($pool)];
+        $secondary = $pool[($index + 1) % count($pool)];
+
+        return array_values(array_unique([$primary, $secondary]));
+    }
+
+    private function commonsImage(string $filename): string
+    {
+        return 'https://commons.wikimedia.org/wiki/Special:FilePath/'.rawurlencode($filename).'?width=800';
     }
 }
