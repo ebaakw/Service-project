@@ -79,6 +79,7 @@ Route::prefix('v1')->group(function (): void {
         Route::prefix('customer')->group(function (): void {
             Route::get('/me', [CustomerAuthController::class, 'me']);
             Route::patch('/me', [CustomerAuthController::class, 'updateProfile']);
+            Route::delete('/me', [CustomerAuthController::class, 'destroy']);
             Route::post('/logout', [CustomerAuthController::class, 'logout']);
 
             Route::get('/notifications', [CustomerNotificationController::class, 'index']);

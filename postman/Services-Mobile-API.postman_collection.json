@@ -1107,6 +1107,60 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Delete account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "me"
+              ]
+            },
+            "description": "Soft-deletes the authenticated customer account (user + customer profile) and revokes all Sanctum tokens.\n\nResponses:\n- 200 `{ ok: true, message }` on success\n- 401 without a valid Bearer token\n- 422 when the customer has active (non-terminal) orders — terminal = completed|cancelled|expired\n\nUse from Account settings gear → Delete account. Locale via Accept-Language only (no language API).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.environment.unset('customer_token');",
+                  "  console.log('customer_token cleared after account delete');",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

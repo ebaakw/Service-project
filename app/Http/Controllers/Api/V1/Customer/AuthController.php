@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Customer;
 
+use App\Enums\OrderStatus;
 use App\Enums\UserStatus;
 use App\Enums\UserType;
 use App\Http\Controllers\Controller;
@@ -15,7 +16,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -132,5 +133,41 @@ class AuthController extends Controller
         $user->currentAccessToken()?->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    public function destroy(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null && $user->isCustomer(), 403);
+
+        $customer = $user->customerProfile;
+        abort_unless($customer !== null, 404);
+
+        $terminalStatuses = [
+            OrderStatus::Completed->value,
+            OrderStatus::Cancelled->value,
+            OrderStatus::Expired->value,
+        ];
+
+        $hasActiveOrders = $customer->orders()
+            ->whereNotIn('status', $terminalStatuses)
+            ->exists();
+
+        if ($hasActiveOrders) {
+            throw ValidationException::withMessages([
+                'account' => [__('auth.cannot_delete_with_active_orders')],
+            ]);
+        }
+
+        DB::transaction(function () use ($user, $customer): void {
+            $user->tokens()->delete();
+            $customer->delete();
+            $user->delete();
+        });
+
+        return response()->json([
+            'ok' => true,
+            'message' => __('auth.account_deleted'),
+        ]);
     }
 }

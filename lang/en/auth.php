@@ -7,6 +7,8 @@ return array_merge(
         'web_login_forbidden' => 'This account type cannot sign in to the web dashboard.',
         'company_not_active' => 'Your account is not linked to an active company. Please contact platform administration.',
         'technician_not_approved' => 'Your technician account is pending review or not approved.',
+        'account_deleted' => 'Your account has been deleted.',
+        'cannot_delete_with_active_orders' => 'You cannot delete your account while you have active orders. Please wait until they are completed or cancelled.',
         'login_title' => 'Sign in',
         'login_hint' => 'Enter your credentials to access the dashboard.',
         'hero_title' => 'Operations, simplified.',
