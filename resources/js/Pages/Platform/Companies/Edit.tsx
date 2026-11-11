@@ -38,6 +38,8 @@ type Company = {
     short_description_en: string | null;
     description_ar: string | null;
     description_en: string | null;
+    warranty_note_ar: string | null;
+    warranty_note_en: string | null;
     status: string;
     subscription_status: string;
     subscription_starts_at: string | null;
@@ -88,6 +90,8 @@ export default function PlatformCompaniesEdit({
         short_description_en: company.short_description_en ?? '',
         description_ar: company.description_ar ?? '',
         description_en: company.description_en ?? '',
+        warranty_note_ar: company.warranty_note_ar ?? '',
+        warranty_note_en: company.warranty_note_en ?? '',
         status: company.status,
         subscription_status: company.subscription_status,
         subscription_starts_at: company.subscription_starts_at ?? '',

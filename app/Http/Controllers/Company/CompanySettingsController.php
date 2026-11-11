@@ -34,6 +34,15 @@ class CompanySettingsController extends Controller
                 'name_en' => $company->name_en,
                 'short_description_ar' => $company->short_description_ar,
                 'short_description_en' => $company->short_description_en,
+                'description_ar' => $company->description_ar,
+                'description_en' => $company->description_en,
+                'warranty_note_ar' => $company->warranty_note_ar,
+                'warranty_note_en' => $company->warranty_note_en,
+                'phone' => $company->phone,
+                'email' => $company->email,
+                'default_inspection_fee' => $company->default_inspection_fee !== null
+                    ? (string) $company->default_inspection_fee
+                    : null,
                 'logo_path' => $company->logo_path,
                 'logo_url' => $company->logo_path
                     ? Storage::disk('public')->url($company->logo_path)
@@ -60,7 +69,10 @@ class CompanySettingsController extends Controller
 
         $data = $request->validated('company');
         $data['name'] = $data['name_ar'] ?: ($data['name_en'] ?? $company->name);
-        $data['short_description'] = $data['short_description_ar'] ?: ($data['short_description_en'] ?? null);
+        $data['short_description'] = ($data['short_description_ar'] ?? null)
+            ?: ($data['short_description_en'] ?? null);
+        $data['description'] = ($data['description_ar'] ?? null)
+            ?: ($data['description_en'] ?? null);
 
         $company->update($data);
 

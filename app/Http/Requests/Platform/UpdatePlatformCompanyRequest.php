@@ -37,6 +37,8 @@ class UpdatePlatformCompanyRequest extends FormRequest
             'short_description_en' => ['nullable', 'string', 'max:500'],
             'description_ar' => ['nullable', 'string'],
             'description_en' => ['nullable', 'string'],
+            'warranty_note_ar' => ['nullable', 'string'],
+            'warranty_note_en' => ['nullable', 'string'],
             'phone' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:255'],
             'status' => ['required', Rule::in(['pending', 'active', 'inactive', 'suspended'])],

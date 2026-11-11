@@ -9,6 +9,13 @@ type CompanyProfileForm = {
     name_en: string;
     short_description_ar: string;
     short_description_en: string;
+    description_ar: string;
+    description_en: string;
+    warranty_note_ar: string;
+    warranty_note_en: string;
+    phone: string;
+    email: string;
+    default_inspection_fee: string;
 };
 
 type SlaForm = {
@@ -24,6 +31,13 @@ type Props = PageProps & {
         name_en: string | null;
         short_description_ar: string | null;
         short_description_en: string | null;
+        description_ar: string | null;
+        description_en: string | null;
+        warranty_note_ar: string | null;
+        warranty_note_en: string | null;
+        phone: string | null;
+        email: string | null;
+        default_inspection_fee: string | null;
         logo_path: string | null;
         logo_url: string | null;
     };
@@ -67,6 +81,13 @@ export default function CompanySettingsEdit({ company, sla }: Props) {
             name_en: company.name_en ?? '',
             short_description_ar: company.short_description_ar ?? '',
             short_description_en: company.short_description_en ?? '',
+            description_ar: company.description_ar ?? '',
+            description_en: company.description_en ?? '',
+            warranty_note_ar: company.warranty_note_ar ?? '',
+            warranty_note_en: company.warranty_note_en ?? '',
+            phone: company.phone ?? '',
+            email: company.email ?? '',
+            default_inspection_fee: company.default_inspection_fee ?? '',
         },
         sla: {
             technician_accept_sla_minutes:
@@ -271,7 +292,7 @@ export default function CompanySettingsEdit({ company, sla }: Props) {
                                     </div>
 
                                     <div className="col-12 col-lg-6">
-                                        <div className="form-group mb-lg-0">
+                                        <div className="form-group">
                                             <label htmlFor="company-short-description-ar" className="font-weight-bold">
                                                 {__('dashboard.company_settings.fields.short_description_ar.label')}
                                             </label>
@@ -285,14 +306,14 @@ export default function CompanySettingsEdit({ company, sla }: Props) {
                                                 value={data.company.short_description_ar}
                                                 onChange={(e) => updateCompany('short_description_ar', e.target.value)}
                                                 dir="rtl"
-                                                rows={4}
+                                                rows={3}
                                             />
                                             {getFieldError('short_description_ar') ? <div className="invalid-feedback d-block">{getFieldError('short_description_ar')}</div> : null}
                                         </div>
                                     </div>
 
                                     <div className="col-12 col-lg-6">
-                                        <div className="form-group mb-0">
+                                        <div className="form-group">
                                             <label htmlFor="company-short-description-en" className="font-weight-bold">
                                                 {__('dashboard.company_settings.fields.short_description_en.label')}
                                             </label>
@@ -306,9 +327,162 @@ export default function CompanySettingsEdit({ company, sla }: Props) {
                                                 value={data.company.short_description_en}
                                                 onChange={(e) => updateCompany('short_description_en', e.target.value)}
                                                 dir="ltr"
-                                                rows={4}
+                                                rows={3}
                                             />
                                             {getFieldError('short_description_en') ? <div className="invalid-feedback d-block">{getFieldError('short_description_en')}</div> : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-6">
+                                        <div className="form-group">
+                                            <label htmlFor="company-description-ar" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.description_ar.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__('dashboard.company_settings.fields.description_ar.description')}
+                                            </div>
+                                            <textarea
+                                                id="company-description-ar"
+                                                name="company.description_ar"
+                                                className={`form-control ${getFieldError('description_ar') ? 'is-invalid' : ''}`}
+                                                value={data.company.description_ar}
+                                                onChange={(e) => updateCompany('description_ar', e.target.value)}
+                                                dir="rtl"
+                                                rows={4}
+                                            />
+                                            {getFieldError('description_ar') ? <div className="invalid-feedback d-block">{getFieldError('description_ar')}</div> : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-6">
+                                        <div className="form-group">
+                                            <label htmlFor="company-description-en" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.description_en.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__('dashboard.company_settings.fields.description_en.description')}
+                                            </div>
+                                            <textarea
+                                                id="company-description-en"
+                                                name="company.description_en"
+                                                className={`form-control ${getFieldError('description_en') ? 'is-invalid' : ''}`}
+                                                value={data.company.description_en}
+                                                onChange={(e) => updateCompany('description_en', e.target.value)}
+                                                dir="ltr"
+                                                rows={4}
+                                            />
+                                            {getFieldError('description_en') ? <div className="invalid-feedback d-block">{getFieldError('description_en')}</div> : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-6">
+                                        <div className="form-group">
+                                            <label htmlFor="company-warranty-note-ar" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.warranty_note_ar.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__('dashboard.company_settings.fields.warranty_note_ar.description')}
+                                            </div>
+                                            <textarea
+                                                id="company-warranty-note-ar"
+                                                name="company.warranty_note_ar"
+                                                className={`form-control ${getFieldError('warranty_note_ar') ? 'is-invalid' : ''}`}
+                                                value={data.company.warranty_note_ar}
+                                                onChange={(e) => updateCompany('warranty_note_ar', e.target.value)}
+                                                dir="rtl"
+                                                rows={3}
+                                            />
+                                            {getFieldError('warranty_note_ar') ? <div className="invalid-feedback d-block">{getFieldError('warranty_note_ar')}</div> : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-6">
+                                        <div className="form-group">
+                                            <label htmlFor="company-warranty-note-en" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.warranty_note_en.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__('dashboard.company_settings.fields.warranty_note_en.description')}
+                                            </div>
+                                            <textarea
+                                                id="company-warranty-note-en"
+                                                name="company.warranty_note_en"
+                                                className={`form-control ${getFieldError('warranty_note_en') ? 'is-invalid' : ''}`}
+                                                value={data.company.warranty_note_en}
+                                                onChange={(e) => updateCompany('warranty_note_en', e.target.value)}
+                                                dir="ltr"
+                                                rows={3}
+                                            />
+                                            {getFieldError('warranty_note_en') ? <div className="invalid-feedback d-block">{getFieldError('warranty_note_en')}</div> : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-4">
+                                        <div className="form-group mb-lg-0">
+                                            <label htmlFor="company-phone" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.phone.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__('dashboard.company_settings.fields.phone.description')}
+                                            </div>
+                                            <input
+                                                id="company-phone"
+                                                name="company.phone"
+                                                className={`form-control ${getFieldError('phone') ? 'is-invalid' : ''}`}
+                                                value={data.company.phone}
+                                                onChange={(e) => updateCompany('phone', e.target.value)}
+                                                dir="ltr"
+                                                style={{ textAlign: isRtl ? 'right' : 'left' }}
+                                            />
+                                            {getFieldError('phone') ? <div className="invalid-feedback d-block">{getFieldError('phone')}</div> : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-4">
+                                        <div className="form-group mb-lg-0">
+                                            <label htmlFor="company-email" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.email.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__('dashboard.company_settings.fields.email.description')}
+                                            </div>
+                                            <input
+                                                id="company-email"
+                                                name="company.email"
+                                                type="email"
+                                                className={`form-control ${getFieldError('email') ? 'is-invalid' : ''}`}
+                                                value={data.company.email}
+                                                onChange={(e) => updateCompany('email', e.target.value)}
+                                                dir="ltr"
+                                                style={{ textAlign: isRtl ? 'right' : 'left' }}
+                                            />
+                                            {getFieldError('email') ? <div className="invalid-feedback d-block">{getFieldError('email')}</div> : null}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-4">
+                                        <div className="form-group mb-0">
+                                            <label htmlFor="company-default-inspection-fee" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.default_inspection_fee.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__('dashboard.company_settings.fields.default_inspection_fee.description')}
+                                            </div>
+                                            <input
+                                                id="company-default-inspection-fee"
+                                                name="company.default_inspection_fee"
+                                                type="number"
+                                                min={0}
+                                                step="0.001"
+                                                className={`form-control ${getFieldError('default_inspection_fee') ? 'is-invalid' : ''}`}
+                                                value={data.company.default_inspection_fee}
+                                                onChange={(e) => updateCompany('default_inspection_fee', e.target.value)}
+                                                dir="ltr"
+                                                style={{ textAlign: isRtl ? 'right' : 'left' }}
+                                            />
+                                            {getFieldError('default_inspection_fee') ? (
+                                                <div className="invalid-feedback d-block">{getFieldError('default_inspection_fee')}</div>
+                                            ) : null}
                                         </div>
                                     </div>
                                 </div>
@@ -331,6 +505,28 @@ export default function CompanySettingsEdit({ company, sla }: Props) {
                                         </>
                                     )}
                                 </button>
+                            </div>
+                        </div>
+
+                        <div className="card card-outline card-info mt-3">
+                            <div className="card-header">
+                                <h3 className="card-title mb-0 font-weight-bold">
+                                    <i className="fas fa-percentage mr-2 text-info" />
+                                    {__('dashboard.company_settings.offers_title')}
+                                </h3>
+                            </div>
+                            <div className="card-body">
+                                <div className="alert alert-light border d-flex align-items-start mb-3" role="note">
+                                    <i className="fas fa-info-circle text-info mr-2 mt-1" />
+                                    <div>
+                                        <div className="font-weight-bold">{__('dashboard.company_settings.offers_hint_title')}</div>
+                                        <div className="small text-muted">{__('dashboard.company_settings.offers_hint')}</div>
+                                    </div>
+                                </div>
+                                <Link href={route('discounts.index')} className="btn btn-outline-info btn-sm">
+                                    <i className="fas fa-tags mr-1" />
+                                    {__('dashboard.company_settings.offers_manage')}
+                                </Link>
                             </div>
                         </div>
 

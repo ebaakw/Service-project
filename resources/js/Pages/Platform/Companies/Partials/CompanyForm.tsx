@@ -33,6 +33,8 @@ type CompanyFormData = {
     short_description_en: string;
     description_ar: string;
     description_en: string;
+    warranty_note_ar: string;
+    warranty_note_en: string;
     status: string;
     subscription_status: string;
     subscription_starts_at: string;
@@ -223,6 +225,8 @@ export default function CompanyForm({
     const shortDescEnLabel = __('tenant.companies.shortDescriptionEn');
     const descArLabel = __('tenant.companies.descriptionAr');
     const descEnLabel = __('tenant.companies.descriptionEn');
+    const warrantyArLabel = __('tenant.companies.warrantyNoteAr');
+    const warrantyEnLabel = __('tenant.companies.warrantyNoteEn');
     const contactNameLabel = __('tenant.companies.contactName');
     const contactPhoneLabel = __('tenant.companies.contactPhone');
     const contactPositionLabel = __('tenant.companies.contactPosition');
@@ -551,6 +555,46 @@ export default function CompanyForm({
                                 rows={4}
                             />
                             <FieldError error={fieldError('description_en')} />
+                        </div>
+                    </div>
+                </div>
+
+                <hr className="my-4" />
+
+                <h5 className="mb-3">{__('tenant.companies.warrantySection')}</h5>
+                <div className="row">
+                    <div className="col-12 col-lg-6">
+                        <div className="form-group mb-lg-0">
+                            <textarea
+                                id="warranty_note_ar"
+                                name="warranty_note_ar"
+                                className={`form-control ${isInvalid('warranty_note_ar') ? 'is-invalid' : ''}`}
+                                value={data.warranty_note_ar}
+                                onChange={(e) => setData('warranty_note_ar', e.target.value)}
+                                placeholder={warrantyArLabel}
+                                aria-label={warrantyArLabel}
+                                dir="rtl"
+                                style={placeholderAlignStyle}
+                                rows={3}
+                            />
+                            <FieldError error={fieldError('warranty_note_ar')} />
+                        </div>
+                    </div>
+                    <div className="col-12 col-lg-6">
+                        <div className="form-group mb-0">
+                            <textarea
+                                id="warranty_note_en"
+                                name="warranty_note_en"
+                                className={`form-control ${isInvalid('warranty_note_en') ? 'is-invalid' : ''}`}
+                                value={data.warranty_note_en}
+                                onChange={(e) => setData('warranty_note_en', e.target.value)}
+                                placeholder={warrantyEnLabel}
+                                aria-label={warrantyEnLabel}
+                                dir="ltr"
+                                style={placeholderAlignStyle}
+                                rows={3}
+                            />
+                            <FieldError error={fieldError('warranty_note_en')} />
                         </div>
                     </div>
                 </div>

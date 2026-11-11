@@ -262,6 +262,8 @@ class PlatformCompaniesController extends Controller
                 'short_description_en' => $company->short_description_en,
                 'description_ar' => $company->description_ar,
                 'description_en' => $company->description_en,
+                'warranty_note_ar' => $company->warranty_note_ar,
+                'warranty_note_en' => $company->warranty_note_en,
                 'phone' => $company->phone,
                 'email' => $company->email,
                 'contacts' => is_array($company->contacts) ? $company->contacts : [],

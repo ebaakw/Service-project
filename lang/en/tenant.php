@@ -841,11 +841,6 @@ return [
     'freeze_reason_postpaid' => 'Postpaid freeze date',
     'cancel' => 'Cancel',
 
-
-
-
-
-
     'payment_processed_successfully' => 'Payment processed successfully.',
 
     // Freeze debug section (temporary) on invoice create page
@@ -1563,6 +1558,9 @@ return [
         'email' => 'Email',
         'shortDescriptionAr' => 'Short description (Arabic)',
         'shortDescriptionEn' => 'Short description (English)',
+        'warrantyNoteAr' => 'Warranty note (Arabic)',
+        'warrantyNoteEn' => 'Warranty note (English)',
+        'warrantySection' => 'Warranty note (mobile app)',
         'descriptionAr' => 'Description (Arabic)',
         'descriptionEn' => 'Description (English)',
         'status' => 'Status',
@@ -1791,4 +1789,3 @@ return [
 
     'field_required' => 'This field is required',
 ];
-

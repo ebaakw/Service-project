@@ -427,7 +427,7 @@ return [
     ],
     'company_settings' => [
         'page_title' => 'Company Settings',
-        'page_description' => 'Manage the company name, short profile, and logo from one organized screen.',
+        'page_description' => 'Manage mobile-facing company details: name, summary, description, warranty note, logo, and inspection fee.',
         'saved_message' => 'Company settings updated.',
         'logo_saved_message' => 'Company logo updated.',
         'identity_title' => 'Company identity',
@@ -435,14 +435,18 @@ return [
         'logo_alt' => 'Company logo',
         'logo_ready' => 'Logo uploaded',
         'logo_missing' => 'No logo',
-        'logo_help' => 'Upload a clear logo that will be used across company-facing screens and documents.',
+        'logo_help' => 'Upload a clear logo used across company screens, documents, and the mobile app.',
         'logo_label' => 'Logo image',
         'upload_logo' => 'Upload logo',
         'uploading_logo' => 'Uploading...',
         'profile_title' => 'Company profile',
-        'profile_hint_title' => 'Public company details',
-        'profile_hint' => 'These details identify the company in dashboards, lists, and customer-facing screens.',
-        'save_hint' => 'Changes update the company profile immediately after saving.',
+        'profile_hint_title' => 'Mobile company page details',
+        'profile_hint' => 'These fields appear on the company page in the mobile app (name, summary, description, warranty note, and inspection fee).',
+        'offers_title' => 'Offers and discounts',
+        'offers_hint_title' => 'Time-limited offers',
+        'offers_hint' => 'Offer text shown in the mobile app comes from active discounts. Set start/end dates for each offer from the discounts screen.',
+        'offers_manage' => 'Manage offers and discounts',
+        'save_hint' => 'Changes update the company profile immediately and appear in the mobile app.',
         'saving' => 'Saving...',
         'sla_title' => 'Technician response SLAs',
         'sla_hint_title' => 'Accept and arrival time limits',
@@ -456,7 +460,7 @@ return [
         'fields' => [
             'name_ar' => [
                 'label' => 'Company name (Arabic)',
-                'description' => 'The Arabic name shown for this company.',
+                'description' => 'The Arabic name shown for this company in the mobile app.',
             ],
             'name_en' => [
                 'label' => 'Company name (English)',
@@ -464,11 +468,39 @@ return [
             ],
             'short_description_ar' => [
                 'label' => 'Company summary (Arabic)',
-                'description' => 'A short Arabic profile or summary for this company.',
+                'description' => 'Short Arabic summary shown under the company name.',
             ],
             'short_description_en' => [
                 'label' => 'Company summary (English)',
-                'description' => 'An optional short English profile or summary for this company.',
+                'description' => 'Optional short English summary for this company.',
+            ],
+            'description_ar' => [
+                'label' => 'Company description (Arabic)',
+                'description' => 'Full description shown on the company page in the mobile app.',
+            ],
+            'description_en' => [
+                'label' => 'Company description (English)',
+                'description' => 'Optional full English description.',
+            ],
+            'warranty_note_ar' => [
+                'label' => 'Warranty note (Arabic)',
+                'description' => 'Example: The company provides up to 6 months warranty on selected spare parts. Edit or replace with any other sentence.',
+            ],
+            'warranty_note_en' => [
+                'label' => 'Warranty note (English)',
+                'description' => 'Warranty text shown to customers when the app language is English.',
+            ],
+            'phone' => [
+                'label' => 'Company phone',
+                'description' => 'Company contact phone number.',
+            ],
+            'email' => [
+                'label' => 'Company email',
+                'description' => 'Company contact email address.',
+            ],
+            'default_inspection_fee' => [
+                'label' => 'Default inspection fee',
+                'description' => 'Fee shown on mobile price-list and booking screens.',
             ],
             'technician_accept_sla_minutes' => [
                 'label' => 'Accept SLA (minutes)',

@@ -22,6 +22,8 @@ export default function PlatformCompaniesCreate({
         short_description_en: '',
         description_ar: '',
         description_en: '',
+        warranty_note_ar: '',
+        warranty_note_en: '',
         status: 'active',
         subscription_status: 'trial',
         subscription_starts_at: '',

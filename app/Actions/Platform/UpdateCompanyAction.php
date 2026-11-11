@@ -30,6 +30,8 @@ class UpdateCompanyAction
                 'short_description_en' => $data['short_description_en'] ?? null,
                 'description_ar' => $data['description_ar'] ?? null,
                 'description_en' => $data['description_en'] ?? null,
+                'warranty_note_ar' => $data['warranty_note_ar'] ?? null,
+                'warranty_note_en' => $data['warranty_note_en'] ?? null,
                 'phone' => $data['phone'] ?? null,
                 'email' => $data['email'] ?? null,
                 'status' => $data['status'],
