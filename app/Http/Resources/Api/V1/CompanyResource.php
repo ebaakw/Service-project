@@ -61,6 +61,11 @@ class CompanyResource extends JsonResource
             'rating_average' => $this->rating_average !== null ? (float) $this->rating_average : null,
             'rating_count' => isset($this->rating_count) ? (int) $this->rating_count : null,
             'availability_status' => $this->resolveAvailabilityStatus(),
+            'is_favorite' => (bool) ($this->is_favorite ?? false),
+            'reviews_preview' => $this->when(
+                $this->relationLoaded('reviewsPreview'),
+                fn () => CompanyReviewResource::collection($this->getRelation('reviewsPreview'))
+            ),
             'default_inspection_fee' => $this->default_inspection_fee !== null
                 ? (string) $this->default_inspection_fee
                 : null,

@@ -175,5 +175,8 @@ class PublicPortfolioAndCompanyApiTest extends TestCase
         $companyShow->assertJsonPath('offer_text', 'يوجد خصم 20%');
         $companyShow->assertJsonPath('display_warranty_note', 'الشركة تعطي كفالة تصل إلى 6 شهور على بعض قطع الغيار');
         $companyShow->assertJsonPath('availability_status', 'available');
+        $companyShow->assertJsonPath('is_favorite', false);
+        $this->assertArrayNotHasKey('cover_url', $companyShow->json());
+        $this->assertArrayNotHasKey('eta_min', $companyShow->json());
     }
 }

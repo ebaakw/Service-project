@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Services Mobile API v1",
-    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies, portfolio-projects browse/details, company technicians/price-list, CMS pages (no auth; optional Bearer on technicians for is_favorite)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians`, `/booking-preview` — valid Bearer enriches home/favorite fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, favorite-technicians, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Technician list / favorites\n- `GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites`\n  - `available` (default): available + GPS + approved\n  - `all`: approved + GPS (includes busy/offline/on_break)\n  - `favorites`: auth required; favorites for the category coverage\n- Response fields: `rating_average`, `rating_count`, `availability_status`, `distance_km`, `is_favorite`, `user.avatar_url`, `company.display_name`\n- **No ETA fields from API** — mobile computes arrival minutes from `distance_km` later\n- Favorites CRUD: `GET/POST/DELETE /customer/favorite-technicians` (auth required)\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n3. GET /available-technicians?service_category_id={leaf_id}&filter=available|all|favorites (technician linked to root covers children)\n4. GET /booking-preview?technician_id=&service_category_id= (guest OK: technician card + company discount + price list + inspection_fee)\n5. POST /customer/register or /login → save token (needed before create order / favorites mutation / pay)\n6. POST /favorite-technicians/{id} (optional heart)\n7. POST /addresses (if needed)\n8. POST /orders\n9. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
+    "description": "# Services Mobile API (v1)\n\nSource of truth: `routes/api.php` under `/api/v1`.\n\n## Apps\n- **Customer app**: guest browse (home/catalog/search) + register/login for orders/payments/profile\n- **Technician app**: login only (no register; created from Platform/Company admin), offers, order status, items\n- **Public**: banners, companies (+ reviews), portfolio-projects browse/details, company technicians/price-list, CMS pages (no auth; optional Bearer on company show/technicians for is_favorite)\n\n## Auth\n- Laravel Sanctum Bearer token\n- Customer login/register returns `{ token, token_type: \"Bearer\", user, customer }`\n- Technician login returns `{ token, token_type: \"Bearer\", user, technician }`\n- **Auth-optional (guest OK):** `GET /customer/home`, `/search`, `/service-categories` (+ children / problems / intake-fields), `/available-technicians`, `/booking-preview` — valid Bearer enriches home/favorite fields; missing token still returns 200\n- **Auth required:** profile, notifications, addresses, favorite-technicians, favorite-companies, orders, pay-*, invoice, devices, feedback, complaints — `Authorization: Bearer {{customer_token}}` or `{{technician_token}}`\n\n## Locale\n- Query `?locale=ar|en` or header `Accept-Language: {{locale}}`\n- Middleware: `SetApiLocale`\n\n## Response shape\n- API Resources typically have **no** top-level `data` wrapper (`JsonResource::withoutWrapping`)\n- Paginated lists may still use Laravel pagination keys (`data`, `links`, `meta`) depending on endpoint\n\n## Favorites (technicians + companies)\n- Technicians: `GET/POST/DELETE /customer/favorite-technicians` (auth required)\n- Companies: `GET/POST/DELETE /customer/favorite-companies` (auth required) — powers company page heart icon\n- `GET /public/companies/{id}` is auth-optional: `is_favorite` is false for guests, real value with Bearer customer\n- `GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites`\n  - Response fields: `rating_average`, `rating_count`, `availability_status`, `distance_km`, `is_favorite`, `user.avatar_url`, `company.display_name`\n- **No ETA fields from API** (neither company show nor technicians) — mobile keeps fallback e.g. \"15 - 25 دقيقة\" / derives minutes from `distance_km`\n- **No `cover_url`** on Company model/API currently\n\n## Typical customer flow\n1. GET /customer/home (guest) → browse catalog/search\n2. GET /service-categories (roots) → /{id}/children (subtypes; empty skips) → /{leaf_id}/problems → intake-fields\n3. GET /available-technicians?service_category_id={leaf_id}&filter=available|all|favorites (technician linked to root covers children)\n4. GET /booking-preview?technician_id=&service_category_id= (guest OK: technician card + company discount + price list + inspection_fee)\n5. POST /customer/register or /login → save token (needed before create order / favorites mutation / pay)\n6. POST /favorite-technicians/{id} or /favorite-companies/{id} (optional heart)\n7. POST /addresses (if needed)\n8. POST /orders\n9. Pay placeholders / invoice (auth required)\n\n## Typical technician flow\n1. POST /technician/login → save token\n2. PATCH /availability, PATCH /location\n3. GET /order-offers → accept/reject\n4. PATCH /orders/{id}/status + manage items\n\n## Controllers\n`app/Http/Controllers/Api/V1/{Public,Customer,Technician}/`\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -74,7 +74,7 @@
     },
     {
       "name": "Public",
-      "description": "No auth (except optional Bearer on company technicians for is_favorite). Home ads, companies, portfolio browse/details, company technicians/price-list, CMS pages. Companies explore gallery uses portfolio-projects. No ETA from server — mobile derives minutes from distance_km.",
+      "description": "No auth by default. Optional Bearer on Show company + Company technicians for is_favorite. Home ads, companies, company reviews, portfolio browse/details, company technicians/price-list, CMS pages. Favorites exist for both technicians and companies. No ETA from server — mobile fallback e.g. 15-25 min / distance_km. No cover_url on company.",
       "item": [
         {
           "name": "List banners",
@@ -185,9 +185,69 @@
                 "{{company_id}}"
               ]
             },
-            "description": "Company details for Active companies only (404 otherwise). withoutWrapping: logo_url, display_name, display_short_description, display_description, display_warranty_note, offer_text, active_discount_type/value, rating_*, is_featured, availability_status (available if any approved+active technician is available) at top level."
+            "description": "Company details for Active companies only (404 otherwise). Auth-optional Sanctum.\n\nFields (withoutWrapping top-level):\n- Display: id, logo_url, display_name + name_ar/en, display_short_description + short_description_ar/en, display_description + description_ar/en, display_warranty_note + warranty_note_ar/en\n- Status/offers: availability_status (available|unavailable), offer_text, active_discount_type/value, rating_average, rating_count, is_featured\n- Favorite: is_favorite (false for guest; real value with Authorization: Bearer {{customer_token}})\n- reviews_preview[] (up to 3 recent published reviews)\n- default_inspection_fee\n\nNOT returned: cover_url (not on Company model), eta_min/eta_max/arrival_eta_text — mobile keeps ETA fallback (e.g. 15-25 دقيقة).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
-          "response": []
+          "response": [
+            {
+              "name": "Show company 200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "public",
+                    "companies",
+                    "{{company_id}}"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 1,\n  \"ulid\": \"01HXYZCOMPANYDEMO000001\",\n  \"name\": \"شركة إباء للحلول الحاسوبية\",\n  \"name_ar\": \"شركة إباء للحلول الحاسوبية\",\n  \"name_en\": \"Ebaa Computer Solutions\",\n  \"display_name\": \"شركة إباء للحلول الحاسوبية\",\n  \"slug\": \"demo-services-co\",\n  \"short_description_ar\": \"شركة متخصصة في أعمال التكييف و التهوية\",\n  \"short_description_en\": \"Specialized company for AC and ventilation works\",\n  \"display_short_description\": \"شركة متخصصة في أعمال التكييف و التهوية\",\n  \"description_ar\": \"نقدم خدمات صيانة وتركيب التكييف والسباكة والخزانات بفريق فنيين معتمدين.\",\n  \"description_en\": \"We provide AC, plumbing, and water-tank maintenance with certified technicians.\",\n  \"display_description\": \"نقدم خدمات صيانة وتركيب التكييف والسباكة والخزانات بفريق فنيين معتمدين.\",\n  \"warranty_note_ar\": \"الشركة تعطي كفالة تصل إلى 6 شهور على بعض قطع الغيار\",\n  \"warranty_note_en\": \"The company provides up to 6 months warranty on selected spare parts\",\n  \"display_warranty_note\": \"الشركة تعطي كفالة تصل إلى 6 شهور على بعض قطع الغيار\",\n  \"status\": \"active\",\n  \"status_label\": \"Active\",\n  \"subscription_status\": \"active\",\n  \"subscription_status_label\": \"Active\",\n  \"is_featured\": true,\n  \"logo_path\": \"https://picsum.photos/seed/ebaa-demo-logo/200/200\",\n  \"logo_url\": \"https://picsum.photos/seed/ebaa-demo-logo/200/200\",\n  \"offer_text\": \"يوجد خصم 20%\",\n  \"active_discount_type\": \"percentage\",\n  \"active_discount_value\": \"20.000\",\n  \"rating_average\": 4.2,\n  \"rating_count\": 5,\n  \"availability_status\": \"available\",\n  \"is_favorite\": false,\n  \"reviews_preview\": [\n    {\n      \"id\": 1,\n      \"rating\": 5,\n      \"comment\": \"خدمة ممتازة والفني التزم بالموعد. الشركة محترفة جداً.\",\n      \"comment_ar\": \"خدمة ممتازة والفني التزم بالموعد. الشركة محترفة جداً.\",\n      \"comment_en\": \"Excellent service and the technician arrived on time. Very professional company.\",\n      \"display_comment\": \"خدمة ممتازة والفني التزم بالموعد. الشركة محترفة جداً.\",\n      \"customer_name\": \"فاطمة العلي\",\n      \"display_author\": \"فاطمة العلي\",\n      \"created_at\": \"2026-11-10T10:00:00+00:00\",\n      \"images\": [\n        {\n          \"id\": 10,\n          \"url\": \"https://picsum.photos/seed/company-review-1/640/480\",\n          \"file_name\": \"review-1.jpg\"\n        }\n      ]\n    }\n  ],\n  \"default_inspection_fee\": \"5.000\"\n}"
+            }
+          ]
         },
         {
           "name": "Company portfolio",
@@ -204,7 +264,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/portfolio",
+              "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/portfolio?page=1&locale={{locale}}",
               "host": [
                 "{{base_url}}"
               ],
@@ -215,11 +275,173 @@
                 "companies",
                 "{{company_id}}",
                 "portfolio"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Pagination page"
+                },
+                {
+                  "key": "locale",
+                  "value": "{{locale}}",
+                  "description": ""
+                }
               ]
             },
-            "description": "Approved active portfolio projects for the company (paginated). Each item includes image_url (first absolute image), images[].url, technician summary, and company when loaded."
+            "description": "Approved active portfolio projects for the company (Laravel pagination: data/links/meta, page query).\nEach item: id, image_url, images[].url, display_title (+ title_ar/en), technician summary, company.\nMobile \"الكل\" tab currently uses this until reviews are shown alongside."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Company portfolio 200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/portfolio?page=1&locale={{locale}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "public",
+                    "companies",
+                    "{{company_id}}",
+                    "portfolio"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Pagination page"
+                    },
+                    {
+                      "key": "locale",
+                      "value": "{{locale}}",
+                      "description": ""
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 12,\n      \"title_ar\": \"تركيب تكييف سبليت غرفة معيشة\",\n      \"title_en\": \"Living room split AC install\",\n      \"display_title\": \"تركيب تكييف سبليت غرفة معيشة\",\n      \"image_url\": \"https://commons.wikimedia.org/wiki/Special:FilePath/Air_conditioner.jpg?width=800\",\n      \"images\": [\n        {\n          \"id\": 1,\n          \"url\": \"https://commons.wikimedia.org/wiki/Special:FilePath/Air_conditioner.jpg?width=800\",\n          \"file_name\": \"ac-1-1.jpg\"\n        }\n      ],\n      \"technician\": {\n        \"id\": 1,\n        \"display_name\": \"أحمد خالد العتيبي\",\n        \"rating_average\": 4.5,\n        \"avatar_url\": \"https://ui-avatars.com/api/?name=Ahmed+Alotaibi&background=0D6EFD&color=fff&size=128\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"display_name\": \"شركة إباء للحلول الحاسوبية\",\n        \"logo_url\": \"https://picsum.photos/seed/ebaa-demo-logo/200/200\",\n        \"is_favorite\": false\n      },\n      \"completed_at\": \"2026-11-09T12:00:00+00:00\",\n      \"is_featured\": true\n    }\n  ],\n  \"links\": {\n    \"first\": \"http://localhost:8000/api/v1/public/companies/1/portfolio?page=1\",\n    \"last\": \"http://localhost:8000/api/v1/public/companies/1/portfolio?page=1\",\n    \"prev\": null,\n    \"next\": null\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"from\": 1,\n    \"last_page\": 1,\n    \"per_page\": 20,\n    \"to\": 1,\n    \"total\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Company reviews",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/reviews?page=1&locale={{locale}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "public",
+                "companies",
+                "{{company_id}}",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Pagination page"
+                },
+                {
+                  "key": "locale",
+                  "value": "{{locale}}",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Published customer reviews for an Active company (404 otherwise). Paginated.\nEach review: id, rating, comment + comment_ar/en + display_comment, customer_name / display_author, created_at, images[] (optional).\nAlso mirrored as reviews_preview[] (max 3) on Show company with rating_average/rating_count."
+          },
+          "response": [
+            {
+              "name": "Company reviews 200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/reviews?page=1&locale={{locale}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "public",
+                    "companies",
+                    "{{company_id}}",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Pagination page"
+                    },
+                    {
+                      "key": "locale",
+                      "value": "{{locale}}",
+                      "description": ""
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"rating\": 5,\n      \"comment\": \"خدمة ممتازة والفني التزم بالموعد. الشركة محترفة جداً.\",\n      \"comment_ar\": \"خدمة ممتازة والفني التزم بالموعد. الشركة محترفة جداً.\",\n      \"comment_en\": \"Excellent service and the technician arrived on time. Very professional company.\",\n      \"display_comment\": \"خدمة ممتازة والفني التزم بالموعد. الشركة محترفة جداً.\",\n      \"customer_name\": \"فاطمة العلي\",\n      \"display_author\": \"فاطمة العلي\",\n      \"created_at\": \"2026-11-10T10:00:00+00:00\",\n      \"images\": [\n        {\n          \"id\": 10,\n          \"url\": \"https://picsum.photos/seed/company-review-1/640/480\",\n          \"file_name\": \"review-1.jpg\"\n        }\n      ]\n    }\n  ],\n  \"links\": {\n    \"first\": \"...\",\n    \"last\": \"...\",\n    \"prev\": null,\n    \"next\": null\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 20,\n    \"total\": 5\n  }\n}"
+            }
+          ]
         },
         {
           "name": "Company technicians",
@@ -276,9 +498,97 @@
                 }
               ]
             },
-            "description": "Approved+active technicians for a company. Query: q, filter=all|available, lat?, lng?, page. TechnicianResource: display_name, rating_average, rating_count, availability_status, avatar_url / user.avatar_url, company.{id,display_name,logo_url}, distance_km when lat/lng, is_favorite when customer Bearer present. No ETA from server — mobile derives minutes from distance_km."
+            "description": "Approved+active technicians for a company. Query: q, filter=all|available, lat?, lng?, page.\nTechnicianResource: display_name, rating_average, rating_count, availability_status, avatar_url / user.avatar_url, company.{id,display_name,logo_url}, distance_km when lat/lng, is_favorite when customer Bearer present.\nNo ETA from server — mobile derives minutes from distance_km.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
-          "response": []
+          "response": [
+            {
+              "name": "Company technicians 200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/technicians?q=&filter=all&lat=&lng=&locale={{locale}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "public",
+                    "companies",
+                    "{{company_id}}",
+                    "technicians"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "",
+                      "description": "Search technician display name / user name"
+                    },
+                    {
+                      "key": "filter",
+                      "value": "all",
+                      "description": "all | available"
+                    },
+                    {
+                      "key": "lat",
+                      "value": "",
+                      "description": "Optional. Enables distance_km"
+                    },
+                    {
+                      "key": "lng",
+                      "value": "",
+                      "description": "Optional. Enables distance_km"
+                    },
+                    {
+                      "key": "locale",
+                      "value": "{{locale}}",
+                      "description": ""
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"display_name\": \"أحمد خالد العتيبي\",\n      \"display_name_ar\": \"أحمد خالد العتيبي\",\n      \"display_name_en\": \"Ahmed Khaled Alotaibi\",\n      \"rating_average\": 4.5,\n      \"rating_count\": 15,\n      \"availability_status\": \"available\",\n      \"avatar_url\": \"https://ui-avatars.com/api/?name=Ahmed+Alotaibi&background=0D6EFD&color=fff&size=128\",\n      \"user\": {\n        \"id\": 10,\n        \"name\": \"Ahmed Khaled Alotaibi\",\n        \"avatar_url\": \"https://ui-avatars.com/api/?name=Ahmed+Alotaibi&background=0D6EFD&color=fff&size=128\"\n      },\n      \"distance_km\": 1.2345,\n      \"is_favorite\": true\n    }\n  ],\n  \"links\": {\n    \"first\": \"...\",\n    \"last\": \"...\",\n    \"prev\": null,\n    \"next\": null\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 20,\n    \"total\": 1\n  }\n}"
+            }
+          ]
         },
         {
           "name": "Company price-list",
@@ -325,9 +635,67 @@
                 }
               ]
             },
-            "description": "Default/active company price list + price_items. Response data: company, price_list, price_items[{id,display_name,name_ar/en,price,discounted_price,currency:KWD,duration_minutes,service_category_id,warranty_days,warranty_description_ar/en}], inspection_fee (company.default_inspection_fee; demo seed = 5.000), currency. Query: q, service_category_id?, page?."
+            "description": "Default/active company price list + price_items.\nResponse data: company, price_list, price_items[{id,display_name,name_ar/en,price,discounted_price,currency:KWD,duration_minutes,service_category_id,warranty_days,warranty_description_ar/en}], inspection_fee (company.default_inspection_fee; demo seed = 5.000), currency.\nQuery: q, service_category_id?, page?."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Company price-list 200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/public/companies/{{company_id}}/price-list?q=&service_category_id=&locale={{locale}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "public",
+                    "companies",
+                    "{{company_id}}",
+                    "price-list"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "",
+                      "description": "Search price item name"
+                    },
+                    {
+                      "key": "service_category_id",
+                      "value": "",
+                      "description": "Optional category filter"
+                    },
+                    {
+                      "key": "locale",
+                      "value": "{{locale}}",
+                      "description": ""
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": {\n    \"company\": {\n      \"id\": 1,\n      \"display_name\": \"شركة إباء للحلول الحاسوبية\",\n      \"logo_url\": \"https://picsum.photos/seed/ebaa-demo-logo/200/200\",\n      \"offer_text\": \"يوجد خصم 20%\",\n      \"active_discount_type\": \"percentage\",\n      \"active_discount_value\": \"20.000\",\n      \"is_favorite\": false,\n      \"default_inspection_fee\": \"5.000\"\n    },\n    \"price_list\": {\n      \"id\": 1,\n      \"name_ar\": \"قائمة الأسعار\",\n      \"name_en\": \"Price List\",\n      \"display_name\": \"قائمة الأسعار\",\n      \"is_default\": true,\n      \"is_active\": true\n    },\n    \"price_items\": [\n      {\n        \"id\": 1,\n        \"display_name\": \"كمبريسر 2.5 طن وكالة\",\n        \"name_ar\": \"كمبريسر 2.5 طن وكالة\",\n        \"name_en\": \"Compressor 2.5 ton original\",\n        \"price\": \"100.000\",\n        \"discounted_price\": \"80.000\",\n        \"currency\": \"KWD\",\n        \"duration_minutes\": 120,\n        \"service_category_id\": 2,\n        \"warranty_days\": 180,\n        \"warranty_description_ar\": \"ضمان 180 يوم\",\n        \"warranty_description_en\": \"180-day warranty\"\n      }\n    ],\n    \"inspection_fee\": \"5.000\",\n    \"currency\": \"KWD\"\n  }\n}"
+            }
+          ]
         },
         {
           "name": "List portfolio projects (browse)",
@@ -1745,8 +2113,304 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "List favorite companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/favorite-companies?page=1&locale={{locale}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "favorite-companies"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Optional pagination"
+                },
+                {
+                  "key": "locale",
+                  "value": "{{locale}}",
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Auth required. Lists Active favorited companies (CompanyResource shape) with is_favorite=true. Paginated (data/links/meta).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "List favorite companies 200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/customer/favorite-companies?page=1&locale={{locale}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customer",
+                    "favorite-companies"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Optional pagination"
+                    },
+                    {
+                      "key": "locale",
+                      "value": "{{locale}}",
+                      "description": ""
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"display_name\": \"شركة إباء للحلول الحاسوبية\",\n      \"logo_url\": \"https://picsum.photos/seed/ebaa-demo-logo/200/200\",\n      \"offer_text\": \"يوجد خصم 20%\",\n      \"availability_status\": \"available\",\n      \"rating_average\": 4.2,\n      \"rating_count\": 5,\n      \"is_favorite\": true\n    }\n  ],\n  \"links\": {\n    \"first\": \"...\",\n    \"last\": \"...\",\n    \"prev\": null,\n    \"next\": null\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 20,\n    \"total\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Add favorite company",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/favorite-companies/{{company_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "favorite-companies",
+                "{{company_id}}"
+              ]
+            },
+            "description": "Auth required. Active company only (404 if missing/inactive). Idempotent attach (201 even if already favorited). Response: { data: CompanyResource with is_favorite=true }.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Add favorite company 201",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/customer/favorite-companies/{{company_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customer",
+                    "favorite-companies",
+                    "{{company_id}}"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"display_name\": \"شركة إباء للحلول الحاسوبية\",\n    \"logo_url\": \"https://picsum.photos/seed/ebaa-demo-logo/200/200\",\n    \"is_favorite\": true,\n    \"offer_text\": \"يوجد خصم 20%\",\n    \"availability_status\": \"available\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove favorite company",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/favorite-companies/{{company_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "favorite-companies",
+                "{{company_id}}"
+              ]
+            },
+            "description": "Auth required. Idempotent detach (ok even if not favorited). Response: { ok: true }.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Remove favorite company 200",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "{{locale}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/customer/favorite-companies/{{company_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customer",
+                    "favorite-companies",
+                    "{{company_id}}"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"ok\": true\n}"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Auth required (Bearer {{customer_token}}). Favorites for technicians AND companies. Company heart on company page uses favorite-companies endpoints. Show company is_favorite reflects these."
     },
     {
       "name": "Customer / Orders",

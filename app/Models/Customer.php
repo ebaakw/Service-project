@@ -60,4 +60,10 @@ class Customer extends Model
         return $this->belongsToMany(Technician::class, 'customer_favorite_technicians')
             ->withTimestamps();
     }
+
+    public function favoriteCompanies(): BelongsToMany
+    {
+        return $this->belongsToMany(Company::class, 'customer_favorite_companies')
+            ->withTimestamps();
+    }
 }

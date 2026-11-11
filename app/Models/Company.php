@@ -8,6 +8,7 @@ use App\Models\Concerns\HasLocalizedFields;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -147,6 +148,17 @@ class Company extends Model
     public function feedbackTickets(): HasMany
     {
         return $this->hasMany(FeedbackTicket::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(CompanyReview::class);
+    }
+
+    public function favoritedByCustomers(): BelongsToMany
+    {
+        return $this->belongsToMany(Customer::class, 'customer_favorite_companies')
+            ->withTimestamps();
     }
 
     public function media(): MorphMany

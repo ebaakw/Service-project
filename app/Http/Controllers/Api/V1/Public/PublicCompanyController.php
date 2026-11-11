@@ -10,11 +10,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CompanyPriceItemResource;
 use App\Http\Resources\Api\V1\CompanyPriceListResource;
 use App\Http\Resources\Api\V1\CompanyResource;
+use App\Http\Resources\Api\V1\CompanyReviewResource;
 use App\Http\Resources\Api\V1\PortfolioProjectResource;
 use App\Http\Resources\Api\V1\TechnicianResource;
 use App\Models\Company;
 use App\Models\CompanyPriceItem;
 use App\Models\CompanyPriceList;
+use App\Models\CompanyReview;
 use App\Models\Technician;
 use App\Services\Mobile\AvailableTechnicianService;
 use App\Services\Settings\SettingsService;
@@ -101,7 +103,7 @@ class PublicCompanyController extends Controller
         return CompanyResource::collection($companies)->response();
     }
 
-    public function show(Company $company): JsonResponse
+    public function show(Request $request, Company $company): JsonResponse
     {
         abort_unless($company->status === CompanyStatus::Active, 404);
 
@@ -126,7 +128,36 @@ class PublicCompanyController extends Controller
                 ->limit(3);
         }]);
 
+        $preview = CompanyReview::query()
+            ->where('company_id', $company->getKey())
+            ->where('is_published', true)
+            ->with(['reviewImages', 'customer.user:id,name,name_ar,name_en'])
+            ->orderByDesc('created_at')
+            ->limit(3)
+            ->get();
+        $company->setRelation('reviewsPreview', $preview);
+
+        $company->setAttribute('is_favorite', $this->isFavoriteCompany($request, $company));
+
         return (new CompanyResource($company))->response();
+    }
+
+    public function reviews(Request $request, Company $company): JsonResponse
+    {
+        abort_unless($company->status === CompanyStatus::Active, 404);
+
+        $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $reviews = CompanyReview::query()
+            ->where('company_id', $company->getKey())
+            ->where('is_published', true)
+            ->with(['reviewImages', 'customer.user:id,name,name_ar,name_en'])
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        return CompanyReviewResource::collection($reviews)->response();
     }
 
     public function portfolio(Request $request, Company $company): JsonResponse
@@ -355,5 +386,18 @@ class PublicCompanyController extends Controller
             ->orderByDesc('is_default')
             ->orderBy('id')
             ->first();
+    }
+
+    private function isFavoriteCompany(Request $request, Company $company): bool
+    {
+        $user = $request->user();
+        if ($user === null || ! $user->isCustomer() || $user->customerProfile === null) {
+            return false;
+        }
+
+        return $user->customerProfile
+            ->favoriteCompanies()
+            ->where('companies.id', $company->getKey())
+            ->exists();
     }
 }

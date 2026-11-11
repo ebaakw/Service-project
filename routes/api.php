@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Customer\AvailableTechnicianController;
 use App\Http\Controllers\Api\V1\Customer\BookingPreviewController;
 use App\Http\Controllers\Api\V1\Customer\ComplaintController as CustomerComplaintController;
 use App\Http\Controllers\Api\V1\Customer\DeviceController as CustomerDeviceController;
+use App\Http\Controllers\Api\V1\Customer\FavoriteCompanyController as CustomerFavoriteCompanyController;
 use App\Http\Controllers\Api\V1\Customer\FavoriteTechnicianController as CustomerFavoriteTechnicianController;
 use App\Http\Controllers\Api\V1\Customer\FeedbackController as CustomerFeedbackController;
 use App\Http\Controllers\Api\V1\Customer\HomeController as CustomerHomeController;
@@ -39,8 +40,10 @@ Route::prefix('v1')->group(function (): void {
     Route::prefix('public')->middleware('throttle:60,1')->group(function (): void {
         Route::get('/banners', [PublicBannerController::class, 'index']);
         Route::get('/companies', [PublicCompanyController::class, 'index']);
-        Route::get('/companies/{company}', [PublicCompanyController::class, 'show']);
+        Route::get('/companies/{company}', [PublicCompanyController::class, 'show'])
+            ->middleware('auth.optional.sanctum');
         Route::get('/companies/{company}/portfolio', [PublicCompanyController::class, 'portfolio']);
+        Route::get('/companies/{company}/reviews', [PublicCompanyController::class, 'reviews']);
         Route::get('/companies/{company}/technicians', [PublicCompanyController::class, 'technicians'])
             ->middleware('auth.optional.sanctum');
         Route::get('/companies/{company}/price-list', [PublicCompanyController::class, 'priceList']);
@@ -91,6 +94,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/favorite-technicians', [CustomerFavoriteTechnicianController::class, 'index']);
             Route::post('/favorite-technicians/{technician}', [CustomerFavoriteTechnicianController::class, 'store']);
             Route::delete('/favorite-technicians/{technician}', [CustomerFavoriteTechnicianController::class, 'destroy']);
+
+            Route::get('/favorite-companies', [CustomerFavoriteCompanyController::class, 'index']);
+            Route::post('/favorite-companies/{company}', [CustomerFavoriteCompanyController::class, 'store']);
+            Route::delete('/favorite-companies/{company}', [CustomerFavoriteCompanyController::class, 'destroy']);
 
             Route::get('/orders', [CustomerOrderController::class, 'index']);
             Route::post('/orders', [CustomerOrderController::class, 'store']);

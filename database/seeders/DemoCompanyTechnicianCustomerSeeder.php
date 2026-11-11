@@ -18,6 +18,7 @@ use App\Models\Company;
 use App\Models\CompanyMember;
 use App\Models\CompanyPriceItem;
 use App\Models\CompanyPriceList;
+use App\Models\CompanyReview;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
 use App\Models\Discount;
@@ -406,7 +407,10 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
             $customer->favoriteTechnicians()->syncWithoutDetaching($favoriteIds);
         }
 
+        $customer->favoriteCompanies()->syncWithoutDetaching([$company->getKey()]);
+
         $this->seedDemoPortfolio($company, $seededTechnicians, $catalogCategories);
+        $this->seedDemoCompanyReviews($company, $customer);
     }
 
     /**
@@ -801,5 +805,95 @@ class DemoCompanyTechnicianCustomerSeeder extends Seeder
     private function commonsImage(string $filename): string
     {
         return 'https://commons.wikimedia.org/wiki/Special:FilePath/'.rawurlencode($filename).'?width=800';
+    }
+
+    private function seedDemoCompanyReviews(Company $company, Customer $customer): void
+    {
+        $reviews = [
+            [
+                'rating' => 5,
+                'author_name' => 'فاطمة العلي',
+                'comment_ar' => 'خدمة ممتازة والفني التزم بالموعد. الشركة محترفة جداً.',
+                'comment_en' => 'Excellent service and the technician arrived on time. Very professional company.',
+                'with_image' => true,
+            ],
+            [
+                'rating' => 4,
+                'author_name' => 'خالد المنصور',
+                'comment_ar' => 'جودة العمل عالية والأسعار واضحة. أنصح بالتعامل معهم.',
+                'comment_en' => 'High work quality and clear pricing. I recommend them.',
+                'with_image' => false,
+            ],
+            [
+                'rating' => 5,
+                'author_name' => 'نورة السالم',
+                'comment_ar' => 'تم إصلاح التكييف بسرعة والكفالة مطمئنة.',
+                'comment_en' => 'AC fixed quickly and the warranty gave peace of mind.',
+                'with_image' => true,
+            ],
+            [
+                'rating' => 4,
+                'author_name' => 'Demo Customer',
+                'comment_ar' => 'تجربة جيدة من تطبيق الموبايل حتى انتهاء العمل.',
+                'comment_en' => 'Good experience from the mobile app through to job completion.',
+                'customer_id' => $customer->getKey(),
+                'with_image' => false,
+            ],
+            [
+                'rating' => 3,
+                'author_name' => 'عبدالله الراشد',
+                'comment_ar' => 'العمل مقبول لكن التأخير بسيط عن الموعد.',
+                'comment_en' => 'Acceptable work but a slight delay versus the appointment.',
+                'with_image' => false,
+            ],
+        ];
+
+        foreach ($reviews as $index => $row) {
+            $review = CompanyReview::query()->updateOrCreate(
+                [
+                    'company_id' => $company->getKey(),
+                    'author_name' => $row['author_name'],
+                    'comment_ar' => $row['comment_ar'],
+                ],
+                [
+                    'customer_id' => $row['customer_id'] ?? null,
+                    'rating' => $row['rating'],
+                    'comment' => $row['comment_ar'],
+                    'comment_en' => $row['comment_en'],
+                    'is_published' => true,
+                    'created_at' => now()->subDays($index + 1),
+                    'updated_at' => now()->subDays($index + 1),
+                ]
+            );
+
+            if (($row['with_image'] ?? false) === true) {
+                Media::query()->updateOrCreate(
+                    [
+                        'model_type' => CompanyReview::class,
+                        'model_id' => $review->getKey(),
+                        'collection_name' => 'review',
+                        'sort_order' => 0,
+                    ],
+                    [
+                        'disk' => 'public',
+                        'file_path' => 'https://picsum.photos/seed/company-review-'.($index + 1).'/640/480',
+                        'file_name' => 'review-'.($index + 1).'.jpg',
+                        'mime_type' => 'image/jpeg',
+                        'size' => 90000 + ($index * 1000),
+                    ]
+                );
+            }
+        }
+
+        $stats = CompanyReview::query()
+            ->where('company_id', $company->getKey())
+            ->where('is_published', true)
+            ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as total')
+            ->first();
+
+        $company->forceFill([
+            'rating_average' => round((float) ($stats->avg_rating ?? 4.5), 2),
+            'rating_count' => (int) ($stats->total ?? 0),
+        ])->save();
     }
 }
