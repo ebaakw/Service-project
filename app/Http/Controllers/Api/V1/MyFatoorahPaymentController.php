@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -25,23 +26,45 @@ class MyFatoorahPaymentController extends Controller
         $signature = $request->header('MyFatoorah-Signature')
             ?? $request->header('myfatoorah-signature');
 
-        if (! $this->webhookVerifier->isValid($signature, $raw)) {
+        $payload = $request->json()->all();
+        if ($payload === [] && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            $payload = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! $this->webhookVerifier->isValid($signature, $raw, $payload)) {
+            Log::warning('myfatoorah.webhook.invalid_signature', [
+                'has_signature' => is_string($signature) && $signature !== '',
+                'body_bytes' => strlen($raw),
+                'event' => data_get($payload, 'Event.Name'),
+            ]);
+
             return response('Invalid signature', 401);
         }
 
-        $payload = $request->json()->all();
         $data = is_array($payload['Data'] ?? null) ? $payload['Data'] : $payload;
+        $invoice = is_array($data['Invoice'] ?? null) ? $data['Invoice'] : [];
 
         $invoiceId = (string) (
             $data['InvoiceId']
             ?? $data['InvoiceID']
+            ?? $invoice['Id']
             ?? ''
         );
 
         $customerReference = (string) (
             $data['CustomerReference']
+            ?? $invoice['ExternalIdentifier']
             ?? ''
         );
+
+        Log::info('myfatoorah.webhook.accepted', [
+            'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
+            'customer_reference' => $customerReference !== '' ? $customerReference : null,
+            'transaction_status' => data_get($data, 'Transaction.Status')
+                ?? data_get($data, 'TransactionStatus'),
+            'event' => data_get($payload, 'Event.Name'),
+        ]);
 
         try {
             if ($customerReference !== '') {
@@ -49,19 +72,45 @@ class MyFatoorahPaymentController extends Controller
             } elseif ($invoiceId !== '') {
                 $this->settlementService->settleByInvoiceId($invoiceId);
             } else {
+                Log::warning('myfatoorah.webhook.missing_identifiers', [
+                    'event' => data_get($payload, 'Event.Name'),
+                ]);
+
                 return response('Missing invoice identifiers', 422);
             }
         } catch (RuntimeException $e) {
             if (str_contains(strtolower($e->getMessage()), 'not paid yet')) {
+                Log::info('myfatoorah.webhook.ignored_pending', [
+                    'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
+                    'customer_reference' => $customerReference !== '' ? $customerReference : null,
+                    'message' => $e->getMessage(),
+                ]);
+
                 return response('Ignored pending', 200);
             }
+
+            Log::warning('myfatoorah.webhook.settlement_failed', [
+                'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
+                'customer_reference' => $customerReference !== '' ? $customerReference : null,
+                'message' => $e->getMessage(),
+            ]);
 
             return response($e->getMessage(), 422);
         } catch (Throwable $e) {
             report($e);
+            Log::error('myfatoorah.webhook.settlement_error', [
+                'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
+                'customer_reference' => $customerReference !== '' ? $customerReference : null,
+                'exception' => $e::class,
+            ]);
 
             return response('Settlement error', 500);
         }
+
+        Log::info('myfatoorah.webhook.settled', [
+            'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
+            'customer_reference' => $customerReference !== '' ? $customerReference : null,
+        ]);
 
         return response('OK', 200);
     }

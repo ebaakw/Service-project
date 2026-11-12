@@ -33,6 +33,8 @@ class MyFatoorahGateway implements PaymentGatewayContract
             'CustomerName' => $customerName,
             'CustomerEmail' => $customerUser?->email,
             'CustomerReference' => $payment->ulid,
+            // Webhook v2 exposes this as Invoice.ExternalIdentifier (not CustomerReference).
+            'CustomerIdentifier' => $payment->ulid,
             'UserDefinedField' => (string) $payment->payment_type?->value,
             'CallBackUrl' => $callback.'?payment_ulid='.$payment->ulid,
             'ErrorUrl' => $error.'?payment_ulid='.$payment->ulid,
