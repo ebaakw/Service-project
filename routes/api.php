@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Customer\NotificationController as CustomerNotif
 use App\Http\Controllers\Api\V1\Customer\OrderController as CustomerOrderController;
 use App\Http\Controllers\Api\V1\Customer\SearchController as CustomerSearchController;
 use App\Http\Controllers\Api\V1\Customer\ServiceCategoryController as CustomerServiceCategoryController;
+use App\Http\Controllers\Api\V1\MyFatoorahPaymentController;
 use App\Http\Controllers\Api\V1\PaymentCompletionController;
 use App\Http\Controllers\Api\V1\Public\PublicBannerController;
 use App\Http\Controllers\Api\V1\Public\PublicCompanyController;
@@ -65,6 +66,15 @@ Route::prefix('v1')->group(function (): void {
         ->middleware('throttle:20,1');
     Route::post('/technician/demo-login', [TechnicianAuthController::class, 'demoLogin'])
         ->middleware('throttle:10,1');
+
+    Route::prefix('payments/myfatoorah')->middleware('throttle:60,1')->group(function (): void {
+        Route::post('/webhook', [MyFatoorahPaymentController::class, 'webhook'])
+            ->name('api.v1.payments.myfatoorah.webhook');
+        Route::get('/callback', [MyFatoorahPaymentController::class, 'callback'])
+            ->name('api.v1.payments.myfatoorah.callback');
+        Route::get('/error', [MyFatoorahPaymentController::class, 'error'])
+            ->name('api.v1.payments.myfatoorah.error');
+    });
 
     // Guest-friendly browse: work without Authorization; enrich when a valid Bearer token is present.
     Route::prefix('customer')->middleware('auth.optional.sanctum')->group(function (): void {

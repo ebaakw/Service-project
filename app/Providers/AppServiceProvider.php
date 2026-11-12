@@ -23,6 +23,7 @@ use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use App\Services\Orders\FixedMinutesArrivalSlaResolver;
 use App\Services\Payments\FakePaymentGateway;
+use App\Services\Payments\MyFatoorahGateway;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -44,7 +45,13 @@ class AppServiceProvider extends ServiceProvider
             ]);
         }
 
-        $this->app->singleton(PaymentGatewayContract::class, FakePaymentGateway::class);
+        $this->app->singleton(PaymentGatewayContract::class, function ($app) {
+            if ((bool) config('myfatoorah.enabled')) {
+                return $app->make(MyFatoorahGateway::class);
+            }
+
+            return $app->make(FakePaymentGateway::class);
+        });
         $this->app->singleton(ArrivalSlaResolverInterface::class, FixedMinutesArrivalSlaResolver::class);
     }
 
