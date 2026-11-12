@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Technician;
 
+use App\Enums\OrderOfferStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
@@ -10,6 +11,7 @@ use App\Http\Resources\Api\V1\OrderResource;
 use App\Models\Order;
 use App\Models\OrderOffer;
 use App\Services\Orders\OrderStateService;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +20,7 @@ class OrderController extends Controller
 {
     public function __construct(
         private readonly OrderStateService $orderStateService,
+        private readonly TechnicianQueueService $technicianQueueService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -38,7 +41,14 @@ class OrderController extends Controller
                         ->where('technician_id', $technicianId)
                         ->select('order_id'));
             })
-            ->with(['company', 'customer.user', 'serviceCategory'])
+            ->with([
+                'company',
+                'customer.user',
+                'serviceCategory',
+                'offers' => static fn ($q) => $q
+                    ->where('technician_id', $technicianId)
+                    ->where('status', OrderOfferStatus::Offered),
+            ])
             ->orderByRaw('queue_position is null')
             ->orderBy('queue_position')
             ->orderBy('assigned_at')
@@ -55,6 +65,8 @@ class OrderController extends Controller
 
         $this->authorize('view', $order);
 
+        $technicianId = $user->technician?->getKey();
+
         $order->load([
             'company',
             'customerAddress',
@@ -64,6 +76,10 @@ class OrderController extends Controller
             'items',
             'payments',
             'statusHistories',
+            'intakeAnswers',
+            'offers' => static fn ($q) => $q
+                ->where('technician_id', $technicianId)
+                ->where('status', OrderOfferStatus::Offered),
         ]);
 
         return response()->json(['order' => new OrderResource($order)]);
@@ -101,13 +117,33 @@ class OrderController extends Controller
             $context,
         );
 
-        $order->refresh()->load([
+        $order->refresh();
+
+        if (array_key_exists('estimated_duration_minutes', $validated)
+            && $validated['estimated_duration_minutes'] !== null
+            && in_array($order->status, $this->technicianQueueService->activeQueueStatuses(), true)) {
+            $this->technicianQueueService->updateOrderDuration(
+                $order,
+                (int) $validated['estimated_duration_minutes'],
+            );
+            $order->refresh();
+        }
+
+        $technicianId = $user->technician?->getKey();
+
+        $order->load([
             'company',
+            'customerAddress',
             'customer.user',
             'serviceCategory',
+            'serviceProblem',
             'items',
             'payments',
             'statusHistories',
+            'intakeAnswers',
+            'offers' => static fn ($q) => $q
+                ->where('technician_id', $technicianId)
+                ->where('status', OrderOfferStatus::Offered),
         ]);
 
         return response()->json([

@@ -21,4 +21,24 @@ enum OrderStatus: string
     {
         return __('enums.order_status.'.$this->value);
     }
+
+    /**
+     * Coarse UI bucket for technician / customer mobile apps.
+     */
+    public function statusGroup(): string
+    {
+        return match ($this) {
+            self::Assigned, self::Accepted => 'waiting',
+            self::TechnicianOnWay => 'on_way',
+            self::Arrived, self::WaitingCustomerPayment, self::Started => 'in_progress',
+            self::Completed => 'completed',
+            self::Cancelled, self::Expired => 'cancelled',
+            default => 'waiting',
+        };
+    }
+
+    public function statusGroupLabel(): string
+    {
+        return __('orders.status_group.'.$this->statusGroup());
+    }
 }

@@ -154,6 +154,13 @@ class TechnicianQueueTest extends TestCase
         $this->assertSame(OrderStatus::Assigned, $order->status);
         $this->assertSame(2, (int) $order->queue_position);
         $this->assertSame(60, (int) $order->estimated_duration_minutes);
+        $this->assertNotNull($order->scheduled_at);
+        $this->assertTrue(
+            $order->scheduled_at->greaterThanOrEqualTo(now()->addMinutes(55)->subSecond())
+        );
+        $this->assertTrue(
+            $order->scheduled_at->lessThanOrEqualTo(now()->addMinutes(65)->addSecond())
+        );
     }
 
     public function test_technician_cannot_cancel_assigned_order_while_accepting_orders(): void

@@ -42,6 +42,7 @@ class OrderStateService
             if (in_array($to, [OrderStatus::Completed, OrderStatus::Cancelled, OrderStatus::Expired], true)) {
                 $order->queue_position = null;
                 $order->estimated_duration_minutes = null;
+                $order->scheduled_at = null;
             }
 
             $order->status = $to;
@@ -105,6 +106,28 @@ class OrderStateService
 
         return ($context['force'] ?? false) === true
             && ($context['force_complete_authorized'] ?? false) === true;
+    }
+
+    /**
+     * Statuses a technician may legally move this order to from its current state
+     * (respects payment / quote gates; does not apply accepting-orders cancel lock).
+     *
+     * @return list<OrderStatus>
+     */
+    public function technicianAllowedNextStatuses(Order $order): array
+    {
+        $from = $order->status;
+        if ($from === null) {
+            return [];
+        }
+
+        $map = $this->allowedTargets();
+        $candidates = $map[$from->value] ?? [];
+
+        return array_values(array_filter(
+            $candidates,
+            fn (OrderStatus $to): bool => $this->canTransition($order, $from, $to),
+        ));
     }
 
     /**

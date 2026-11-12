@@ -12,6 +12,7 @@ use App\Http\Resources\Api\V1\OrderOfferResource;
 use App\Models\Order;
 use App\Models\OrderOffer;
 use App\Services\Orders\OrderStateService;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ class OrderOfferController extends Controller
 {
     public function __construct(
         private readonly OrderStateService $orderStateService,
+        private readonly TechnicianQueueService $technicianQueueService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -32,7 +34,12 @@ class OrderOfferController extends Controller
 
         $offers = OrderOffer::query()
             ->where('technician_id', $technicianId)
-            ->with(['order.company:id,name'])
+            ->with([
+                'order.company:id,name',
+                'order.customer.user',
+                'order.serviceCategory',
+                'order.customerAddress',
+            ])
             ->orderByDesc('id')
             ->paginate(20);
 
@@ -83,6 +90,9 @@ class OrderOfferController extends Controller
                 $user,
                 'Technician accepted offer',
             );
+
+            $order->refresh();
+            $this->technicianQueueService->enqueueAssignedOrder($order);
         });
 
         $order->refresh();
@@ -90,8 +100,15 @@ class OrderOfferController extends Controller
 
         event(new TechnicianAcceptedOrder($order->fresh(), $offer->getKey(), $offer->technician_id));
 
+        $offer = $offer->fresh([
+            'order.company:id,name',
+            'order.customer.user',
+            'order.serviceCategory',
+            'order.customerAddress',
+        ]);
+
         return response()->json([
-            'data' => new OrderOfferResource($offer->fresh()),
+            'data' => new OrderOfferResource($offer),
             'order_id' => $order->getKey(),
         ]);
     }

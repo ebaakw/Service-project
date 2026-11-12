@@ -1,6 +1,13 @@
 <?php
 
 return [
+    'status_group' => [
+        'waiting' => 'Waiting',
+        'on_way' => 'On the way',
+        'in_progress' => 'In progress',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ],
     'queue' => [
         'wait_none' => 'No wait',
         'wait_minutes' => ':count minutes',

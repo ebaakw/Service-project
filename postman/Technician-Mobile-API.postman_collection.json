@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Technician Mobile API (v1)",
-    "description": "# Technician Mobile API\n\nSource: `routes/api.php` under `/api/v1/technician`.\n\n## Flow\n1. Login (or demo-login for store review)\n2. Register FCM device + subscribe to `private-technician.{id}`\n3. Orders appear only after customer pays inspection fee\n4. Queue: orders get queue_position after inspection pay; list sorted by queue_position. Ring until accept (`assigned` → `accepted`). Cancel/reject blocked while is_accepting_orders=true.\n4b. PATCH /job-preferences for is_accepting_orders + estimated_job_duration_minutes\n5. `accepted` → `technician_on_way` → `arrived`\n6. Add price-list items + optional extra_amount → `POST .../request-payment`\n7. Wait for customer accept-invoice + pay → status becomes `started`\n8. `PATCH` status `completed` when work is done\n\n## Auth\nSanctum Bearer. Login returns `{ token, token_type, user, technician }`.\nDemo: `POST /technician/demo-login` (when `TECHNICIAN_DEMO_LOGIN_ENABLED=true`).\nSeed: `technician-demo@example.test` / `password`",
+    "description": "# Technician Mobile API\n\nSource: `routes/api.php` under `/api/v1/technician`.\n\n## Flow\n1. Login (or demo-login for store review)\n2. Register FCM device + subscribe to `private-technician.{id}`\n3. Orders appear only after customer pays inspection fee\n4. Queue: each order gets `queue_position`, per-order `estimated_duration_minutes`, and `scheduled_at` (ETA). List sorted by queue_position. Show Accept when `can_accept=true` (`assigned` → `accepted`). Cancel/reject blocked while is_accepting_orders=true.\n4b. PATCH /job-preferences sets defaults only (`is_accepting_orders` + `estimated_job_duration_minutes`); do NOT use the global duration as the order display — use order.scheduled_at + order.estimated_duration_minutes.\n4c. Order payload helpers: `status_group` (waiting|on_way|in_progress|completed|cancelled), `allowed_next_statuses`, `can_accept` / `can_start_trip` / `can_mark_arrived` / `can_complete` / `can_cancel`, `customer`, `pending_offer_id`.\n5. `accepted` → `technician_on_way` → `arrived` (drive UI from allowed_next_statuses)\n6. Add price-list items + optional extra_amount → `POST .../request-payment`\n7. Wait for customer accept-invoice + pay → status becomes `started`\n8. `PATCH` status `completed` when work is done\n9. Optional on status PATCH: `estimated_duration_minutes` to set this order's duration and refresh queue ETAs\n\n## Auth\nSanctum Bearer. Login returns `{ token, token_type, user, technician }`.\nDemo: `POST /technician/demo-login` (when `TECHNICIAN_DEMO_LOGIN_ENABLED=true`).\nSeed: `technician-demo@example.test` / `password`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -398,7 +398,7 @@
               }
             ],
             "url": "{{base_url}}/api/v1/technician/orders",
-            "description": "Hidden until inspection_payment_status=paid."
+            "description": "Work queue. Hidden until inspection paid. Includes customer, status_group, can_accept, allowed_next_statuses, scheduled_at, estimated_duration_minutes."
           }
         },
         {
@@ -415,7 +415,8 @@
                 "value": "Bearer {{technician_token}}"
               }
             ],
-            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}"
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}",
+            "description": "Full detail: customer (+user name/phone), customer_address, service_problem, items, payments, status_histories, intake_answers, action flags."
           }
         },
         {
@@ -438,10 +439,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"accepted\"\n}"
+              "raw": "{\n  \"status\": \"accepted\",\n  \"estimated_duration_minutes\": 90\n}"
             },
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
-            "description": "Stops awaiting-accept ring on company dashboard and tech app."
+            "description": "Accept when can_accept=true. Optional estimated_duration_minutes sets per-order duration and recalculates scheduled_at for the queue."
           }
         },
         {

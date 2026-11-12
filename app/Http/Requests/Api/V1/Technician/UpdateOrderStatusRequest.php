@@ -22,6 +22,7 @@ class UpdateOrderStatusRequest extends FormRequest
             'status' => ['required', Rule::enum(OrderStatus::class)],
             'note' => ['nullable', 'string', 'max:5000'],
             'cancellation_reason' => ['nullable', 'string', 'max:5000'],
+            'estimated_duration_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
         ];
     }
 }

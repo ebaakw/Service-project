@@ -191,21 +191,104 @@ class TechnicianQueueService
             $position = $this->nextQueuePosition($technician);
         }
 
+        $minutesAhead = $this->minutesAheadOfPosition($technician, (int) $position, (int) $order->getKey());
+
         $order->forceFill([
             'queue_position' => $position,
             'estimated_duration_minutes' => $duration,
+            'scheduled_at' => now()->addMinutes($minutesAhead),
         ])->save();
+    }
+
+    /**
+     * Minutes of work queued strictly before the given position (for ETA).
+     */
+    public function minutesAheadOfPosition(Technician $technician, int $position, ?int $excludeOrderId = null): int
+    {
+        $fallback = $this->resolveJobDurationMinutes($technician);
+
+        $query = $this->activeQueueQuery($technician)
+            ->where('queue_position', '<', $position)
+            ->orderBy('queue_position')
+            ->orderBy('assigned_at')
+            ->orderBy('id');
+
+        if ($excludeOrderId !== null) {
+            $query->whereKeyNot($excludeOrderId);
+        }
+
+        $total = 0;
+        foreach ($query->get(['id', 'estimated_duration_minutes']) as $ahead) {
+            $minutes = $ahead->estimated_duration_minutes;
+            $total += ($minutes !== null && (int) $minutes > 0) ? (int) $minutes : $fallback;
+        }
+
+        return $total;
+    }
+
+    /**
+     * Recalculate scheduled_at for every active-queue order of the technician.
+     */
+    public function recalculateScheduledAts(Technician $technician): void
+    {
+        $fallback = $this->resolveJobDurationMinutes($technician);
+
+        /** @var Collection<int, Order> $orders */
+        $orders = $this->activeQueueQuery($technician)
+            ->orderBy('queue_position')
+            ->orderBy('assigned_at')
+            ->orderBy('id')
+            ->get();
+
+        $minutesAhead = 0;
+
+        foreach ($orders as $order) {
+            $order->forceFill([
+                'scheduled_at' => now()->addMinutes($minutesAhead),
+            ])->save();
+
+            $minutes = $order->estimated_duration_minutes;
+            $minutesAhead += ($minutes !== null && (int) $minutes > 0) ? (int) $minutes : $fallback;
+        }
+    }
+
+    /**
+     * Update per-order duration and refresh ETAs for the technician queue.
+     */
+    public function updateOrderDuration(Order $order, int $durationMinutes): void
+    {
+        if ($durationMinutes <= 0) {
+            return;
+        }
+
+        $order->forceFill([
+            'estimated_duration_minutes' => $durationMinutes,
+        ])->save();
+
+        if ($order->technician_id === null) {
+            return;
+        }
+
+        $technician = $order->technician ?? Technician::query()->find($order->technician_id);
+        if ($technician === null) {
+            return;
+        }
+
+        $this->recalculateScheduledAts($technician);
     }
 
     public function clearQueueFields(Order $order): void
     {
-        if ($order->queue_position === null && $order->estimated_duration_minutes === null) {
+        if ($order->queue_position === null
+            && $order->estimated_duration_minutes === null
+            && $order->scheduled_at === null) {
             return;
         }
 
         $order->forceFill([
             'queue_position' => null,
             'estimated_duration_minutes' => null,
+            'scheduled_at' => null,
         ])->save();
     }
 

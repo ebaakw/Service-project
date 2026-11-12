@@ -1,6 +1,13 @@
 <?php
 
 return [
+    'status_group' => [
+        'waiting' => 'في الانتظار',
+        'on_way' => 'في الطريق',
+        'in_progress' => 'جاري العمل',
+        'completed' => 'تم الانتهاء',
+        'cancelled' => 'ملغي',
+    ],
     'queue' => [
         'wait_none' => 'بدون انتظار',
         'wait_minutes' => ':count دقيقة',
