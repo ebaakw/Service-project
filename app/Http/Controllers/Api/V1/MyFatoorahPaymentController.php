@@ -44,6 +44,7 @@ class MyFatoorahPaymentController extends Controller
 
         $data = is_array($payload['Data'] ?? null) ? $payload['Data'] : $payload;
         $invoice = is_array($data['Invoice'] ?? null) ? $data['Invoice'] : [];
+        $transaction = is_array($data['Transaction'] ?? null) ? $data['Transaction'] : [];
 
         $invoiceId = (string) (
             $data['InvoiceId']
@@ -58,17 +59,30 @@ class MyFatoorahPaymentController extends Controller
             ?? ''
         );
 
+        $paymentId = (string) (
+            $transaction['PaymentId']
+            ?? $data['PaymentId']
+            ?? ''
+        );
+
         Log::info('myfatoorah.webhook.accepted', [
             'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
             'customer_reference' => $customerReference !== '' ? $customerReference : null,
-            'transaction_status' => data_get($data, 'Transaction.Status')
+            'payment_id' => $paymentId !== '' ? $paymentId : null,
+            'transaction_status' => $transaction['Status']
                 ?? data_get($data, 'TransactionStatus'),
             'event' => data_get($payload, 'Event.Name'),
         ]);
 
         try {
-            if ($customerReference !== '') {
-                $this->settlementService->settleByPaymentUlid($customerReference);
+            // Prefer PaymentId from SDK/webhook transaction; then ulid; then invoice.
+            if ($paymentId !== '') {
+                $this->settlementService->settleByMyFatoorahPaymentId($paymentId);
+            } elseif ($customerReference !== '') {
+                $this->settlementService->settleByPaymentUlid(
+                    $customerReference,
+                    $invoiceId !== '' ? $invoiceId : null,
+                );
             } elseif ($invoiceId !== '') {
                 $this->settlementService->settleByInvoiceId($invoiceId);
             } else {
@@ -83,6 +97,7 @@ class MyFatoorahPaymentController extends Controller
                 Log::info('myfatoorah.webhook.ignored_pending', [
                     'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
                     'customer_reference' => $customerReference !== '' ? $customerReference : null,
+                    'payment_id' => $paymentId !== '' ? $paymentId : null,
                     'message' => $e->getMessage(),
                 ]);
 
@@ -92,6 +107,7 @@ class MyFatoorahPaymentController extends Controller
             Log::warning('myfatoorah.webhook.settlement_failed', [
                 'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
                 'customer_reference' => $customerReference !== '' ? $customerReference : null,
+                'payment_id' => $paymentId !== '' ? $paymentId : null,
                 'message' => $e->getMessage(),
             ]);
 
@@ -101,6 +117,7 @@ class MyFatoorahPaymentController extends Controller
             Log::error('myfatoorah.webhook.settlement_error', [
                 'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
                 'customer_reference' => $customerReference !== '' ? $customerReference : null,
+                'payment_id' => $paymentId !== '' ? $paymentId : null,
                 'exception' => $e::class,
             ]);
 
@@ -110,6 +127,7 @@ class MyFatoorahPaymentController extends Controller
         Log::info('myfatoorah.webhook.settled', [
             'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
             'customer_reference' => $customerReference !== '' ? $customerReference : null,
+            'payment_id' => $paymentId !== '' ? $paymentId : null,
         ]);
 
         return response('OK', 200);

@@ -260,6 +260,69 @@ class MyFatoorahGatewayTest extends TestCase
         $response->assertStatus(401);
     }
 
+    public function test_settlement_falls_back_to_customer_reference_when_sendpayment_invoice_pending(): void
+    {
+        config([
+            'myfatoorah.enabled' => true,
+            'myfatoorah.api_key' => 'test-key',
+            'myfatoorah.is_test' => true,
+            'myfatoorah.api_base_url' => 'https://apitest.myfatoorah.com',
+        ]);
+
+        [$order] = $this->makePendingOrder();
+
+        $payment = Payment::factory()->create([
+            'order_id' => $order->getKey(),
+            'customer_id' => $order->customer_id,
+            'company_id' => $order->company_id,
+            'payment_type' => PaymentType::InspectionFee,
+            'payment_status' => PaymentStatus::Pending,
+            'provider' => 'myfatoorah',
+            'provider_reference' => '111', // SendPayment invoice still pending
+            'amount' => 5,
+            'currency' => 'KWD',
+        ]);
+
+        Http::fake([
+            'apitest.myfatoorah.com/v2/GetPaymentStatus' => function (\Illuminate\Http\Client\Request $request) use ($payment) {
+                $keyType = $request['KeyType'] ?? null;
+                $key = $request['Key'] ?? null;
+
+                if ($keyType === 'InvoiceId' && (string) $key === '111') {
+                    return Http::response([
+                        'IsSuccess' => true,
+                        'Data' => [
+                            'InvoiceId' => 111,
+                            'InvoiceStatus' => 'Pending',
+                            'CustomerReference' => $payment->ulid,
+                        ],
+                    ], 200);
+                }
+
+                if ($keyType === 'CustomerReference' && (string) $key === $payment->ulid) {
+                    return Http::response([
+                        'IsSuccess' => true,
+                        'Data' => [
+                            'InvoiceId' => 222,
+                            'InvoiceStatus' => 'Paid',
+                            'CustomerReference' => $payment->ulid,
+                        ],
+                    ], 200);
+                }
+
+                return Http::response(['IsSuccess' => false, 'Message' => 'unexpected'], 400);
+            },
+        ]);
+
+        $result = app(\App\Services\Payments\MyFatoorahPaymentSettlementService::class)
+            ->settleByPaymentUlid($payment->ulid);
+
+        $this->assertFalse($result['already_paid']);
+        $this->assertSame(PaymentStatus::Paid, $payment->fresh()->payment_status);
+        $this->assertSame('222', $payment->fresh()->provider_reference);
+        $this->assertSame(PaymentStatus::Paid, $order->fresh()->inspection_payment_status);
+    }
+
     /**
      * @return array{0: Order}
      */
