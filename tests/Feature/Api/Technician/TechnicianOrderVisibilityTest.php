@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\Technician;
 
 use App\Enums\CompanyStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
 use App\Models\Company;
@@ -51,6 +52,16 @@ class TechnicianOrderVisibilityTest extends TestCase
             'technician_id' => $technician->getKey(),
             'service_category_id' => $category->getKey(),
             'status' => OrderStatus::Assigned,
+            'inspection_payment_status' => PaymentStatus::Paid,
+        ]);
+
+        $unpaidOrder = Order::factory()->create([
+            'company_id' => $company->getKey(),
+            'customer_id' => $customer->getKey(),
+            'technician_id' => $technician->getKey(),
+            'service_category_id' => $category->getKey(),
+            'status' => OrderStatus::PendingPayment,
+            'inspection_payment_status' => PaymentStatus::Pending,
         ]);
 
         $foreignOrder = Order::factory()->create([
@@ -59,6 +70,7 @@ class TechnicianOrderVisibilityTest extends TestCase
             'technician_id' => $otherTechnician->getKey(),
             'service_category_id' => $category->getKey(),
             'status' => OrderStatus::Assigned,
+            'inspection_payment_status' => PaymentStatus::Paid,
         ]);
 
         Sanctum::actingAs($techUser);
@@ -68,8 +80,12 @@ class TechnicianOrderVisibilityTest extends TestCase
         $ids = collect($list->json('data'))->pluck('id')->all();
         $this->assertContains($assignedOrder->getKey(), $ids);
         $this->assertNotContains($foreignOrder->getKey(), $ids);
+        $this->assertNotContains($unpaidOrder->getKey(), $ids);
 
         $showForeign = $this->getJson('/api/v1/technician/orders/'.$foreignOrder->getKey());
         $showForeign->assertForbidden();
+
+        $showUnpaid = $this->getJson('/api/v1/technician/orders/'.$unpaidOrder->getKey());
+        $showUnpaid->assertForbidden();
     }
 }

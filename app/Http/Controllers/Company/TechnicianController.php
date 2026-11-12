@@ -210,6 +210,10 @@ class TechnicianController extends Controller
                 'is_active' => $technician->is_active,
                 'availability_status' => $technician->availability_status?->value,
                 'availability_status_label' => $technician->availability_status?->label(),
+                'is_accepting_orders' => (bool) $technician->is_accepting_orders,
+                'estimated_job_duration_minutes' => $technician->estimated_job_duration_minutes !== null
+                    ? (int) $technician->estimated_job_duration_minutes
+                    : null,
                 'review_status' => $technician->review_status?->value,
                 'rejection_reason' => $technician->rejection_reason,
                 'pending_changes' => $technician->pending_changes,
@@ -239,11 +243,34 @@ class TechnicianController extends Controller
         $avatar = $request->file('avatar');
         $civilIdDocument = $request->file('civil_id_document');
         $categoryIds = $validated['service_category_ids'] ?? null;
-        unset($validated['service_category_ids'], $validated['avatar'], $validated['civil_id_document']);
+
+        $hasAcceptingOrders = array_key_exists('is_accepting_orders', $validated);
+        $hasEstimatedDuration = array_key_exists('estimated_job_duration_minutes', $validated);
+        $isAcceptingOrders = $hasAcceptingOrders ? (bool) $validated['is_accepting_orders'] : null;
+        $estimatedJobDurationMinutes = $hasEstimatedDuration ? $validated['estimated_job_duration_minutes'] : null;
+
+        unset(
+            $validated['service_category_ids'],
+            $validated['avatar'],
+            $validated['civil_id_document'],
+            $validated['is_accepting_orders'],
+            $validated['estimated_job_duration_minutes'],
+        );
 
         $status = $technician->review_status;
 
-        DB::transaction(function () use ($validated, $categoryIds, $technician, $avatar, $civilIdDocument, $status): void {
+        DB::transaction(function () use (
+            $validated,
+            $categoryIds,
+            $technician,
+            $avatar,
+            $civilIdDocument,
+            $status,
+            $hasAcceptingOrders,
+            $hasEstimatedDuration,
+            $isAcceptingOrders,
+            $estimatedJobDurationMinutes,
+        ): void {
             if ($status?->appliesLiveOnCompanyEdit()) {
                 TechnicianProfileSync::applyLive(
                     $technician,
@@ -253,17 +280,27 @@ class TechnicianController extends Controller
                     is_array($categoryIds) ? $categoryIds : [],
                     resubmitForCreateReview: true,
                 );
-
-                return;
+            } else {
+                TechnicianProfileSync::stagePending(
+                    $technician,
+                    $validated,
+                    $avatar,
+                    $civilIdDocument,
+                    is_array($categoryIds) ? $categoryIds : null,
+                );
             }
 
-            TechnicianProfileSync::stagePending(
-                $technician,
-                $validated,
-                $avatar,
-                $civilIdDocument,
-                is_array($categoryIds) ? $categoryIds : null,
-            );
+            $queuePayload = [];
+            if ($hasAcceptingOrders) {
+                $queuePayload['is_accepting_orders'] = $isAcceptingOrders;
+            }
+            if ($hasEstimatedDuration) {
+                $queuePayload['estimated_job_duration_minutes'] = $estimatedJobDurationMinutes;
+            }
+
+            if ($queuePayload !== []) {
+                $technician->forceFill($queuePayload)->save();
+            }
         });
 
         $message = $status?->appliesLiveOnCompanyEdit()

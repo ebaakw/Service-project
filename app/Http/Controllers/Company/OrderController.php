@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Company;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentType;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Technician;
+use App\Services\Orders\OrderAssignmentNotifier;
 use App\Services\Orders\OrderFinalInvoiceDispatchService;
 use App\Services\Orders\OrderStateService;
 use App\Services\Orders\TechnicianOrderValidator;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -23,6 +26,8 @@ class OrderController extends Controller
         private readonly OrderStateService $orderStateService,
         private readonly TechnicianOrderValidator $technicianOrderValidator,
         private readonly OrderFinalInvoiceDispatchService $invoiceDispatchService,
+        private readonly OrderAssignmentNotifier $orderAssignmentNotifier,
+        private readonly TechnicianQueueService $technicianQueueService,
     ) {}
 
     public function index(Request $request): Response
@@ -130,7 +135,7 @@ class OrderController extends Controller
             ->where('company_id', $order->company_id)
             ->where('review_status', 'approved')
             ->where('is_active', true)
-            ->whereHas('user', fn ($q) => $q->where('status', \App\Enums\UserStatus::Active))
+            ->whereHas('user', fn ($q) => $q->where('status', UserStatus::Active))
             ->with(['user:id,name'])
             ->orderBy('id')
             ->get(['id', 'user_id']);
@@ -169,6 +174,13 @@ class OrderController extends Controller
         $order->forceFill(['technician_id' => $technician->getKey()])->save();
 
         $this->orderStateService->transition($order, OrderStatus::Assigned, $request->user(), 'Technician assigned by company');
+
+        $assigned = $order->fresh(['technician', 'company']);
+        if ($assigned !== null) {
+            $this->technicianQueueService->enqueueAssignedOrder($assigned);
+        }
+
+        $this->orderAssignmentNotifier->notifyPaidAssignment($order->fresh());
 
         return redirect()->route('company.orders.show', $order)->with('message', 'Technician assigned.');
     }

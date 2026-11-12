@@ -1,0 +1,656 @@
+{
+  "info": {
+    "name": "Technician Mobile API (v1)",
+    "description": "# Technician Mobile API\n\nSource: `routes/api.php` under `/api/v1/technician`.\n\n## Flow\n1. Login (or demo-login for store review)\n2. Register FCM device + subscribe to `private-technician.{id}`\n3. Orders appear only after customer pays inspection fee\n4. Queue: orders get queue_position after inspection pay; list sorted by queue_position. Ring until accept (`assigned` → `accepted`). Cancel/reject blocked while is_accepting_orders=true.\n4b. PATCH /job-preferences for is_accepting_orders + estimated_job_duration_minutes\n5. `accepted` → `technician_on_way` → `arrived`\n6. Add price-list items + optional extra_amount → `POST .../request-payment`\n7. Wait for customer accept-invoice + pay → status becomes `started`\n8. `PATCH` status `completed` when work is done\n\n## Auth\nSanctum Bearer. Login returns `{ token, token_type, user, technician }`.\nDemo: `POST /technician/demo-login` (when `TECHNICIAN_DEMO_LOGIN_ENABLED=true`).\nSeed: `technician-demo@example.test` / `password`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost"
+    },
+    {
+      "key": "locale",
+      "value": "ar"
+    },
+    {
+      "key": "technician_email",
+      "value": "technician-demo@example.test"
+    },
+    {
+      "key": "technician_password",
+      "value": "password"
+    },
+    {
+      "key": "technician_token",
+      "value": ""
+    },
+    {
+      "key": "technician_id",
+      "value": ""
+    },
+    {
+      "key": "order_id",
+      "value": ""
+    },
+    {
+      "key": "offer_id",
+      "value": ""
+    },
+    {
+      "key": "item_id",
+      "value": ""
+    },
+    {
+      "key": "device_id",
+      "value": ""
+    },
+    {
+      "key": "company_price_item_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('technician_token', j.token);",
+                  "  if (j.technician && j.technician.id) pm.collectionVariables.set('technician_id', String(j.technician.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{technician_email}}\",\n  \"password\": \"{{technician_password}}\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/login",
+            "description": "Real technician account (created from company dashboard)."
+          }
+        },
+        {
+          "name": "Demo login (store review)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('technician_token', j.token);",
+                  "  if (j.technician && j.technician.id) pm.collectionVariables.set('technician_id', String(j.technician.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/demo-login",
+            "description": "No body. Uses TECHNICIAN_DEMO_EMAIL/PASSWORD. Returns 404 when disabled."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/me"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Presence & Devices",
+      "item": [
+        {
+          "name": "Update availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availability_status\": \"available\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/availability"
+          }
+        },
+        {
+          "name": "Update job preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_accepting_orders\": true,\n  \"estimated_job_duration_minutes\": 90\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/job-preferences",
+            "description": "Toggle receiving orders and/or personal estimated job duration (minutes). Personal duration overrides company default_job_duration_minutes for queue wait estimates. While is_accepting_orders=true, technician cannot cancel assigned orders (mandatory accept)."
+          }
+        },
+        {
+          "name": "Update location",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lat\": 29.375859,\n  \"lng\": 47.977405\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/location"
+          }
+        },
+        {
+          "name": "Register device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_type\": \"android\",\n  \"fcm_token\": \"demo-fcm-token\",\n  \"device_name\": \"Postman\",\n  \"app_version\": \"1.0.0\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/devices"
+          }
+        },
+        {
+          "name": "Delete device",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/devices/{{device_id}}"
+          }
+        },
+        {
+          "name": "Broadcasting auth",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"socket_id\": \"1234.5678\",\n  \"channel_name\": \"private-technician.{{technician_id}}\"\n}"
+            },
+            "url": "{{base_url}}/api/broadcasting/auth",
+            "description": "Subscribe to private-technician.{id}. Events: order.awaiting-accept, order.status-changed, offer.created"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        {
+          "name": "List order offers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/order-offers"
+          }
+        },
+        {
+          "name": "Accept offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/order-offers/{{offer_id}}/accept"
+          }
+        },
+        {
+          "name": "Reject offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response_note\": \"Busy\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/order-offers/{{offer_id}}/reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "List orders (paid inspection only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data || [];",
+                  "  if (data[0]) pm.collectionVariables.set('order_id', String(data[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/orders",
+            "description": "Hidden until inspection_payment_status=paid."
+          }
+        },
+        {
+          "name": "Show order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}"
+          }
+        },
+        {
+          "name": "Accept assigned order (status=accepted)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
+            "description": "Stops awaiting-accept ring on company dashboard and tech app."
+          }
+        },
+        {
+          "name": "On the way",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"technician_on_way\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status"
+          }
+        },
+        {
+          "name": "Arrived",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"arrived\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status"
+          }
+        },
+        {
+          "name": "Complete work (after customer paid → started)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
+            "description": "Only from started after final invoice paid."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Price list & quote",
+      "item": [
+        {
+          "name": "My company price list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  const items = j.data || j.price_items || [];",
+                  "  if (items[0] && items[0].id) pm.collectionVariables.set('company_price_item_id', String(items[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/price-list?q="
+          }
+        },
+        {
+          "name": "Add item from price list",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_price_item_id\": {{company_price_item_id}},\n  \"name_ar\": \"خدمة\",\n  \"name_en\": \"Service\",\n  \"quantity\": 1,\n  \"unit_price\": 10.000\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/items",
+            "description": "Only while status=arrived (or waiting_customer_payment before customer accepts)."
+          }
+        },
+        {
+          "name": "Request payment (send invoice + optional extra)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extra_amount\": 2.500,\n  \"extra_name_ar\": \"مبلغ إضافي\",\n  \"extra_name_en\": \"Extra amount\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/request-payment",
+            "description": "Moves order to waiting_customer_payment and notifies customer. Work starts only after customer accept-invoice + pay."
+          }
+        },
+        {
+          "name": "Update item",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2,\n  \"unit_price\": 10.000\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/items/{{item_id}}"
+          }
+        },
+        {
+          "name": "Delete item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/items/{{item_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -36,9 +36,19 @@ class OrderResource extends JsonResource
             'scheduled_at' => $this->scheduled_at?->toIso8601String(),
             'inspection_paid_at' => $this->inspection_paid_at?->toIso8601String(),
             'assigned_at' => $this->assigned_at?->toIso8601String(),
+            'queue_position' => $this->queue_position !== null ? (int) $this->queue_position : null,
+            'estimated_duration_minutes' => $this->estimated_duration_minutes !== null
+                ? (int) $this->estimated_duration_minutes
+                : null,
             'accepted_at' => $this->accepted_at?->toIso8601String(),
             'technician_on_way_at' => $this->technician_on_way_at?->toIso8601String(),
             'arrived_at' => $this->arrived_at?->toIso8601String(),
+            'quote_accepted_at' => $this->quote_accepted_at?->toIso8601String(),
+            'invoice_accepted' => $this->quote_accepted_at !== null,
+            'can_pay_final' => $this->quote_accepted_at !== null
+                && $this->status?->value === 'waiting_customer_payment'
+                && $this->final_payment_status?->value !== 'paid',
+            'can_review' => $this->status?->value === 'completed',
             'started_at' => $this->started_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),

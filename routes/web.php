@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Company\AwaitingAcceptAlertController as CompanyAwaitingAcceptAlertController;
 use App\Http\Controllers\Company\CompanySettingsController;
 use App\Http\Controllers\Company\FeedbackTicketController as CompanyFeedbackTicketController;
 use App\Http\Controllers\Company\OrderController as CompanyOrderController;
@@ -15,6 +16,8 @@ use App\Http\Controllers\CompanyDashboardController;
 use App\Http\Controllers\CompanyProbeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\Platform\BannerController;
+use App\Http\Controllers\Platform\ContentPageController;
 use App\Http\Controllers\Platform\CustomerController as PlatformCustomerController;
 use App\Http\Controllers\Platform\InvoiceController as PlatformInvoiceController;
 use App\Http\Controllers\Platform\OrderController as PlatformOrderController;
@@ -24,8 +27,6 @@ use App\Http\Controllers\Platform\PlatformPortfolioProjectController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\PortfolioProjectReviewController as PlatformPortfolioProjectReviewController;
 use App\Http\Controllers\Platform\RoleController as PlatformRoleController;
-use App\Http\Controllers\Platform\BannerController;
-use App\Http\Controllers\Platform\ContentPageController;
 use App\Http\Controllers\Platform\ServiceCategoryController;
 use App\Http\Controllers\Platform\ServiceIntakeFieldController;
 use App\Http\Controllers\Platform\ServiceProblemController;
@@ -190,6 +191,7 @@ Route::middleware(['auth', 'verified', 'company.user', 'company.resolve'])->pref
 
     Route::get('reports/technicians', CompanyTechnicianReportController::class)->name('reports.technicians');
     Route::get('alerts/technician-delays', CompanyTechnicianDelayAlertController::class)->name('alerts.technician-delays');
+    Route::get('alerts/awaiting-accept', CompanyAwaitingAcceptAlertController::class)->name('alerts.awaiting-accept');
 
     Route::resource('orders', CompanyOrderController::class)->only(['index', 'show']);
     Route::post('orders/{order}/assign-technician', [CompanyOrderController::class, 'assignTechnician'])

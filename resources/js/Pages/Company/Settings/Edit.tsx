@@ -21,6 +21,7 @@ type CompanyProfileForm = {
 type SlaForm = {
     technician_accept_sla_minutes: string;
     technician_arrival_sla_minutes: string;
+    default_job_duration_minutes: string;
 };
 
 type Props = PageProps & {
@@ -44,12 +45,16 @@ type Props = PageProps & {
     sla: {
         technician_accept_sla_minutes: number | null;
         technician_arrival_sla_minutes: number | null;
+        default_job_duration_minutes: number | null;
         effective_accept_minutes: number;
         effective_arrival_minutes: number;
+        effective_job_duration_minutes: number;
         platform_accept_minutes: number;
         platform_arrival_minutes: number;
+        platform_job_duration_minutes: number;
         accept_overridden: boolean;
         arrival_overridden: boolean;
+        job_duration_overridden: boolean;
     };
 };
 
@@ -94,6 +99,8 @@ export default function CompanySettingsEdit({ company, sla }: Props) {
                 sla.technician_accept_sla_minutes !== null ? String(sla.technician_accept_sla_minutes) : '',
             technician_arrival_sla_minutes:
                 sla.technician_arrival_sla_minutes !== null ? String(sla.technician_arrival_sla_minutes) : '',
+            default_job_duration_minutes:
+                sla.default_job_duration_minutes !== null ? String(sla.default_job_duration_minutes) : '',
         },
     });
 
@@ -635,6 +642,49 @@ export default function CompanySettingsEdit({ company, sla }: Props) {
                                                     {sla.effective_arrival_minutes}{' '}
                                                     {__('dashboard.company_settings.sla_minutes')}
                                                     {sla.arrival_overridden
+                                                        ? ` (${__('dashboard.company_settings.sla_custom')})`
+                                                        : ` (${__('dashboard.company_settings.sla_from_platform')})`}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-6 mt-3">
+                                        <div className="form-group mb-0">
+                                            <label htmlFor="sla-job-duration" className="font-weight-bold">
+                                                {__('dashboard.company_settings.fields.default_job_duration_minutes.label')}
+                                            </label>
+                                            <div className="text-muted small mb-2">
+                                                {__(
+                                                    'dashboard.company_settings.fields.default_job_duration_minutes.description',
+                                                )}
+                                            </div>
+                                            <input
+                                                id="sla-job-duration"
+                                                name="sla.default_job_duration_minutes"
+                                                type="number"
+                                                min={1}
+                                                step={1}
+                                                className={`form-control ${getSlaError('default_job_duration_minutes') ? 'is-invalid' : ''}`}
+                                                value={data.sla.default_job_duration_minutes}
+                                                onChange={(e) => updateSla('default_job_duration_minutes', e.target.value)}
+                                                placeholder={String(sla.platform_job_duration_minutes)}
+                                                aria-label={__(
+                                                    'dashboard.company_settings.fields.default_job_duration_minutes.label',
+                                                )}
+                                                dir="ltr"
+                                                style={{ textAlign: isRtl ? 'right' : 'left' }}
+                                            />
+                                            {getSlaError('default_job_duration_minutes') ? (
+                                                <div className="invalid-feedback d-block">
+                                                    {getSlaError('default_job_duration_minutes')}
+                                                </div>
+                                            ) : (
+                                                <div className="small text-muted mt-1">
+                                                    {__('dashboard.company_settings.sla_effective')}:{' '}
+                                                    {sla.effective_job_duration_minutes}{' '}
+                                                    {__('dashboard.company_settings.sla_minutes')}
+                                                    {sla.job_duration_overridden
                                                         ? ` (${__('dashboard.company_settings.sla_custom')})`
                                                         : ` (${__('dashboard.company_settings.sla_from_platform')})`}
                                                 </div>

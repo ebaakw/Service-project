@@ -12,13 +12,19 @@ use App\Events\InvoicePaid;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Notifications\NewOrderForCompany;
+use App\Services\Orders\OrderAssignmentNotifier;
 use App\Services\Orders\OrderStateService;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class PaymentProcessingService
 {
     public function __construct(
         private readonly OrderStateService $orderStateService,
+        private readonly OrderAssignmentNotifier $orderAssignmentNotifier,
+        private readonly TechnicianQueueService $technicianQueueService,
     ) {}
 
     public function createInspectionPayment(Order $order): Payment
@@ -134,13 +140,23 @@ class PaymentProcessingService
 
         if ($order->technician_id !== null) {
             $this->orderStateService->transition($order, OrderStatus::Assigned, null, 'Technician pre-selected');
+            $assigned = $order->fresh(['technician', 'company']);
+            if ($assigned !== null) {
+                $this->technicianQueueService->enqueueAssignedOrder($assigned);
+            }
+            $this->orderAssignmentNotifier->notifyPaidAssignment($order->fresh());
         } else {
             $this->orderStateService->transition($order, OrderStatus::SearchingTechnician, null, 'Awaiting technician assignment');
+            NewOrderForCompany::notifyViewers($order->fresh());
         }
     }
 
     private function completeFinalSettlement(Order $order, Payment $payment): void
     {
+        if ($order->quote_accepted_at === null) {
+            throw new RuntimeException('Customer must accept the invoice before payment.');
+        }
+
         $order->forceFill([
             'final_payment_status' => PaymentStatus::Paid,
         ])->save();
@@ -155,6 +171,6 @@ class PaymentProcessingService
             ])->save();
         }
 
-        $this->orderStateService->transition($order, OrderStatus::Completed, null, 'Final invoice paid');
+        $this->orderStateService->transition($order, OrderStatus::Started, null, 'Final invoice paid — work may begin');
     }
 }

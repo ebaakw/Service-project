@@ -55,6 +55,7 @@ class UpdateCompanySettingsRequest extends FormRequest
             'sla' => ['nullable', 'array'],
             'sla.technician_accept_sla_minutes' => ['nullable', 'integer', 'min:1'],
             'sla.technician_arrival_sla_minutes' => ['nullable', 'integer', 'min:1'],
+            'sla.default_job_duration_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
         ];
     }
 }

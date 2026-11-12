@@ -8,6 +8,7 @@ use App\Enums\UserStatus;
 use App\Models\Customer;
 use App\Models\ServiceCategory;
 use App\Models\Technician;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Support\Collection;
 
 class AvailableTechnicianService
@@ -17,6 +18,10 @@ class AvailableTechnicianService
     public const FILTER_ALL = 'all';
 
     public const FILTER_FAVORITES = 'favorites';
+
+    public function __construct(
+        private readonly TechnicianQueueService $technicianQueueService,
+    ) {}
 
     /**
      * Technicians eligible for mobile booking: active company, active technician,
@@ -94,23 +99,25 @@ class AvailableTechnicianService
         });
 
         if ($lat === null || $lng === null) {
-            return $technicians->values();
+            return $this->withQueueSnapshots($technicians->values());
         }
 
-        return $technicians
-            ->map(function (Technician $t) use ($lat, $lng): Technician {
-                $d = $this->distanceKm(
-                    $lat,
-                    $lng,
-                    (float) $t->current_lat,
-                    (float) $t->current_lng,
-                );
-                $t->setAttribute('distance_km', round($d, 4));
+        return $this->withQueueSnapshots(
+            $technicians
+                ->map(function (Technician $t) use ($lat, $lng): Technician {
+                    $d = $this->distanceKm(
+                        $lat,
+                        $lng,
+                        (float) $t->current_lat,
+                        (float) $t->current_lng,
+                    );
+                    $t->setAttribute('distance_km', round($d, 4));
 
-                return $t;
-            })
-            ->sortBy(fn (Technician $t): float => (float) $t->distance_km)
-            ->values();
+                    return $t;
+                })
+                ->sortBy(fn (Technician $t): float => (float) $t->distance_km)
+                ->values()
+        );
     }
 
     /**
@@ -157,27 +164,55 @@ class AvailableTechnicianService
         });
 
         if ($lat === null || $lng === null) {
-            return $technicians->values();
+            return $this->withQueueSnapshots($technicians->values());
         }
 
-        return $technicians
-            ->map(function (Technician $t) use ($lat, $lng): Technician {
-                if ($t->current_lat === null || $t->current_lng === null) {
+        return $this->withQueueSnapshots(
+            $technicians
+                ->map(function (Technician $t) use ($lat, $lng): Technician {
+                    if ($t->current_lat === null || $t->current_lng === null) {
+                        return $t;
+                    }
+
+                    $d = $this->distanceKm(
+                        $lat,
+                        $lng,
+                        (float) $t->current_lat,
+                        (float) $t->current_lng,
+                    );
+                    $t->setAttribute('distance_km', round($d, 4));
+
                     return $t;
-                }
+                })
+                ->sortBy(fn (Technician $t): float => (float) ($t->distance_km ?? PHP_FLOAT_MAX))
+                ->values()
+        );
+    }
 
-                $d = $this->distanceKm(
-                    $lat,
-                    $lng,
-                    (float) $t->current_lat,
-                    (float) $t->current_lng,
-                );
-                $t->setAttribute('distance_km', round($d, 4));
+    /**
+     * @param  Collection<int, Technician>  $technicians
+     * @return Collection<int, Technician>
+     */
+    private function withQueueSnapshots(Collection $technicians): Collection
+    {
+        if ($technicians->isEmpty()) {
+            return $technicians;
+        }
 
-                return $t;
-            })
-            ->sortBy(fn (Technician $t): float => (float) ($t->distance_km ?? PHP_FLOAT_MAX))
-            ->values();
+        $snapshots = $this->technicianQueueService->snapshotsForMany($technicians);
+
+        return $technicians->map(function (Technician $technician) use ($snapshots): Technician {
+            $snapshot = $snapshots[(int) $technician->getKey()] ?? null;
+            if ($snapshot === null) {
+                return $technician;
+            }
+
+            $technician->setAttribute('queued_orders_count', $snapshot['queued_orders_count']);
+            $technician->setAttribute('estimated_wait_minutes', $snapshot['estimated_wait_minutes']);
+            $technician->setAttribute('estimated_wait_label', $snapshot['estimated_wait_label']);
+
+            return $technician;
+        })->values();
     }
 
     /**

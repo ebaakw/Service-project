@@ -13,6 +13,7 @@ use App\Models\ServiceCategory;
 use App\Models\ServiceProblem;
 use App\Models\Technician;
 use App\Services\Orders\InspectionFeeService;
+use App\Services\Orders\TechnicianQueueService;
 use App\Services\Settings\SettingsService;
 use App\Support\ArabicSearch;
 use Illuminate\Support\Collection;
@@ -24,6 +25,7 @@ class BookingPreviewService
         private readonly InspectionFeeService $inspectionFeeService,
         private readonly SettingsService $settingsService,
         private readonly AvailableTechnicianService $availableTechnicianService,
+        private readonly TechnicianQueueService $technicianQueueService,
     ) {}
 
     /**
@@ -34,7 +36,14 @@ class BookingPreviewService
      *     price_items: Collection<int, CompanyPriceItem>,
      *     inspection_fee: string,
      *     currency: string,
-     *     is_favorite: bool
+     *     is_favorite: bool,
+     *     queue: array{
+     *         queued_orders_count: int,
+     *         estimated_wait_minutes: int,
+     *         estimated_wait_label: string,
+     *         is_accepting_orders: bool,
+     *         estimated_job_duration_minutes: int
+     *     }
      * }
      */
     public function build(
@@ -139,6 +148,11 @@ class BookingPreviewService
         }
         $technician->setAttribute('is_favorite', $isFavorite);
 
+        $queue = $this->technicianQueueService->queueSnapshot($technician);
+        $technician->setAttribute('queued_orders_count', $queue['queued_orders_count']);
+        $technician->setAttribute('estimated_wait_minutes', $queue['estimated_wait_minutes']);
+        $technician->setAttribute('estimated_wait_label', $queue['estimated_wait_label']);
+
         $priceList = $this->resolvePriceList($company, $category);
         $priceItems = $this->resolvePriceItems($company, $category, $priceList, $search);
         $inspectionFee = $this->inspectionFeeService->resolve($company, $category, $problem);
@@ -152,6 +166,7 @@ class BookingPreviewService
             'inspection_fee' => $inspectionFee,
             'currency' => $currency,
             'is_favorite' => $isFavorite,
+            'queue' => $queue,
         ];
     }
 

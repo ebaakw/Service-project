@@ -7,6 +7,8 @@ type OrderPageProps = {
         id: number;
         order_number: string;
         status: string;
+        queue_position?: number | null;
+        estimated_duration_minutes?: number | null;
         inspection_fee: string;
         subtotal: string;
         total_amount: string;
@@ -132,6 +134,14 @@ export default function CompanyOrderShow({ order, inspectionPayment, technicians
                             <div>
                                 <dt className="text-xs uppercase text-gray-500">Technician</dt>
                                 <dd className="text-sm text-gray-900">{order.technician?.user.name ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs uppercase text-gray-500">Queue position</dt>
+                                <dd className="text-sm text-gray-900">{order.queue_position ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs uppercase text-gray-500">Estimated duration (min)</dt>
+                                <dd className="text-sm text-gray-900">{order.estimated_duration_minutes ?? '—'}</dd>
                             </div>
                             <div>
                                 <dt className="text-xs uppercase text-gray-500">Inspection fee</dt>

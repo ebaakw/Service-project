@@ -1,5 +1,8 @@
 export const TECHNICIAN_DELAY_SOUND_KEY = 'technician_delay_sound_enabled';
 
+let loopAudio = null;
+let loopTimer = null;
+
 export function isDelaySoundEnabled() {
     try {
         const raw = window.localStorage.getItem(TECHNICIAN_DELAY_SOUND_KEY);
@@ -18,6 +21,10 @@ export function setDelaySoundEnabled(enabled) {
     } catch {
         // ignore storage failures
     }
+
+    if (!enabled) {
+        stopLoopingAlertSound();
+    }
 }
 
 export function playDelayAlertSound() {
@@ -33,5 +40,57 @@ export function playDelayAlertSound() {
         });
     } catch {
         // ignore audio failures
+    }
+}
+
+export function startLoopingAlertSound(intervalMs = 4000) {
+    if (!isDelaySoundEnabled()) {
+        stopLoopingAlertSound();
+        return;
+    }
+
+    if (loopTimer !== null) {
+        return;
+    }
+
+    const playOnce = () => {
+        if (!isDelaySoundEnabled()) {
+            stopLoopingAlertSound();
+            return;
+        }
+
+        try {
+            if (loopAudio) {
+                loopAudio.pause();
+                loopAudio.currentTime = 0;
+            }
+            loopAudio = new Audio('/sounds/technician-delay-alert.wav');
+            loopAudio.volume = 0.7;
+            void loopAudio.play().catch(() => {
+                // ignore autoplay blocks
+            });
+        } catch {
+            // ignore audio failures
+        }
+    };
+
+    playOnce();
+    loopTimer = window.setInterval(playOnce, intervalMs);
+}
+
+export function stopLoopingAlertSound() {
+    if (loopTimer !== null) {
+        window.clearInterval(loopTimer);
+        loopTimer = null;
+    }
+
+    if (loopAudio) {
+        try {
+            loopAudio.pause();
+            loopAudio.currentTime = 0;
+        } catch {
+            // ignore
+        }
+        loopAudio = null;
     }
 }

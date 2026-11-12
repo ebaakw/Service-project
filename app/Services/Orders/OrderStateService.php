@@ -39,6 +39,11 @@ class OrderStateService
 
             $this->applyLifecycleTimestamps($order, $to, $context);
 
+            if (in_array($to, [OrderStatus::Completed, OrderStatus::Cancelled, OrderStatus::Expired], true)) {
+                $order->queue_position = null;
+                $order->estimated_duration_minutes = null;
+            }
+
             $order->status = $to;
             $order->save();
 
@@ -75,6 +80,11 @@ class OrderStateService
             }
 
             return false;
+        }
+
+        if ($to === OrderStatus::Started && $from === OrderStatus::WaitingCustomerPayment) {
+            return $order->final_payment_status === PaymentStatus::Paid
+                && $order->quote_accepted_at !== null;
         }
 
         if ($to === OrderStatus::Completed) {
@@ -131,14 +141,14 @@ class OrderStateService
                 OrderStatus::Cancelled,
             ],
             OrderStatus::Arrived->value => [
-                OrderStatus::Started,
-                OrderStatus::Cancelled,
-            ],
-            OrderStatus::Started->value => [
                 OrderStatus::WaitingCustomerPayment,
                 OrderStatus::Cancelled,
             ],
             OrderStatus::WaitingCustomerPayment->value => [
+                OrderStatus::Started,
+                OrderStatus::Cancelled,
+            ],
+            OrderStatus::Started->value => [
                 OrderStatus::Completed,
                 OrderStatus::Cancelled,
             ],

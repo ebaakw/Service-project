@@ -50,6 +50,7 @@ class TechnicianOrderValidator
     {
         $this->assertMatchesCompany($technician, $order);
         $this->assertApprovedActive($technician);
+        $this->assertAcceptingOrders($technician);
 
         $category = $order->serviceCategory;
         if ($category === null) {
@@ -59,5 +60,14 @@ class TechnicianOrderValidator
         }
 
         $this->assertHasServiceCategory($technician, $category);
+    }
+
+    public function assertAcceptingOrders(Technician $technician): void
+    {
+        if (! $technician->is_accepting_orders) {
+            throw ValidationException::withMessages([
+                'technician_id' => __('orders.queue.technician_not_accepting'),
+            ]);
+        }
     }
 }

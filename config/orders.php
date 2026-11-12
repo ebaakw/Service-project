@@ -31,4 +31,18 @@ return [
     */
     'fake_payment_base_url' => env('ORDERS_FAKE_PAYMENT_BASE_URL', 'https://pay.fake.test'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Technician demo/review login (App Store / Play Store reviewers).
+    |--------------------------------------------------------------------------
+    */
+    'technician_demo_login_enabled' => env(
+        'TECHNICIAN_DEMO_LOGIN_ENABLED',
+        env('APP_ENV') === 'local' || env('APP_ENV') === 'testing'
+    ),
+
+    'technician_demo_email' => env('TECHNICIAN_DEMO_EMAIL', 'technician-demo@example.test'),
+
+    'technician_demo_password' => env('TECHNICIAN_DEMO_PASSWORD', 'password'),
+
 ];

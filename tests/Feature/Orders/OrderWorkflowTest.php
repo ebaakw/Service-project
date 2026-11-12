@@ -9,7 +9,6 @@ use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Enums\SubscriptionStatus;
 use App\Enums\UserStatus;
-use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\CompanyMember;
 use App\Models\CompanyPriceItem;
@@ -22,6 +21,7 @@ use App\Models\Role;
 use App\Models\ServiceCategory;
 use App\Models\Technician;
 use App\Models\User;
+use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -48,7 +48,7 @@ class OrderWorkflowTest extends TestCase
 
     public function test_customer_can_create_order_and_company_and_fee_are_derived_from_technician(): void
     {
-        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(PermissionSeeder::class);
 
         $company = Company::factory()->create([
             'status' => CompanyStatus::Active,
@@ -103,7 +103,7 @@ class OrderWorkflowTest extends TestCase
 
     public function test_customer_can_pay_inspection_and_order_advances(): void
     {
-        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(PermissionSeeder::class);
 
         $company = Company::factory()->create([
             'status' => CompanyStatus::Active,
@@ -159,7 +159,7 @@ class OrderWorkflowTest extends TestCase
 
     public function test_company_can_assign_technician_while_searching(): void
     {
-        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(PermissionSeeder::class);
 
         $company = Company::factory()->create([
             'status' => CompanyStatus::Active,
@@ -212,7 +212,7 @@ class OrderWorkflowTest extends TestCase
 
     public function test_technician_can_add_items_and_invoice_syncs(): void
     {
-        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(PermissionSeeder::class);
 
         $company = Company::factory()->create([
             'status' => CompanyStatus::Active,
@@ -238,7 +238,7 @@ class OrderWorkflowTest extends TestCase
             'customer_address_id' => $address->getKey(),
             'service_category_id' => $category->getKey(),
             'technician_id' => $technician->getKey(),
-            'status' => OrderStatus::Started,
+            'status' => OrderStatus::Arrived,
             'inspection_payment_status' => PaymentStatus::Paid,
             'final_payment_status' => PaymentStatus::Pending,
         ]);
@@ -265,7 +265,7 @@ class OrderWorkflowTest extends TestCase
 
     public function test_company_can_generate_final_invoice_payment_link(): void
     {
-        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(PermissionSeeder::class);
 
         $company = Company::factory()->create([
             'status' => CompanyStatus::Active,
@@ -292,7 +292,7 @@ class OrderWorkflowTest extends TestCase
             'customer_address_id' => $address->getKey(),
             'service_category_id' => $category->getKey(),
             'technician_id' => $technician->getKey(),
-            'status' => OrderStatus::Started,
+            'status' => OrderStatus::Arrived,
             'inspection_payment_status' => PaymentStatus::Paid,
             'final_payment_status' => PaymentStatus::Pending,
         ]);
@@ -325,7 +325,7 @@ class OrderWorkflowTest extends TestCase
 
     public function test_company_users_cannot_access_other_company_orders(): void
     {
-        $this->seed(\Database\Seeders\PermissionSeeder::class);
+        $this->seed(PermissionSeeder::class);
 
         $companyA = Company::factory()->create([
             'status' => CompanyStatus::Active,

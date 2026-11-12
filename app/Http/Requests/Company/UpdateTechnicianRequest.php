@@ -21,7 +21,7 @@ class UpdateTechnicianRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $merge = [];
-        foreach (['email', 'phone'] as $key) {
+        foreach (['email', 'phone', 'estimated_job_duration_minutes'] as $key) {
             if ($this->input($key) === '') {
                 $merge[$key] = null;
             }
@@ -84,6 +84,8 @@ class UpdateTechnicianRequest extends FormRequest
             'job_title_ar' => ['nullable', 'string', 'max:255'],
             'job_title_en' => ['nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'is_accepting_orders' => ['sometimes', 'boolean'],
+            'estimated_job_duration_minutes' => ['nullable', 'integer', 'min:1', 'max:10080'],
             'service_category_ids' => ['nullable', 'array'],
             'service_category_ids.*' => ['integer', Rule::exists('service_categories', 'id')->where('is_active', true)],
         ];

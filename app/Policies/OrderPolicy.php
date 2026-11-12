@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\OrderOffer;
 use App\Models\User;
@@ -108,7 +109,31 @@ class OrderPolicy
 
     public function sendFinalInvoice(User $user, Order $order): bool
     {
-        return $this->manage($user, $order);
+        if ($this->manage($user, $order)) {
+            return true;
+        }
+
+        if (! $user->isTechnician()) {
+            return false;
+        }
+
+        $technician = $user->technician;
+        if ($technician === null) {
+            return false;
+        }
+
+        return (int) $order->technician_id === (int) $technician->getKey()
+            && $order->inspection_payment_status === PaymentStatus::Paid;
+    }
+
+    public function acceptInvoice(User $user, Order $order): bool
+    {
+        return $user->isCustomer() && $this->ownsCustomerOrder($user, $order);
+    }
+
+    public function review(User $user, Order $order): bool
+    {
+        return $user->isCustomer() && $this->ownsCustomerOrder($user, $order);
     }
 
     private function sameCompany(User $user, Order $order): bool
@@ -132,6 +157,10 @@ class OrderPolicy
             return false;
         }
 
+        if ($order->inspection_payment_status !== PaymentStatus::Paid) {
+            return false;
+        }
+
         if ((int) $order->technician_id === (int) $technician->getKey()) {
             return true;
         }
@@ -142,4 +171,3 @@ class OrderPolicy
             ->exists();
     }
 }
-

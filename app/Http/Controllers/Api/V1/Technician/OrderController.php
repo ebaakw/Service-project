@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Technician;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Technician\UpdateOrderStatusRequest;
 use App\Http\Resources\Api\V1\OrderResource;
@@ -11,6 +12,7 @@ use App\Models\OrderOffer;
 use App\Services\Orders\OrderStateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -29,6 +31,7 @@ class OrderController extends Controller
         abort_if($technicianId === null, 403);
 
         $orders = Order::query()
+            ->where('inspection_payment_status', PaymentStatus::Paid)
             ->where(function ($q) use ($technicianId): void {
                 $q->where('technician_id', $technicianId)
                     ->orWhereIn('id', OrderOffer::query()
@@ -36,6 +39,9 @@ class OrderController extends Controller
                         ->select('order_id'));
             })
             ->with(['company', 'customer.user', 'serviceCategory'])
+            ->orderByRaw('queue_position is null')
+            ->orderBy('queue_position')
+            ->orderBy('assigned_at')
             ->orderByDesc('id')
             ->paginate(20);
 
@@ -77,6 +83,13 @@ class OrderController extends Controller
 
         $context = [];
         if ($to === OrderStatus::Cancelled) {
+            $technician = $user->technician;
+            if ($technician !== null && $technician->is_accepting_orders) {
+                throw ValidationException::withMessages([
+                    'status' => __('orders.queue.reject_blocked_while_accepting'),
+                ]);
+            }
+
             $context['cancellation_reason'] = $validated['cancellation_reason'] ?? null;
         }
 

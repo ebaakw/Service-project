@@ -45,6 +45,8 @@ class TechnicianFactory extends Factory
             'job_title_ar' => $job,
             'job_title_en' => $job,
             'availability_status' => TechnicianAvailabilityStatus::Offline,
+            'is_accepting_orders' => true,
+            'estimated_job_duration_minutes' => null,
             'current_lat' => null,
             'current_lng' => null,
             'last_location_at' => null,

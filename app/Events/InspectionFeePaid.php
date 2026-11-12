@@ -16,17 +16,23 @@ class InspectionFeePaid implements ShouldBroadcast
     public function __construct(public Order $order) {}
 
     /**
-     * @return array<int, \Illuminate\Broadcasting\PrivateChannel>
+     * @return array<int, PrivateChannel>
      */
     public function broadcastOn(): array
     {
         $order = $this->order;
 
-        return [
+        $channels = [
             new PrivateChannel('company.'.$order->company_id),
             new PrivateChannel('customer.'.$order->customer_id),
             new PrivateChannel('order.'.$order->getKey()),
         ];
+
+        if ($order->technician_id !== null) {
+            $channels[] = new PrivateChannel('technician.'.$order->technician_id);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string

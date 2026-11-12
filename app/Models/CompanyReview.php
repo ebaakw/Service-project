@@ -17,6 +17,8 @@ class CompanyReview extends Model
     protected $fillable = [
         'company_id',
         'customer_id',
+        'order_id',
+        'technician_id',
         'rating',
         'author_name',
         'comment',
@@ -48,6 +50,16 @@ class CompanyReview extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function technician(): BelongsTo
+    {
+        return $this->belongsTo(Technician::class);
     }
 
     public function media(): MorphMany

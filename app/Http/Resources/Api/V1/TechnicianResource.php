@@ -32,6 +32,13 @@ class TechnicianResource extends JsonResource
             'display_job_title' => $this->localized('job_title'),
             'availability_status' => $this->availability_status?->value,
             'availability_status_label' => $this->availability_status?->label(),
+            'is_accepting_orders' => (bool) $this->is_accepting_orders,
+            'estimated_job_duration_minutes' => $this->estimated_job_duration_minutes !== null
+                ? (int) $this->estimated_job_duration_minutes
+                : null,
+            'queued_orders_count' => (int) ($this->queued_orders_count ?? 0),
+            'estimated_wait_minutes' => (int) ($this->estimated_wait_minutes ?? 0),
+            'estimated_wait_label' => $this->estimated_wait_label ?? null,
             'avatar_url' => $avatarUrl,
             'current_lat' => $this->current_lat !== null ? (float) $this->current_lat : null,
             'current_lng' => $this->current_lng !== null ? (float) $this->current_lng : null,

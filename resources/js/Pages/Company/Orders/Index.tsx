@@ -14,6 +14,8 @@ type OrderRow = {
     id: number;
     order_number: string;
     status: string;
+    queue_position?: number | null;
+    estimated_duration_minutes?: number | null;
     inspection_payment_status: string;
     final_payment_status: string;
     created_at: string | null;
@@ -245,6 +247,14 @@ export default function CompanyOrdersIndex({
                     </StatusBadge>
                 ),
                 searchText: (r) => `${statusLabels[r.status] ?? ''} ${r.status}`.trim(),
+            },
+            {
+                id: 'queue_position',
+                key: 'queue_position',
+                label: t.col_queue_position ?? 'Queue #',
+                header: t.col_queue_position ?? 'Queue #',
+                render: (r) => <span dir="ltr">{r.queue_position ?? '—'}</span>,
+                searchText: (r) => (r.queue_position != null ? String(r.queue_position) : ''),
             },
             {
                 id: 'inspection_payment_status',

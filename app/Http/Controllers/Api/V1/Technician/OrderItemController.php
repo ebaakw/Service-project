@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1\Technician;
 
-use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -18,7 +17,7 @@ class OrderItemController extends Controller
 
         $this->authorize('manageItemsTechnician', $order);
 
-        abort_unless($order->status === OrderStatus::Started, 422, 'Items can only be added while the order is started.');
+        abort_unless($order->allowsQuoteItemEdits(), 422, 'Items can only be added after arrival and before the customer accepts the invoice.');
 
         $validated = $request->validate([
             'company_price_item_id' => ['nullable', 'integer', 'exists:company_price_items,id'],
@@ -60,7 +59,7 @@ class OrderItemController extends Controller
         $this->authorize('manageItemsTechnician', $order);
 
         abort_if($item->order_id !== $order->getKey(), 404);
-        abort_unless($order->status === OrderStatus::Started, 422);
+        abort_unless($order->allowsQuoteItemEdits(), 422);
 
         $validated = $request->validate([
             'name_ar' => ['sometimes', 'string', 'max:255'],
@@ -91,7 +90,7 @@ class OrderItemController extends Controller
         $this->authorize('manageItemsTechnician', $order);
 
         abort_if($item->order_id !== $order->getKey(), 404);
-        abort_unless($order->status === OrderStatus::Started, 422);
+        abort_unless($order->allowsQuoteItemEdits(), 422);
 
         $item->delete();
 

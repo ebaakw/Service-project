@@ -43,6 +43,8 @@ class OrderFactory extends Factory
             'scheduled_at' => null,
             'inspection_paid_at' => null,
             'assigned_at' => null,
+            'queue_position' => null,
+            'estimated_duration_minutes' => null,
             'accepted_at' => null,
             'technician_on_way_at' => null,
             'arrived_at' => null,

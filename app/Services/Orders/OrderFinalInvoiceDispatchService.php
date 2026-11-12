@@ -4,6 +4,7 @@ namespace App\Services\Orders;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Events\InvoiceCreated;
 use App\Models\Invoice;
 use App\Models\Order;
@@ -32,8 +33,12 @@ class OrderFinalInvoiceDispatchService
         return DB::transaction(function () use ($order, $actor, $options): Invoice {
             $order->loadMissing(['company', 'items']);
 
-            if ($order->status !== OrderStatus::Started) {
-                throw new AuthorizationException('Invoice can only be sent after the order has been started.');
+            if ($order->status !== OrderStatus::Arrived) {
+                throw new AuthorizationException('Invoice can only be sent after the technician has arrived.');
+            }
+
+            if ($order->inspection_payment_status !== PaymentStatus::Paid) {
+                throw new AuthorizationException('Inspection fee must be paid before sending the final invoice.');
             }
 
             $hasItems = $order->items()->exists();

@@ -25,6 +25,13 @@ class CompanySettingsController extends Controller
 
         $acceptOverride = $settings->getCompanyRaw($company, 'technician_accept_sla_minutes');
         $arrivalOverride = $settings->getCompanyRaw($company, 'technician_arrival_sla_minutes');
+        $jobDurationOverride = $settings->getCompanyRaw($company, 'default_job_duration_minutes');
+        $platformJobDuration = (int) $settings->getGlobal('default_job_duration_minutes', 60);
+        $effectiveJobDuration = (int) $settings->getForCompany(
+            'default_job_duration_minutes',
+            $company,
+            $platformJobDuration > 0 ? $platformJobDuration : 60
+        );
 
         return Inertia::render('Company/Settings/Edit', [
             'company' => [
@@ -51,12 +58,16 @@ class CompanySettingsController extends Controller
             'sla' => [
                 'technician_accept_sla_minutes' => $acceptOverride !== null ? (int) $acceptOverride : null,
                 'technician_arrival_sla_minutes' => $arrivalOverride !== null ? (int) $arrivalOverride : null,
+                'default_job_duration_minutes' => $jobDurationOverride !== null ? (int) $jobDurationOverride : null,
                 'effective_accept_minutes' => $sla->acceptSlaMinutes($company),
                 'effective_arrival_minutes' => $sla->arrivalSlaMinutes($company),
+                'effective_job_duration_minutes' => $effectiveJobDuration > 0 ? $effectiveJobDuration : 60,
                 'platform_accept_minutes' => $sla->acceptSlaMinutes(null),
                 'platform_arrival_minutes' => $sla->arrivalSlaMinutes(null),
+                'platform_job_duration_minutes' => $platformJobDuration > 0 ? $platformJobDuration : 60,
                 'accept_overridden' => $settings->companyHasOverride($company, 'technician_accept_sla_minutes'),
                 'arrival_overridden' => $settings->companyHasOverride($company, 'technician_arrival_sla_minutes'),
+                'job_duration_overridden' => $settings->companyHasOverride($company, 'default_job_duration_minutes'),
             ],
         ]);
     }
@@ -90,6 +101,13 @@ class CompanySettingsController extends Controller
             'technician_arrival_sla_minutes',
             $slaInput['technician_arrival_sla_minutes'] ?? null,
             'Minutes allowed for technician to arrive after acceptance'
+        );
+        $this->persistCompanySla(
+            $settings,
+            $company,
+            'default_job_duration_minutes',
+            $slaInput['default_job_duration_minutes'] ?? null,
+            'Default estimated job duration in minutes for technician queue wait estimates'
         );
 
         return redirect()

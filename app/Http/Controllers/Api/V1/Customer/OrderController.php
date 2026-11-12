@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Customer;
 
+use App\Enums\FeedbackPriority;
+use App\Enums\FeedbackTicketStatus;
+use App\Enums\FeedbackTicketType;
 use App\Enums\OrderStatus;
 use App\Events\OrderCreated;
 use App\Http\Controllers\Controller;
@@ -9,12 +12,13 @@ use App\Http\Requests\Api\V1\Customer\StoreOrderRequest;
 use App\Http\Resources\Api\V1\InvoiceResource;
 use App\Http\Resources\Api\V1\OrderResource;
 use App\Http\Resources\Api\V1\PaymentResource;
-use App\Models\CustomerAddress;
+use App\Models\Company;
+use App\Models\CompanyReview;
+use App\Models\FeedbackTicket;
 use App\Models\Order;
 use App\Models\ServiceCategory;
 use App\Models\ServiceProblem;
 use App\Models\Technician;
-use App\Notifications\NewOrderForCompany;
 use App\Services\Orders\InspectionFeeService;
 use App\Services\Orders\OrderNumberGenerator;
 use App\Services\Orders\OrderStateService;
@@ -24,6 +28,7 @@ use App\Services\Payments\PaymentProcessingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -74,6 +79,8 @@ class OrderController extends Controller
         $technician = Technician::query()->findOrFail($validated['technician_id']);
         $category = ServiceCategory::query()->findOrFail($validated['service_category_id']);
 
+        $this->technicianOrderValidator->assertApprovedActive($technician);
+        $this->technicianOrderValidator->assertAcceptingOrders($technician);
         $this->technicianOrderValidator->assertHasServiceCategory($technician, $category);
 
         $problem = isset($validated['service_problem_id'])
@@ -120,7 +127,6 @@ class OrderController extends Controller
         [$order, $payment] = $payload;
 
         event(new OrderCreated($order));
-        NewOrderForCompany::notifyViewers($order);
 
         $order->load(['company', 'technician.user', 'serviceCategory']);
 
@@ -190,12 +196,179 @@ class OrderController extends Controller
 
         $this->authorize('view', $order);
 
+        abort_if(
+            $order->quote_accepted_at === null,
+            422,
+            'Accept the invoice before paying.'
+        );
+
         $this->fakePaymentService->completeFinal($order, $user);
 
         $order->refresh()->load(['payments']);
 
         return response()->json([
             'order' => new OrderResource($order),
+        ]);
+    }
+
+    public function acceptInvoice(Request $request, Order $order): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null && $user->isCustomer(), 403);
+
+        $this->authorize('acceptInvoice', $order);
+
+        abort_unless(
+            $order->status === OrderStatus::WaitingCustomerPayment,
+            422,
+            'Invoice can only be accepted while awaiting customer payment.'
+        );
+
+        abort_if($order->quote_accepted_at !== null, 422, 'Invoice already accepted.');
+
+        $invoice = $order->invoices()->latest('id')->first();
+        abort_if($invoice === null, 404, 'Invoice not found.');
+
+        $order->forceFill(['quote_accepted_at' => now()])->save();
+
+        $order->refresh()->load([
+            'company',
+            'technician.user',
+            'serviceCategory',
+            'items',
+            'payments',
+        ]);
+
+        return response()->json([
+            'order' => new OrderResource($order),
+            'invoice' => new InvoiceResource($invoice),
+        ]);
+    }
+
+    public function contactCompany(Request $request, Order $order): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null && $user->isCustomer(), 403);
+
+        $this->authorize('view', $order);
+
+        $customer = $user->customerProfile;
+        abort_if($customer === null, 403);
+
+        $validated = $request->validate([
+            'subject' => ['nullable', 'string', 'max:255'],
+            'message' => ['required', 'string', 'max:10000'],
+        ]);
+
+        $ticket = FeedbackTicket::query()->create([
+            'customer_id' => $customer->getKey(),
+            'company_id' => $order->company_id,
+            'order_id' => $order->getKey(),
+            'type' => FeedbackTicketType::Complaint,
+            'subject' => $validated['subject'] ?? 'استفسار عن فاتورة الطلب '.$order->order_number,
+            'message' => $validated['message'],
+            'status' => FeedbackTicketStatus::Open,
+            'priority' => FeedbackPriority::Normal,
+        ]);
+
+        $order->loadMissing('company');
+
+        return response()->json([
+            'ticket' => [
+                'ulid' => $ticket->ulid,
+                'status' => $ticket->status->value,
+            ],
+            'company_contact' => [
+                'phone' => $order->company?->phone,
+                'contacts' => $order->company?->contacts,
+            ],
+        ], 201);
+    }
+
+    public function review(Request $request, Order $order): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null && $user->isCustomer(), 403);
+
+        $this->authorize('review', $order);
+
+        abort_unless(
+            $order->status === OrderStatus::Completed,
+            422,
+            'Order can only be reviewed after completion.'
+        );
+
+        if (CompanyReview::query()->where('order_id', $order->getKey())->exists()) {
+            throw ValidationException::withMessages([
+                'order_id' => ['This order was already reviewed.'],
+            ]);
+        }
+
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'comment' => ['nullable', 'string', 'max:5000'],
+            'comment_ar' => ['nullable', 'string', 'max:5000'],
+            'comment_en' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $customer = $user->customerProfile;
+        abort_if($customer === null, 403);
+
+        $commentAr = $validated['comment_ar'] ?? $validated['comment'] ?? null;
+        $commentEn = $validated['comment_en'] ?? $validated['comment'] ?? null;
+
+        $review = CompanyReview::query()->create([
+            'company_id' => $order->company_id,
+            'customer_id' => $customer->getKey(),
+            'order_id' => $order->getKey(),
+            'technician_id' => $order->technician_id,
+            'rating' => (int) $validated['rating'],
+            'author_name' => $user->name,
+            'comment_ar' => $commentAr,
+            'comment_en' => $commentEn,
+            'is_published' => true,
+        ]);
+
+        $this->recalculateCompanyRating($order->company_id);
+        if ($order->technician_id !== null) {
+            $this->recalculateTechnicianRating((int) $order->technician_id);
+        }
+
+        return response()->json([
+            'review' => [
+                'id' => $review->getKey(),
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'order_id' => $review->order_id,
+            ],
+        ], 201);
+    }
+
+    private function recalculateCompanyRating(int $companyId): void
+    {
+        $stats = CompanyReview::query()
+            ->where('company_id', $companyId)
+            ->where('is_published', true)
+            ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as rating_count')
+            ->first();
+
+        Company::query()->whereKey($companyId)->update([
+            'rating_average' => $stats?->avg_rating !== null ? round((float) $stats->avg_rating, 2) : null,
+            'rating_count' => (int) ($stats?->rating_count ?? 0),
+        ]);
+    }
+
+    private function recalculateTechnicianRating(int $technicianId): void
+    {
+        $stats = CompanyReview::query()
+            ->where('technician_id', $technicianId)
+            ->where('is_published', true)
+            ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as rating_count')
+            ->first();
+
+        Technician::query()->whereKey($technicianId)->update([
+            'rating_average' => $stats?->avg_rating !== null ? round((float) $stats->avg_rating, 2) : null,
+            'rating_count' => (int) ($stats?->rating_count ?? 0),
         ]);
     }
 }

@@ -1956,7 +1956,7 @@
                 }
               ]
             },
-            "description": "Auth-optional (except filter=favorites → 401 without token). Returns TechnicianResource with rating_*, availability_status, distance_km, is_favorite, user.avatar_url, company.logo_url + active_discount_*. No ETA from server — mobile derives minutes from distance_km.",
+            "description": "Auth-optional (except filter=favorites → 401 without token). Returns TechnicianResource with rating_*, availability_status, distance_km, is_favorite, user.avatar_url, company.logo_url + active_discount_*. No ETA from server — mobile derives minutes from distance_km.\n\nEach technician includes: is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label. Use filter=all to browse busy technicians and show queue wait before booking.",
             "auth": {
               "type": "noauth"
             }
@@ -2022,7 +2022,7 @@
                 }
               ]
             },
-            "description": "Auth-optional guest screen for technician card + company offer + searchable price list + inspection fee CTA.\n\nResponse `data`:\n- `technician` — TechnicianResource (display_name, rating_*, availability_status, distance_km, user.avatar_url, is_favorite)\n- `company` — CompanyResource (display_name, logo_url, offer_text, active_discount_type/value)\n- `price_list` — active/default list meta (nullable)\n- `price_items[]` — display_name, price, discounted_price, currency, duration_minutes\n- `inspection_fee` — resolved fee string (demo seed = 5.000)\n- `currency` — e.g. KWD\n- `is_favorite` — false for guests; real value when customer Bearer present\n\nNo ETA from API — derive arrival minutes from `distance_km` on mobile.\nPay inspection / create order still require `Authorization: Bearer {{customer_token}}`.",
+            "description": "Auth-optional guest screen for technician card + company offer + searchable price list + inspection fee CTA.\n\nResponse `data`:\n- `technician` — TechnicianResource including is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label\n- `company` — CompanyResource\n- `price_list` / `price_items[]`\n- `inspection_fee`, `currency`, `is_favorite`\n- `queue` — {queued_orders_count, estimated_wait_minutes, estimated_wait_label, is_accepting_orders, estimated_job_duration_minutes}\n\nShow wait copy like: '3 orders in queue — you will wait about 2 hours' using queue fields.\nCreate order blocked when is_accepting_orders=false.",
             "auth": {
               "type": "noauth"
             }
@@ -3317,6 +3317,48 @@
                 }
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Update job preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_accepting_orders\": true,\n  \"estimated_job_duration_minutes\": 90\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/technician/job-preferences",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "technician",
+                "job-preferences"
+              ]
+            },
+            "description": "is_accepting_orders + estimated_job_duration_minutes. While accepting orders, cancel/reject of assigned orders is blocked."
           },
           "response": []
         }

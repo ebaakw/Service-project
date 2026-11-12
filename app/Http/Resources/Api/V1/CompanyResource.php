@@ -69,6 +69,8 @@ class CompanyResource extends JsonResource
             'default_inspection_fee' => $this->default_inspection_fee !== null
                 ? (string) $this->default_inspection_fee
                 : null,
+            'phone' => $this->phone,
+            'contacts' => $this->contacts,
         ];
     }
 

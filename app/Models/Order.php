@@ -47,10 +47,13 @@ class Order extends Model
         'scheduled_at',
         'inspection_paid_at',
         'assigned_at',
+        'queue_position',
+        'estimated_duration_minutes',
         'accept_sla_breached_at',
         'accepted_at',
         'technician_on_way_at',
         'arrived_at',
+        'quote_accepted_at',
         'arrival_sla_breached_at',
         'started_at',
         'completed_at',
@@ -71,15 +74,29 @@ class Order extends Model
             'scheduled_at' => 'datetime',
             'inspection_paid_at' => 'datetime',
             'assigned_at' => 'datetime',
+            'queue_position' => 'integer',
+            'estimated_duration_minutes' => 'integer',
             'accept_sla_breached_at' => 'datetime',
             'accepted_at' => 'datetime',
             'technician_on_way_at' => 'datetime',
             'arrived_at' => 'datetime',
+            'quote_accepted_at' => 'datetime',
             'arrival_sla_breached_at' => 'datetime',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    public function allowsQuoteItemEdits(): bool
+    {
+        if ($this->status === OrderStatus::Arrived) {
+            return true;
+        }
+
+        return $this->status === OrderStatus::WaitingCustomerPayment
+            && $this->final_payment_status !== PaymentStatus::Paid
+            && $this->quote_accepted_at === null;
     }
 
     public function company(): BelongsTo

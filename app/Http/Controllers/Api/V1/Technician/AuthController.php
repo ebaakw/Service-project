@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\Technician\LoginRequest;
 use App\Http\Resources\Api\V1\TechnicianResource;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,10 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly TechnicianQueueService $technicianQueueService,
+    ) {}
+
     public function login(LoginRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -31,6 +36,34 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
+
+        return $this->issueTechnicianToken($user);
+    }
+
+    public function demoLogin(): JsonResponse
+    {
+        abort_unless((bool) config('orders.technician_demo_login_enabled'), 404);
+
+        $email = (string) config('orders.technician_demo_email');
+        $password = (string) config('orders.technician_demo_password');
+
+        if (! Auth::attempt([
+            'email' => $email,
+            'password' => $password,
+        ])) {
+            throw ValidationException::withMessages([
+                'email' => [__('auth.failed')],
+            ]);
+        }
+
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $this->issueTechnicianToken($user);
+    }
+
+    private function issueTechnicianToken(User $user): JsonResponse
+    {
         abort_unless($user->isTechnician(), 403);
 
         $user->load('technician.company');
@@ -51,11 +84,16 @@ class AuthController extends Controller
 
         $token = $user->createToken('mobile-technician', ['technician'])->plainTextToken;
 
+        $technician = $user->technician;
+        if ($technician !== null) {
+            $this->technicianQueueService->attachSnapshotAttributes($technician);
+        }
+
         return response()->json([
             'token' => $token,
             'token_type' => 'Bearer',
             'user' => new UserResource($user),
-            'technician' => new TechnicianResource($user->technician),
+            'technician' => new TechnicianResource($technician),
         ]);
     }
 
@@ -75,9 +113,11 @@ class AuthController extends Controller
             403
         );
 
+        $this->technicianQueueService->attachSnapshotAttributes($technician);
+
         return response()->json([
             'user' => new UserResource($user),
-            'technician' => new TechnicianResource($user->technician),
+            'technician' => new TechnicianResource($technician),
         ]);
     }
 

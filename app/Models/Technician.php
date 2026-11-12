@@ -41,6 +41,8 @@ class Technician extends Model
         'job_title_ar',
         'job_title_en',
         'availability_status',
+        'is_accepting_orders',
+        'estimated_job_duration_minutes',
         'current_lat',
         'current_lng',
         'last_location_at',
@@ -120,6 +122,8 @@ class Technician extends Model
     {
         return [
             'availability_status' => TechnicianAvailabilityStatus::class,
+            'is_accepting_orders' => 'boolean',
+            'estimated_job_duration_minutes' => 'integer',
             'current_lat' => 'decimal:7',
             'current_lng' => 'decimal:7',
             'last_location_at' => 'datetime',

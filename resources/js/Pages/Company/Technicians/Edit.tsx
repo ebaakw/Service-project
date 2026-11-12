@@ -6,6 +6,7 @@ import { submitMultipartUpdate } from '@/Utility/submitMultipartUpdate';
 import type { PageProps } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import '@/Components/Core/css/switch.css';
 
 function safeObjectUrl(file: File | null): string | null {
     try {
@@ -38,6 +39,8 @@ type TechnicianPayload = {
     is_active: boolean;
     availability_status?: string | null;
     availability_status_label?: string | null;
+    is_accepting_orders?: boolean;
+    estimated_job_duration_minutes?: number | null;
     review_status?: string | null;
     rejection_reason?: string | null;
     pending_changes?: Record<string, unknown> | null;
@@ -81,6 +84,11 @@ export default function CompanyTechniciansEdit({
         bio_en: technician.bio_en ?? '',
         job_title_ar: technician.job_title_ar ?? '',
         job_title_en: technician.job_title_en ?? '',
+        is_accepting_orders: technician.is_accepting_orders ?? true,
+        estimated_job_duration_minutes:
+            technician.estimated_job_duration_minutes !== null && technician.estimated_job_duration_minutes !== undefined
+                ? String(technician.estimated_job_duration_minutes)
+                : '',
         service_category_ids: technician.service_category_ids,
     });
 
@@ -221,6 +229,15 @@ export default function CompanyTechniciansEdit({
             return;
         }
 
+        transform((payload) => ({
+            ...payload,
+            estimated_job_duration_minutes:
+                String(payload.estimated_job_duration_minutes ?? '').trim() === ''
+                    ? null
+                    : Number(payload.estimated_job_duration_minutes),
+            is_accepting_orders: Boolean(payload.is_accepting_orders),
+        }));
+
         submitMultipartUpdate(
             { transform, post },
             route('company.technicians.update', technician.id),
@@ -320,6 +337,16 @@ export default function CompanyTechniciansEdit({
                             <div className="col-md-4 mb-3">
                                 <div className="text-muted small">{__('tenant.technicians.availability')}</div>
                                 <div>{technician.availability_status_label ?? technician.availability_status ?? '—'}</div>
+                            </div>
+                            <div className="col-md-4 mb-3">
+                                <div className="text-muted small">{__('tenant.technicians.accepting_orders')}</div>
+                                <div>
+                                    {technician.is_accepting_orders ? (
+                                        <StatusBadge variant="success">{__('tenant.yes')}</StatusBadge>
+                                    ) : (
+                                        <StatusBadge variant="secondary">{__('tenant.no')}</StatusBadge>
+                                    )}
+                                </div>
                             </div>
                             <div className="col-md-4 mb-3">
                                 <div className="text-muted small">{__('tenant.technicians.companySection')}</div>
@@ -586,7 +613,41 @@ export default function CompanyTechniciansEdit({
                                     />
                                 </div>
                             </div>
-                            <div className="col-md-6" />
+                            <div className="col-md-6">
+                                <div className="form-group">
+                                    <input
+                                        className="form-control"
+                                        type="number"
+                                        min={1}
+                                        step={1}
+                                        placeholder={__('tenant.technicians.estimated_job_duration_minutes')}
+                                        aria-label={__('tenant.technicians.estimated_job_duration_minutes')}
+                                        dir="ltr"
+                                        value={data.estimated_job_duration_minutes}
+                                        onChange={(e) => setData('estimated_job_duration_minutes', e.target.value)}
+                                        style={{ textAlign: align }}
+                                    />
+                                    <div className="text-muted small mt-1">
+                                        {__('tenant.technicians.estimated_job_duration_minutes_help')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="form-group">
+                                    <div className="custom-control custom-switch custom-switch-md">
+                                        <input
+                                            type="checkbox"
+                                            className="custom-control-input"
+                                            id="technician-is-accepting-orders"
+                                            checked={Boolean(data.is_accepting_orders)}
+                                            onChange={(e) => setData('is_accepting_orders', e.target.checked)}
+                                        />
+                                        <label className="custom-control-label pt-1 pl-3" htmlFor="technician-is-accepting-orders">
+                                            {__('tenant.technicians.accepting_orders')}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div className="col-md-6">
                                 <div className="form-group">

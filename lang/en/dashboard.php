@@ -510,6 +510,10 @@ return [
                 'label' => 'Arrival SLA (minutes)',
                 'description' => 'Maximum minutes allowed between acceptance and arrival. Fixed for now; distance-based later.',
             ],
+            'default_job_duration_minutes' => [
+                'label' => 'Default job duration (minutes)',
+                'description' => 'Used to estimate customer wait time when a technician has queued orders. Technicians can override this personally.',
+            ],
         ],
     ],
     'orders' => [
@@ -526,6 +530,7 @@ return [
         'col_technician' => 'Technician',
         'col_service_category' => 'Service category',
         'col_collected_amount' => 'Collected amount',
+        'col_queue_position' => 'Queue #',
         'col_created_at' => 'Created at',
         'col_status' => 'Status',
         'col_inspection_payment_status' => 'Inspection payment',

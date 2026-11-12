@@ -14,7 +14,11 @@ import {useEffect, useMemo, useRef} from 'react';
 import {__} from "@/Utility/Hooks/useTranslate.jsx";
 import ScrollUpButton from "@/Layouts/Tenant/components/scrollUp/ScrollUpButton.jsx";
 import { filterMenuByPermissions } from "@/Support/permissions.js";
-import { playDelayAlertSound } from "@/Utility/technicianDelayAlerts.js";
+import {
+    playDelayAlertSound,
+    startLoopingAlertSound,
+    stopLoopingAlertSound,
+} from "@/Utility/technicianDelayAlerts.js";
 
 const applyBadges = (items, badges) => {
     if (!Array.isArray(items)) return [];
@@ -143,6 +147,54 @@ const MainLayout = ({
         return () => {
             cancelled = true;
             window.clearInterval(timer);
+        };
+    }, [shellVariant]);
+
+    useEffect(() => {
+        if (shellVariant !== 'company') {
+            stopLoopingAlertSound();
+            return undefined;
+        }
+
+        let cancelled = false;
+        const endpoint = route('company.alerts.awaiting-accept');
+
+        const pollAwaiting = async () => {
+            try {
+                const response = await fetch(endpoint, {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                });
+
+                if (!response.ok || cancelled) {
+                    return;
+                }
+
+                const payload = await response.json();
+                const count = Number(payload?.count ?? 0);
+
+                if (count > 0) {
+                    startLoopingAlertSound(4000);
+                } else {
+                    stopLoopingAlertSound();
+                }
+            } catch {
+                // Ignore transient network/auth errors during polling.
+            }
+        };
+
+        void pollAwaiting();
+        const timer = window.setInterval(() => {
+            void pollAwaiting();
+        }, 10000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+            stopLoopingAlertSound();
         };
     }, [shellVariant]);
 

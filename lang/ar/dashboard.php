@@ -510,6 +510,10 @@ return [
                 'label' => 'مهلة الوصول (بالدقائق)',
                 'description' => 'أقصى دقائق مسموحة بين القبول والوصول. ثابتة حالياً؛ لاحقاً حسب المسافة.',
             ],
+            'default_job_duration_minutes' => [
+                'label' => 'مدة إنجاز العمل الافتراضية (بالدقائق)',
+                'description' => 'تُستخدم لتقدير مدة انتظار العميل عندما يكون للفني طلبات في قائمة الانتظار. يمكن للفني تجاوزها شخصياً.',
+            ],
         ],
     ],
     'orders' => [
@@ -526,6 +530,7 @@ return [
         'col_technician' => 'الفني',
         'col_service_category' => 'تصنيف الخدمة',
         'col_collected_amount' => 'المبلغ المحصل',
+        'col_queue_position' => 'ترتيب الانتظار',
         'col_created_at' => 'تاريخ الإنشاء',
         'col_status' => 'الحالة',
         'col_inspection_payment_status' => 'دفع رسوم الفحص',

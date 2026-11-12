@@ -62,6 +62,7 @@ class BookingPreviewController extends Controller
                 'inspection_fee' => $preview['inspection_fee'],
                 'currency' => $currency,
                 'is_favorite' => $preview['is_favorite'],
+                'queue' => $preview['queue'],
             ],
         ]);
     }

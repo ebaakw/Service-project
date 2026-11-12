@@ -23,10 +23,13 @@ use App\Http\Controllers\Api\V1\Public\PublicPortfolioProjectController;
 use App\Http\Controllers\Api\V1\Technician\AuthController as TechnicianAuthController;
 use App\Http\Controllers\Api\V1\Technician\AvailabilityController as TechnicianAvailabilityController;
 use App\Http\Controllers\Api\V1\Technician\DeviceController as TechnicianDeviceController;
+use App\Http\Controllers\Api\V1\Technician\JobPreferencesController as TechnicianJobPreferencesController;
 use App\Http\Controllers\Api\V1\Technician\LocationController as TechnicianLocationController;
 use App\Http\Controllers\Api\V1\Technician\OrderController as TechnicianOrderController;
 use App\Http\Controllers\Api\V1\Technician\OrderItemController as TechnicianOrderItemController;
 use App\Http\Controllers\Api\V1\Technician\OrderOfferController as TechnicianOrderOfferController;
+use App\Http\Controllers\Api\V1\Technician\OrderPaymentRequestController as TechnicianOrderPaymentRequestController;
+use App\Http\Controllers\Api\V1\Technician\PriceListController as TechnicianPriceListController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +63,8 @@ Route::prefix('v1')->group(function (): void {
 
     Route::post('/technician/login', [TechnicianAuthController::class, 'login'])
         ->middleware('throttle:20,1');
+    Route::post('/technician/demo-login', [TechnicianAuthController::class, 'demoLogin'])
+        ->middleware('throttle:10,1');
 
     // Guest-friendly browse: work without Authorization; enrich when a valid Bearer token is present.
     Route::prefix('customer')->middleware('auth.optional.sanctum')->group(function (): void {
@@ -105,7 +110,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/orders/{order}', [CustomerOrderController::class, 'show']);
             Route::post('/orders/{order}/pay-inspection-placeholder', [CustomerOrderController::class, 'payInspectionPlaceholder']);
             Route::get('/orders/{order}/invoice', [CustomerOrderController::class, 'invoice']);
+            Route::post('/orders/{order}/accept-invoice', [CustomerOrderController::class, 'acceptInvoice']);
+            Route::post('/orders/{order}/contact-company', [CustomerOrderController::class, 'contactCompany']);
             Route::post('/orders/{order}/pay-final-placeholder', [CustomerOrderController::class, 'payFinalPlaceholder']);
+            Route::post('/orders/{order}/review', [CustomerOrderController::class, 'review']);
 
             Route::get('/complaints', [CustomerComplaintController::class, 'index']);
             Route::post('/complaints', [CustomerComplaintController::class, 'store']);
@@ -121,15 +129,19 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/logout', [TechnicianAuthController::class, 'logout']);
 
             Route::patch('/availability', [TechnicianAvailabilityController::class, 'update']);
+            Route::patch('/job-preferences', [TechnicianJobPreferencesController::class, 'update']);
             Route::patch('/location', [TechnicianLocationController::class, 'update']);
 
             Route::get('/order-offers', [TechnicianOrderOfferController::class, 'index']);
             Route::post('/order-offers/{offer}/accept', [TechnicianOrderOfferController::class, 'accept']);
             Route::post('/order-offers/{offer}/reject', [TechnicianOrderOfferController::class, 'reject']);
 
+            Route::get('/price-list', [TechnicianPriceListController::class, 'index']);
+
             Route::get('/orders', [TechnicianOrderController::class, 'index']);
             Route::get('/orders/{order}', [TechnicianOrderController::class, 'show']);
             Route::patch('/orders/{order}/status', [TechnicianOrderController::class, 'updateStatus']);
+            Route::post('/orders/{order}/request-payment', [TechnicianOrderPaymentRequestController::class, 'store']);
 
             Route::post('/orders/{order}/items', [TechnicianOrderItemController::class, 'store']);
             Route::patch('/orders/{order}/items/{item}', [TechnicianOrderItemController::class, 'update']);
