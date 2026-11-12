@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             ServiceCatalogSeeder::class,
             ContentPagesSeeder::class,
             DemoCompanyTechnicianCustomerSeeder::class,
+            DemoTechnicianQueueOrdersSeeder::class,
         ]);
     }
 }

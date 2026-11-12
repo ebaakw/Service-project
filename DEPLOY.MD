@@ -11,4 +11,5 @@ ls -la public/build/manifest.json
 
 --force
 php artisan db:seed --class=DemoCompanyTechnicianCustomerSeeder --force
+php artisan db:seed --class=DemoTechnicianQueueOrdersSeeder --force
 php artisan db:seed --class=ContentPagesSeeder --force

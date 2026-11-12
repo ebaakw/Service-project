@@ -1,58 +1,112 @@
 # Cursor prompt — Customer App
 
-انسخ الكتلة التالية كما هي إلى محادثة Cursor في مشروع تطبيق العميل:
+Base URL الإنتاج المختبر:
+`https://phplaravel-909502-6765961.cloudwaysapps.com/api/v1`
+
+انسخ الكتلة التالية كما هي إلى Cursor في مشروع تطبيق العميل:
 
 ```text
-أنت تعمل على تطبيق موبايل العميل (Customer App) مع Laravel API تحت /api/v1.
+أنت تعمل على تطبيق موبايل العميل (Customer App).
+Base API: https://phplaravel-909502-6765961.cloudwaysapps.com/api/v1
+Auth: Laravel Sanctum Bearer token
+مصدر Postman: postman/Services-Mobile-API.postman_collection.json
 
-## مسار الخدمة الكامل (مصدر الحقيقة للمنتج)
-1) العميل يطلب فنياً وينشئ طلباً.
-2) يجب دفع رسوم الكشف أولاً. بدون الدفع لا يُرسل الطلب للفني.
-3) بعد الدفع يتابع حالة الفني (تعيين/قبول/في الطريق/وصل).
-4) عندما يرسل الفني الفاتورة (بنود + مبلغ إضافي): يصل إشعار، وتظهر الفاتورة داخل شاشة «طلباتي» / تفاصيل الطلب.
-5) العميل يطّلع على الفاتورة ثم:
-   - يقبل الفاتورة، أو
-   - يتواصل مع مسؤول الشركة (تذكرة/اتصال حسب الـ API).
-6) بعد قبول الفاتورة فقط يظهر مسار الدفع. يجب الدفع أولاً ثم يبدأ العمل (status=started).
-7) عند completed يظهر زر تقييم الطلب (مرة واحدة).
+## دفع MyFatoorah داخل التطبيق (إلزامي — بدون WebView)
+- استخدم MyFatoorah Mobile SDK الرسمي للمنصة (Flutter: myfatoorah_flutter / React Native: myfatoorah SDK / Native iOS|Android حسب المشروع).
+- ممنوع فتح payment_url في WebView أو متصفح خارجي لمسار الدفع الأساسي.
+- الدفع يتم داخل التطبيق عبر SDK:
+  1) MFSDK.init(apiKey, MFCountry.KUWAIT, MFEnvironment.TEST|LIVE) عند إقلاع التطبيق (المفتاح من إعدادات التطبيق/ENV الآمنة — لا تُثبّت مفتاح Live في الكود).
+  2) عند الدفع (كشف أو فاتورة نهائية):
+     - اقرأ من الباك اند: amount + currency + payment.ulid (CustomerReference) + order_id
+       من Create Order → inspection_payment أو من Get Invoice / Show Order بعد Accept Invoice
+     - InitiatePayment (مرة على الأقل لجلب PaymentMethodId) أو InitiateSession + CardView للدفع المضمّن
+     - ExecutePayment / CardView.pay داخل الـ SDK مع:
+       invoiceValue = مبلغ الدفع
+       customerReference = payment.ulid
+       userDefinedField = payment_type (inspection_fee | final_invoice) إن أمكن
+       customerEmail/mobile إن توفرا
+  3) عند نجاح SDK (invoiceId / success callback): أعد فوراً Show Order و/أو List Orders وانتظر حتى inspection_payment_status=paid أو final مدفوع (الباك اند يعتمد Webhook GetPaymentStatus).
+  4) اعرض شاشة انتظار قصيرة «جاري تأكيد الدفع…» مع polling خفيف لـ Show Order كل 2–3 ثوانٍ لمدة محدودة.
+- payment_url من الـ API يبقى موجوداً كـ fallback طوارئ فقط (مخفي عن المستخدم) — المسار الافتراضي للمستخدم هو SDK داخل التطبيق.
+- Apple Pay / Google Pay عبر مكوّنات SDK إن كانت المنصة تدعمها.
+- اللغة: AR في الكويت افتراضياً.
 
-## قائمة انتظار الفني (جديد — إلزامي في UI)
-- يمكن حجز فني مشغول/غير متاح طالما `is_accepting_orders=true`.
-- في قائمة الفنيين (`GET /customer/available-technicians` وخصوصاً `filter=all`) وفي `GET /customer/booking-preview` يظهر:
-  - `queued_orders_count` (مثال: 3 أو 5 طلبات بالانتظار)
-  - `estimated_wait_minutes` + `estimated_wait_label` (نص جاهز بالساعات/الأيام حسب لغة الواجهة)
-  - `is_accepting_orders`
-- قبل الدفع اعرض تأكيد واضح: «هذا الفني لديه X طلبات في الانتظار — سوف تنتظر تقريباً Y» ثم زر المتابعة للدفع.
-- إذا `is_accepting_orders=false` امنع إنشاء الطلب واعرض رسالة أن الفني لا يستقبل طلبات حالياً.
-- بعد الدفع يدخل الطلب طابور الفني (`queue_position` على OrderResource) ويظهر في تفاصيل الطلب.
+## مسار المنتج (إلزامي)
+1) تصفح خدمات/فنيين → حجز فني (حتى لو مشغول وله طابور).
+2) إنشاء طلب → ادفع رسوم الكشف عبر MyFatoorah SDK داخل التطبيق.
+3) بدون دفع الكشف لا يصل الطلب للفني.
+4) بعد الدفع: الطلب assigned + queue_position؛ تابع الحالات.
+5) عند وصول فاتورة من الفني: إشعار + شاشة طلباتي.
+6) اطّلع على الفاتورة → Accept Invoice أو Contact Company.
+7) بعد accept فقط ادفع الفاتورة عبر MyFatoorah SDK داخل التطبيق.
+8) بعد دفع الفاتورة: status=started (بدأ العمل).
+9) عند completed: زر تقييم مرة واحدة.
 
-## API متوقع / موجود
-- Auth عميل: register/login/me/logout + devices + notifications
-- GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites
-- GET /customer/booking-preview?technician_id=&service_category_id=… → data.technician + data.queue
-- POST /customer/orders → inspection_payment (يفشل إن كان الفني لا يستقبل طلبات)
-- POST /customer/orders/{order}/pay-inspection-placeholder (تجريبي إلى حين ماي فاتورة)
-- GET /customer/orders و GET /customer/orders/{order} — راقب queue_position و estimated_duration_minutes
-- GET /customer/orders/{order}/invoice
-- POST /customer/orders/{order}/accept-invoice
-- POST /customer/orders/{order}/contact-company
-- POST /customer/orders/{order}/pay-final-placeholder أو إتمام عبر payment_url / complete-test
-- POST /customer/orders/{order}/review بعد completed
-- حقول مفيدة في TechnicianResource: is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label
-- حقول مفيدة في OrderResource: quote_accepted_at, invoice_accepted, can_pay_final, can_review, queue_position, estimated_duration_minutes
-- Realtime: private-customer.{id}, private-order.{id} — invoice.created, invoice.paid, order.status-changed
+## أسماء الـ Requests / Endpoints (استخدم هذه الأسماء في طبقة الـ API)
 
-## UI مطلوب
-- بطاقة الفني: شارة عدد الطلبات بالانتظار + نص مدة الانتظار بجانب حالة التوفر.
-- شاشة تأكيد الحجز قبل الدفع تعرض التقدير بوضوح.
-- حالات طلباتي واضحة: بانتظار دفع الكشف، في قائمة انتظار الفني (#N)، جاري التنفيذ، فاتورة بانتظار المراجعة، بانتظار الدفع، جاري العمل، مكتمل، قيّم الآن.
-- شاشة فاتورة: بنود + إجمالي + قبول + تواصل مع المسؤول؛ بعد القبول زر ادفع.
-- لا تعرض «بدأ العمل» قبل دفع الفاتورة؛ لا تعرض «مكتمل» قبل completed.
-- Deep link من إشعار الفاتورة إلى تفاصيل الطلب/الفاتورة.
-- ماي فاتورة ستُربط لاحقاً من الباك اند؛ اترك طبقة دفع قابلة لاستبدال WebView/SDK دون كسر المسار.
+### Auth
+- Customer Register → POST /customer/register
+- Customer Login → POST /customer/login
+- Customer Me → GET /customer/me
+- Customer Update Profile → PATCH /customer/me
+- Customer Delete Account → DELETE /customer/me
+- Customer Logout → POST /customer/logout
 
-## قيود
-- لا تختلق endpoints؛ سجّل أي نقص كـ blocker.
-- حافظ على AR/EN إن وُجد.
-- مصدر Postman: postman/Services-Mobile-API.postman_collection.json
+### Browse (guest OK)
+- Customer Home → GET /customer/home
+- Customer Search → GET /customer/search?q=
+- Service Categories → GET /customer/service-categories
+- Service Category Children → GET /customer/service-categories/{id}/children
+- Service Category Problems → GET /customer/service-categories/{id}/problems
+- Service Intake Fields → GET /customer/service-categories/{id}/intake-fields
+- Available Technicians → GET /customer/available-technicians?service_category_id=&lat=&lng=&filter=available|all|favorites
+- Booking Preview → GET /customer/booking-preview?technician_id=&service_category_id=&service_problem_id=&lat=&lng=
+
+### Addresses / Favorites / Devices / Notifications
+- List Addresses → GET /customer/addresses
+- Create Address → POST /customer/addresses
+- Update Address → PATCH /customer/addresses/{id}
+- Delete Address → DELETE /customer/addresses/{id}
+- Favorite Technicians List/Add/Remove → GET|POST|DELETE /customer/favorite-technicians[/{id}]
+- Favorite Companies List/Add/Remove → GET|POST|DELETE /customer/favorite-companies[/{id}]
+- Register Device → POST /customer/devices  body: {device_type, fcm_token, device_name?, app_version?}
+- Delete Device → DELETE /customer/devices/{id}
+- Notifications List → GET /customer/notifications
+- Mark Notification Read → POST /customer/notifications/{id}/read
+- Mark All Notifications Read → POST /customer/notifications/read-all
+
+### Orders & Payments (مهم)
+- Create Order → POST /customer/orders
+  body: {technician_id, customer_address_id, service_category_id, service_problem_id?, custom_problem_text?, customer_notes?, intake_answers?[]}
+  response: order + inspection_payment { ulid, amount, currency, payment_url, payment_type }
+  → ادفع بـ SDK باستخدام amount + customerReference=inspection_payment.ulid  (لا WebView)
+- List My Orders → GET /customer/orders
+- Show Order → GET /customer/orders/{order}
+- Get Invoice → GET /customer/orders/{order}/invoice
+- Accept Invoice → POST /customer/orders/{order}/accept-invoice
+- Contact Company → POST /customer/orders/{order}/contact-company  body: {message, subject?}
+- Review Order → POST /customer/orders/{order}/review  body: {rating:1-5, comment?}
+- Pay Inspection / Pay Final placeholders → للتطوير فقط؛ ممنوع في إنتاج التطبيق مع SDK
+
+بعد نجاح SDK: polling على Show Order حتى paid. الباك اند يؤكّد عبر Webhook:
+POST /payments/myfatoorah/webhook (سيرفر فقط)
+
+### حقول UI مهمة
+TechnicianResource: is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label, availability_status, rating_*
+OrderResource: status, queue_position, estimated_duration_minutes, quote_accepted_at, invoice_accepted, can_pay_final, can_review, inspection_payment_status, final_payment_status
+Payment: ulid (CustomerReference للـ SDK), amount, currency, payment_type
+
+### طابور الفني
+- اعرض قبل الدفع: «لدى الفني X طلبات — انتظار تقريبي Y».
+- امنع الحجز إذا is_accepting_orders=false.
+- بعد الدفع اعرض queue_position في تفاصيل الطلب.
+
+### حالات طلباتي
+pending_payment | assigned(+طابور) | accepted | technician_on_way | arrived | waiting_customer_payment | started | completed
+
+### Realtime (إن وُجد Echo)
+قنوات: private-customer.{customerId}, private-order.{orderId}
+أحداث: order.status-changed, invoice.created, invoice.paid, order.inspection-paid
+
+قيود: لا تختلق endpoints. ممنوع WebView للدفع. AR/EN. سجّل أي نقص كـ blocker.
 ```
