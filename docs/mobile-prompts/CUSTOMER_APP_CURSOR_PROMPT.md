@@ -99,10 +99,11 @@ Payment: ulid (CustomerReference للـ SDK), amount, currency, payment_type
 ### طابور الفني
 - اعرض قبل الدفع: «لدى الفني X طلبات — انتظار تقريبي Y».
 - امنع الحجز إذا is_accepting_orders=false.
-- بعد الدفع اعرض queue_position في تفاصيل الطلب.
+- بعد الدفع اعرض `queue_position` + `queue_position_label` («موقعك في قائمة الانتظار» — ليس «الطابور»).
+- عند `inspection_payment_status=paid` اعرض `inspection_paid_banner` (صح أخضر + «تم الدفع بنجاح») أعلى تفاصيل الطلب.
 
 ### حالات طلباتي
-pending_payment | assigned(+طابور) | accepted | technician_on_way | arrived | waiting_customer_payment | started | completed
+pending_payment | assigned(+قائمة انتظار) | accepted | technician_on_way | arrived | waiting_customer_payment | started | completed
 
 ### Realtime (إن وُجد Echo)
 قنوات: private-customer.{customerId}, private-order.{orderId}

@@ -75,7 +75,7 @@ pay#13 inspection_fee paid inv=7369832
    - status بعد النجاح غالباً = assigned (مع queue_position) وليس بالضرورة paid_inspection
    - إذا كنت تنتظر فقط status==paid_inspection ستعلق أو تخطئ — اعتمد inspection_payment_status / payments[] أولاً
    - حدّث كاش الطلب (Invalidate queries / refetch List Orders + Show Order) قبل مغادرة confirming
-   - بعد النجاح انتقل لتفاصيل الطلب واعرض الحالة الجديدة (assigned + الطابور إن وُجد)
+   - بعد النجاح انتقل لتفاصيل الطلب واعرض inspection_paid_banner (صح أخضر + تم الدفع بنجاح) و queue_position_label («موقعك في قائمة الانتظار») إن وُجد
 
 ### C) عند فشل/إلغاء SDK
 - اخرج من confirming إلى شاشة الدفع مع رسالة واضحة

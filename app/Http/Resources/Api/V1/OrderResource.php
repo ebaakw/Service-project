@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\V1;
 
 use App\Enums\OrderOfferStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\OrderOffer;
 use App\Services\Orders\OrderStateService;
 use Illuminate\Http\Request;
@@ -59,6 +60,10 @@ class OrderResource extends JsonResource
             'inspection_paid_at' => $this->inspection_paid_at?->toIso8601String(),
             'assigned_at' => $this->assigned_at?->toIso8601String(),
             'queue_position' => $this->queue_position !== null ? (int) $this->queue_position : null,
+            'queue_position_label' => $this->queue_position !== null
+                ? __('orders.queue.position_label')
+                : null,
+            'inspection_paid_banner' => $this->inspectionPaymentBanner(),
             'estimated_duration_minutes' => $this->estimated_duration_minutes !== null
                 ? (int) $this->estimated_duration_minutes
                 : null,
@@ -143,5 +148,24 @@ class OrderResource extends JsonResource
             ->value('id');
 
         return $offerId !== null ? (int) $offerId : null;
+    }
+
+    /**
+     * @return array{show: bool, tone: string, icon: string, title: string, message: string, badge: string}|null
+     */
+    private function inspectionPaymentBanner(): ?array
+    {
+        if ($this->inspection_payment_status !== PaymentStatus::Paid) {
+            return null;
+        }
+
+        return [
+            'show' => true,
+            'tone' => 'success',
+            'icon' => 'check',
+            'title' => __('orders.customer.inspection_paid_title'),
+            'message' => __('orders.customer.inspection_paid_message'),
+            'badge' => __('orders.customer.inspection_paid_badge'),
+        ];
     }
 }
