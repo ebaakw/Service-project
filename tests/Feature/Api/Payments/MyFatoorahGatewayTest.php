@@ -19,6 +19,7 @@ use App\Services\Payments\MyFatoorahWebhookVerifier;
 use App\Services\Payments\PaymentProcessingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class MyFatoorahGatewayTest extends TestCase
@@ -323,8 +324,73 @@ class MyFatoorahGatewayTest extends TestCase
         $this->assertSame(PaymentStatus::Paid, $order->fresh()->inspection_payment_status);
     }
 
+    public function test_show_order_sync_settles_pending_myfatoorah_when_webhook_missing(): void
+    {
+        config([
+            'myfatoorah.enabled' => true,
+            'myfatoorah.api_key' => 'test-key',
+            'myfatoorah.is_test' => true,
+            'myfatoorah.api_base_url' => 'https://apitest.myfatoorah.com',
+        ]);
+
+        [$order, $customerUser] = $this->makePendingOrder();
+
+        $payment = Payment::factory()->create([
+            'order_id' => $order->getKey(),
+            'customer_id' => $order->customer_id,
+            'company_id' => $order->company_id,
+            'payment_type' => PaymentType::InspectionFee,
+            'payment_status' => PaymentStatus::Pending,
+            'provider' => 'myfatoorah',
+            'provider_reference' => '7376206',
+            'amount' => 5,
+            'currency' => 'KWD',
+        ]);
+
+        Http::fake([
+            'apitest.myfatoorah.com/v2/GetPaymentStatus' => function (\Illuminate\Http\Client\Request $request) use ($payment) {
+                $keyType = $request['KeyType'] ?? null;
+                $key = $request['Key'] ?? null;
+
+                if ($keyType === 'InvoiceId' && (string) $key === '7376206') {
+                    return Http::response([
+                        'IsSuccess' => true,
+                        'Data' => [
+                            'InvoiceId' => 7376206,
+                            'InvoiceStatus' => 'Pending',
+                            'CustomerReference' => $payment->ulid,
+                        ],
+                    ], 200);
+                }
+
+                if ($keyType === 'CustomerReference' && (string) $key === $payment->ulid) {
+                    return Http::response([
+                        'IsSuccess' => true,
+                        'Data' => [
+                            'InvoiceId' => 7376207,
+                            'InvoiceStatus' => 'Paid',
+                            'CustomerReference' => $payment->ulid,
+                        ],
+                    ], 200);
+                }
+
+                return Http::response(['IsSuccess' => false, 'Message' => 'unexpected'], 400);
+            },
+        ]);
+
+        Sanctum::actingAs($customerUser);
+
+        $response = $this->getJson('/api/v1/customer/orders/'.$order->getKey());
+
+        $response->assertOk();
+        $response->assertJsonPath('order.inspection_payment_status', PaymentStatus::Paid->value);
+        $this->assertNotNull($response->json('order.inspection_paid_at'));
+        $this->assertSame(PaymentStatus::Paid, $payment->fresh()->payment_status);
+        $this->assertSame('7376207', $payment->fresh()->provider_reference);
+    }
+
     /**
-     * @return array{0: Order}
+     * @return array{0: Order, 1: User}
      */
     private function makePendingOrder(): array
     {
@@ -347,6 +413,6 @@ class MyFatoorahGatewayTest extends TestCase
             'inspection_payment_status' => PaymentStatus::Pending,
         ]);
 
-        return [$order];
+        return [$order, $customerUser];
     }
 }

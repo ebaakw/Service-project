@@ -24,6 +24,7 @@ use App\Services\Orders\OrderNumberGenerator;
 use App\Services\Orders\OrderStateService;
 use App\Services\Orders\TechnicianOrderValidator;
 use App\Services\Payments\FakePaymentService;
+use App\Services\Payments\MyFatoorahPaymentSettlementService;
 use App\Services\Payments\PaymentProcessingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,7 @@ class OrderController extends Controller
         private readonly OrderNumberGenerator $orderNumberGenerator,
         private readonly OrderStateService $orderStateService,
         private readonly PaymentProcessingService $paymentProcessingService,
+        private readonly MyFatoorahPaymentSettlementService $myFatoorahSettlementService,
         private readonly TechnicianOrderValidator $technicianOrderValidator,
     ) {}
 
@@ -143,7 +145,15 @@ class OrderController extends Controller
 
         $this->authorize('view', $order);
 
-        $order->load([
+        // Mobile confirming polls this endpoint. If MyFatoorah webhook is delayed/missing,
+        // sync-confirm via GetPaymentStatus (PaymentId → InvoiceId → CustomerReference/ulid).
+        $sdkPaymentId = (string) ($request->query('paymentId') ?? $request->query('PaymentId') ?? '');
+        $this->myFatoorahSettlementService->attemptSettlePendingOrderPayments(
+            $order,
+            $sdkPaymentId !== '' ? $sdkPaymentId : null,
+        );
+
+        $order->refresh()->load([
             'company',
             'customerAddress',
             'technician.user',

@@ -3,8 +3,12 @@
 namespace App\Services\Payments;
 
 use App\Enums\PaymentStatus;
+use App\Models\Order;
 use App\Models\Payment;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 class MyFatoorahPaymentSettlementService
 {
@@ -12,6 +16,66 @@ class MyFatoorahPaymentSettlementService
         private readonly MyFatoorahClient $client,
         private readonly PaymentProcessingService $paymentProcessingService,
     ) {}
+
+    /**
+     * Best-effort settle for mobile confirming/polling when webhook is delayed or missing.
+     * Does not throw — Show Order must remain readable.
+     */
+    public function attemptSettlePendingOrderPayments(Order $order, ?string $myFatoorahPaymentId = null): void
+    {
+        if (! (bool) config('myfatoorah.enabled')) {
+            return;
+        }
+
+        $pending = Payment::query()
+            ->where('order_id', $order->getKey())
+            ->where('provider', 'myfatoorah')
+            ->where('payment_status', PaymentStatus::Pending)
+            ->orderByDesc('id')
+            ->get();
+
+        if ($pending->isEmpty()) {
+            return;
+        }
+
+        if (is_string($myFatoorahPaymentId) && $myFatoorahPaymentId !== '') {
+            $lockKey = 'myfatoorah:settle:payment_id:'.$myFatoorahPaymentId;
+            if (Cache::add($lockKey, 1, now()->addSeconds(5))) {
+                try {
+                    $this->settleByMyFatoorahPaymentId($myFatoorahPaymentId);
+
+                    return;
+                } catch (Throwable $e) {
+                    Log::info('myfatoorah.sync_settle.payment_id_failed', [
+                        'order_id' => $order->getKey(),
+                        'payment_id' => $myFatoorahPaymentId,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        foreach ($pending as $payment) {
+            $lockKey = 'myfatoorah:settle:payment:'.$payment->getKey();
+            if (! Cache::add($lockKey, 1, now()->addSeconds(5))) {
+                continue;
+            }
+
+            try {
+                $this->settlePayment($payment, (string) $payment->provider_reference ?: null, $myFatoorahPaymentId);
+                Log::info('myfatoorah.sync_settle.settled', [
+                    'order_id' => $order->getKey(),
+                    'payment_ulid' => $payment->ulid,
+                ]);
+            } catch (Throwable $e) {
+                Log::info('myfatoorah.sync_settle.pending_or_failed', [
+                    'order_id' => $order->getKey(),
+                    'payment_ulid' => $payment->ulid,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
 
     /**
      * @return array{payment: Payment, invoice_status: string, already_paid: bool}
