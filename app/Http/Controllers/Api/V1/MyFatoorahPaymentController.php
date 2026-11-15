@@ -65,7 +65,7 @@ class MyFatoorahPaymentController extends Controller
             ?? ''
         );
 
-        Log::info('myfatoorah.webhook.accepted', [
+        Log::warning('myfatoorah.webhook.accepted', [
             'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
             'customer_reference' => $customerReference !== '' ? $customerReference : null,
             'payment_id' => $paymentId !== '' ? $paymentId : null,
@@ -94,7 +94,7 @@ class MyFatoorahPaymentController extends Controller
             }
         } catch (RuntimeException $e) {
             if (str_contains(strtolower($e->getMessage()), 'not paid yet')) {
-                Log::info('myfatoorah.webhook.ignored_pending', [
+                Log::warning('myfatoorah.webhook.ignored_pending', [
                     'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
                     'customer_reference' => $customerReference !== '' ? $customerReference : null,
                     'payment_id' => $paymentId !== '' ? $paymentId : null,
@@ -124,7 +124,7 @@ class MyFatoorahPaymentController extends Controller
             return response('Settlement error', 500);
         }
 
-        Log::info('myfatoorah.webhook.settled', [
+        Log::warning('myfatoorah.webhook.settled', [
             'invoice_id' => $invoiceId !== '' ? $invoiceId : null,
             'customer_reference' => $customerReference !== '' ? $customerReference : null,
             'payment_id' => $paymentId !== '' ? $paymentId : null,

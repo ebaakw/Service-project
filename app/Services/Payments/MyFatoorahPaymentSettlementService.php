@@ -46,7 +46,7 @@ class MyFatoorahPaymentSettlementService
 
                     return;
                 } catch (Throwable $e) {
-                    Log::info('myfatoorah.sync_settle.payment_id_failed', [
+                    Log::warning('myfatoorah.sync_settle.payment_id_failed', [
                         'order_id' => $order->getKey(),
                         'payment_id' => $myFatoorahPaymentId,
                         'message' => $e->getMessage(),
@@ -63,12 +63,12 @@ class MyFatoorahPaymentSettlementService
 
             try {
                 $this->settlePayment($payment, (string) $payment->provider_reference ?: null, $myFatoorahPaymentId);
-                Log::info('myfatoorah.sync_settle.settled', [
+                Log::warning('myfatoorah.sync_settle.settled', [
                     'order_id' => $order->getKey(),
                     'payment_ulid' => $payment->ulid,
                 ]);
             } catch (Throwable $e) {
-                Log::info('myfatoorah.sync_settle.pending_or_failed', [
+                Log::warning('myfatoorah.sync_settle.pending_or_failed', [
                     'order_id' => $order->getKey(),
                     'payment_ulid' => $payment->ulid,
                     'message' => $e->getMessage(),
