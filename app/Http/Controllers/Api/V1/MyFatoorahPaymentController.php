@@ -33,11 +33,10 @@ class MyFatoorahPaymentController extends Controller
         }
 
         if (! $this->webhookVerifier->isValid($signature, $raw, $payload)) {
-            Log::warning('myfatoorah.webhook.invalid_signature', [
-                'has_signature' => is_string($signature) && $signature !== '',
-                'body_bytes' => strlen($raw),
-                'event' => data_get($payload, 'Event.Name'),
-            ]);
+            Log::warning(
+                'myfatoorah.webhook.invalid_signature',
+                $this->webhookVerifier->failureContext($signature, $raw, $payload),
+            );
 
             return response('Invalid signature', 401);
         }
