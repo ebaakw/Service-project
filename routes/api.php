@@ -136,6 +136,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::prefix('technician')->group(function (): void {
             Route::get('/me', [TechnicianAuthController::class, 'me']);
+            Route::patch('/me', [TechnicianAuthController::class, 'updateMe']);
             Route::post('/logout', [TechnicianAuthController::class, 'logout']);
 
             Route::patch('/availability', [TechnicianAvailabilityController::class, 'update']);

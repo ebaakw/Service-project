@@ -3,16 +3,21 @@
 namespace App\Http\Controllers\Api\V1\Technician;
 
 use App\Enums\OrderStatus;
+use App\Enums\TechnicianAvailabilityStatus;
 use App\Events\TechnicianLocationUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Technician\UpdateAvailabilityRequest;
 use App\Http\Resources\Api\V1\TechnicianResource;
 use App\Models\Order;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class AvailabilityController extends Controller
 {
+    public function __construct(
+        private readonly TechnicianQueueService $technicianQueueService,
+    ) {}
+
     public function update(UpdateAvailabilityRequest $request): JsonResponse
     {
         $user = $request->user();
@@ -27,14 +32,16 @@ class AvailabilityController extends Controller
             'availability_status' => $validated['availability_status'],
         ])->save();
 
-        $technician->refresh();
+        $technician = $technician->fresh(['company', 'user']);
+        $this->technicianQueueService->attachSnapshotAttributes($technician);
 
         $activeOrderId = $this->resolveActiveOrderId($technician->getKey());
 
-        event(new TechnicianLocationUpdated($technician->fresh(), $activeOrderId));
+        event(new TechnicianLocationUpdated($technician, $activeOrderId));
 
         return response()->json([
-            'technician' => new TechnicianResource($technician->fresh(['company', 'user'])),
+            'technician' => new TechnicianResource($technician),
+            'availability_options' => TechnicianAvailabilityStatus::options(),
         ]);
     }
 

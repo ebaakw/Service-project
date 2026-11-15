@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1\Technician;
 
+use App\Enums\OrderStatus;
+use App\Enums\TechnicianAvailabilityStatus;
 use App\Enums\TechnicianReviewStatus;
 use App\Enums\UserStatus;
+use App\Events\TechnicianLocationUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Technician\LoginRequest;
+use App\Http\Requests\Api\V1\Technician\UpdateProfileRequest;
 use App\Http\Resources\Api\V1\TechnicianResource;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Models\Order;
 use App\Models\User;
 use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Http\JsonResponse;
@@ -94,6 +99,7 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => new UserResource($user),
             'technician' => new TechnicianResource($technician),
+            'availability_options' => TechnicianAvailabilityStatus::options(),
         ]);
     }
 
@@ -118,6 +124,62 @@ class AuthController extends Controller
         return response()->json([
             'user' => new UserResource($user),
             'technician' => new TechnicianResource($technician),
+            'availability_options' => TechnicianAvailabilityStatus::options(),
+        ]);
+    }
+
+    public function updateMe(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user !== null && $user->isTechnician(), 403);
+
+        $technician = $user->technician;
+        abort_if($technician === null, 403);
+
+        $validated = $request->validated();
+        $payload = [];
+        $availabilityChanged = false;
+
+        if (array_key_exists('availability_status', $validated)) {
+            $payload['availability_status'] = $validated['availability_status'];
+            $availabilityChanged = true;
+        }
+
+        if (array_key_exists('is_accepting_orders', $validated)) {
+            $payload['is_accepting_orders'] = (bool) $validated['is_accepting_orders'];
+        }
+
+        if (array_key_exists('estimated_job_duration_minutes', $validated)) {
+            $payload['estimated_job_duration_minutes'] = $validated['estimated_job_duration_minutes'];
+        }
+
+        if ($payload !== []) {
+            $technician->forceFill($payload)->save();
+        }
+
+        $technician = $technician->fresh(['company', 'user']);
+        $this->technicianQueueService->attachSnapshotAttributes($technician);
+
+        if ($availabilityChanged) {
+            $activeOrderId = Order::query()
+                ->where('technician_id', $technician->getKey())
+                ->whereNotIn('status', [
+                    OrderStatus::Completed,
+                    OrderStatus::Cancelled,
+                    OrderStatus::Expired,
+                ])
+                ->orderByDesc('id')
+                ->value('id');
+
+            event(new TechnicianLocationUpdated($technician, $activeOrderId !== null ? (int) $activeOrderId : null));
+        }
+
+        $user->setRelation('technician', $technician);
+
+        return response()->json([
+            'user' => new UserResource($user),
+            'technician' => new TechnicianResource($technician),
+            'availability_options' => TechnicianAvailabilityStatus::options(),
         ]);
     }
 

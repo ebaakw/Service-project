@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Technician Mobile API (v1)",
-    "description": "# Technician Mobile API\n\nSource: `routes/api.php` under `/api/v1/technician`.\n\n## Flow\n1. Login (or demo-login for store review)\n2. Register FCM device + subscribe to `private-technician.{id}`\n3. Orders appear only after customer pays inspection fee\n4. Queue: each order gets `queue_position`, per-order `estimated_duration_minutes`, and `scheduled_at` (ETA). List sorted by queue_position. Show Accept when `can_accept=true` (`assigned` → `accepted`). Cancel/reject blocked while is_accepting_orders=true.\n4b. PATCH /job-preferences sets defaults only (`is_accepting_orders` + `estimated_job_duration_minutes`); do NOT use the global duration as the order display — use order.scheduled_at + order.estimated_duration_minutes.\n4c. Order payload helpers: `status_group` (waiting|on_way|in_progress|completed|cancelled), `allowed_next_statuses`, `can_accept` / `can_start_trip` / `can_mark_arrived` / `can_complete` / `can_cancel`, `customer`, `pending_offer_id`.\n5. `accepted` → `technician_on_way` → `arrived` (drive UI from allowed_next_statuses)\n6. Add price-list items + optional extra_amount → `POST .../request-payment`\n7. Wait for customer accept-invoice + pay → status becomes `started`\n8. `PATCH` status `completed` when work is done\n9. Optional on status PATCH: `estimated_duration_minutes` to set this order's duration and refresh queue ETAs\n\n## Auth\nSanctum Bearer. Login returns `{ token, token_type, user, technician }`.\nDemo: `POST /technician/demo-login` (when `TECHNICIAN_DEMO_LOGIN_ENABLED=true`).\nSeed: `technician-demo@example.test` / `password`",
+    "description": "# Technician Mobile API\n\nSource: `routes/api.php` under `/api/v1/technician`.\n\n## Flow\n1. Login (or demo-login for store review)\n2. Register FCM device + subscribe to `private-technician.{id}`\n3. **My Account statuses** via `GET/PATCH /me` (availability + accepting orders + default duration)\n4. Orders appear only after customer pays inspection fee\n5. **Work queue** `GET /orders`: each order has per-order `queue_position`, `estimated_duration_minutes`, `scheduled_at` (ETA). Sorted by queue_position.\n6. Show **Accept** when `can_accept=true` → `PATCH .../status` `{ \"status\": \"accepted\", \"estimated_duration_minutes\": 90 }`\n7. Drive next buttons from `allowed_next_statuses` / flags: `can_start_trip` → `technician_on_way` → `can_mark_arrived` → `arrived`\n8. Add price-list items + `POST .../request-payment` → `waiting_customer_payment`\n9. After customer accepts invoice + pays → status becomes `started`\n10. `PATCH` `{ \"status\": \"completed\" }` when done\n\n## My Account (حسابي)\nPreferred single endpoint for the account screen:\n- `GET /api/v1/technician/me` → current profile + `availability_options`\n- `PATCH /api/v1/technician/me` → update any of:\n  - `availability_status`: `offline` | `available` | `busy` | `on_break`\n  - `is_accepting_orders`: bool\n  - `estimated_job_duration_minutes`: default only (not per-order display)\n\nAlso available separately:\n- `PATCH /availability`\n- `PATCH /job-preferences`\n\n`availability_options` example:\n```json\n[\n  { \"value\": \"offline\", \"label\": \"غير متصل\" },\n  { \"value\": \"available\", \"label\": \"متاح\" },\n  { \"value\": \"busy\", \"label\": \"مشغول\" },\n  { \"value\": \"on_break\", \"label\": \"في استراحة\" }\n]\n```\n\n## UI status groups (`status_group`)\n| group | backend statuses | AR label |\n|---|---|---|\n| `waiting` | `assigned`, `accepted` | في الانتظار |\n| `on_way` | `technician_on_way` | في الطريق |\n| `in_progress` | `arrived`, `waiting_customer_payment`, `started` | جاري العمل |\n| `completed` | `completed` | تم الانتهاء |\n| `cancelled` | `cancelled`, `expired` | ملغي |\n\n## Order action fields (list + show)\n- `customer` (+ `user.name` / `phone`)\n- `scheduled_at`, `estimated_duration_minutes`, `queue_position`\n- `status_group`, `status_group_label`\n- `can_accept`, `can_start_trip`, `can_mark_arrived`, `can_move_to_payment`, `can_complete`, `can_cancel`\n- `pending_offer_id` (secondary offer path)\n- `allowed_next_statuses[]`: `{ value, label, status_group, status_group_label }`\n\n## Show-only extras\n`customer_address`, `service_problem`, `items`, `payments`, `status_histories`, `intake_answers`\n\nResponse shape:\n- List: `{ data: [Order...], links, meta }`\n- Show / status: `{ order: { ... } }`\n- Me / update me: `{ user, technician, availability_options }`\n\n## Defaults vs per-order duration\n`PATCH /me` or `/job-preferences` → technician default only. **Never** use `estimated_job_duration_minutes` to display an order — use `order.scheduled_at` + `order.estimated_duration_minutes`.\n\nCancel/reject blocked while `is_accepting_orders=true`.\n\n## Auth\nSanctum Bearer. Login returns `{ token, token_type, user, technician, availability_options }`.\nDemo: `POST /technician/demo-login` (when `TECHNICIAN_DEMO_LOGIN_ENABLED=true`).\nSeed: `technician-demo@example.test` / `password`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -78,6 +78,10 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -87,7 +91,7 @@
               "raw": "{\n  \"email\": \"{{technician_email}}\",\n  \"password\": \"{{technician_password}}\"\n}"
             },
             "url": "{{base_url}}/api/v1/technician/login",
-            "description": "Real technician account (created from company dashboard)."
+            "description": "Real technician account (created from company dashboard).\n\nResponse includes `technician.availability_status`, `is_accepting_orders`, `estimated_job_duration_minutes` (defaults only), queue snapshot fields, and `availability_options` for the account picker."
           }
         },
         {
@@ -112,6 +116,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               }
             ],
             "url": "{{base_url}}/api/v1/technician/demo-login",
@@ -128,11 +136,46 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Authorization",
                 "value": "Bearer {{technician_token}}"
               }
             ],
-            "url": "{{base_url}}/api/v1/technician/me"
+            "url": "{{base_url}}/api/v1/technician/me",
+            "description": "Account screen bootstrap.\n\nResponse:\n```json\n{\n  \"user\": { },\n  \"technician\": {\n    \"availability_status\": \"available\",\n    \"availability_status_label\": \"متاح\",\n    \"is_accepting_orders\": true,\n    \"estimated_job_duration_minutes\": 60,\n    \"queued_orders_count\": 0,\n    \"estimated_wait_minutes\": 0,\n    \"estimated_wait_label\": \"...\"\n  },\n  \"availability_options\": [\n    { \"value\": \"offline\", \"label\": \"غير متصل\" },\n    { \"value\": \"available\", \"label\": \"متاح\" },\n    { \"value\": \"busy\", \"label\": \"مشغول\" },\n    { \"value\": \"on_break\", \"label\": \"في استراحة\" }\n  ]\n}\n```\n\n`estimated_job_duration_minutes` is a default for settings/queue math — not for displaying a specific order."
+          }
+        },
+        {
+          "name": "Update me (account statuses)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availability_status\": \"available\",\n  \"is_accepting_orders\": true,\n  \"estimated_job_duration_minutes\": 90\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/me",
+            "description": "**Preferred for My Account (حسابي).** Update any combination of:\n- `availability_status`: `offline` | `available` | `busy` | `on_break`\n- `is_accepting_orders`: bool (while true, cancel of assigned orders is blocked)\n- `estimated_job_duration_minutes`: technician default only (1–10080), nullable to clear\n\nAt least one field required. Response same shape as GET `/me` including refreshed `availability_options`.\n\nExamples:\n- Available: `{ \"availability_status\": \"available\" }`\n- Busy: `{ \"availability_status\": \"busy\" }`\n- Stop receiving orders: `{ \"is_accepting_orders\": false }`"
           }
         },
         {
@@ -167,6 +210,40 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availability_status\": \"busy\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/availability",
+            "description": "Dedicated availability endpoint (also covered by `PATCH /me`).\n\nValues: `offline` | `available` | `busy` | `on_break`.\n\nResponse: `{ technician, availability_options }`."
+          }
+        },
+        {
+          "name": "Set available",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               },
@@ -179,7 +256,38 @@
               "mode": "raw",
               "raw": "{\n  \"availability_status\": \"available\"\n}"
             },
-            "url": "{{base_url}}/api/v1/technician/availability"
+            "url": "{{base_url}}/api/v1/technician/availability",
+            "description": "Shortcut example: set status to متاح."
+          }
+        },
+        {
+          "name": "Set on break",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availability_status\": \"on_break\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/availability",
+            "description": "Shortcut example: set status to في استراحة."
           }
         },
         {
@@ -190,6 +298,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",
@@ -205,7 +317,7 @@
               "raw": "{\n  \"is_accepting_orders\": true,\n  \"estimated_job_duration_minutes\": 90\n}"
             },
             "url": "{{base_url}}/api/v1/technician/job-preferences",
-            "description": "Toggle receiving orders and/or personal estimated job duration (minutes). Personal duration overrides company default_job_duration_minutes for queue wait estimates. While is_accepting_orders=true, technician cannot cancel assigned orders (mandatory accept)."
+            "description": "Dedicated preferences endpoint (also covered by `PATCH /me`).\n\nTechnician **defaults** only:\n- `is_accepting_orders`: while true, cancel of assigned work is blocked (mandatory accept).\n- `estimated_job_duration_minutes`: stamped onto **new** queue orders if they have no duration yet.\n\nPer-order display must use `order.estimated_duration_minutes` + `order.scheduled_at`.\n\nPrefer `PATCH /me` from the account screen when updating availability + preferences together."
           }
         },
         {
@@ -235,6 +347,20 @@
         },
         {
           "name": "Register device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  const id = (j.data && j.data.id) || j.id || (j.device && j.device.id);",
+                  "  if (id) pm.collectionVariables.set('device_id', String(id));",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -298,7 +424,7 @@
               "raw": "{\n  \"socket_id\": \"1234.5678\",\n  \"channel_name\": \"private-technician.{{technician_id}}\"\n}"
             },
             "url": "{{base_url}}/api/broadcasting/auth",
-            "description": "Subscribe to private-technician.{id}. Events: order.awaiting-accept, order.status-changed, offer.created"
+            "description": "Subscribe to `private-technician.{id}`. Events: order.awaiting-accept, order.status-changed, offer.created."
           }
         }
       ]
@@ -308,6 +434,21 @@
       "item": [
         {
           "name": "List order offers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data || [];",
+                  "  const open = data.find(o => o.status === 'offered') || data[0];",
+                  "  if (open && open.id) pm.collectionVariables.set('offer_id', String(open.id));",
+                  "  if (open && open.order_id) pm.collectionVariables.set('order_id', String(open.order_id));",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -316,15 +457,34 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Authorization",
                 "value": "Bearer {{technician_token}}"
               }
             ],
-            "url": "{{base_url}}/api/v1/technician/order-offers"
+            "url": "{{base_url}}/api/v1/technician/order-offers",
+            "description": "Secondary path (`searching_technician`).\n\nEach offer now includes nested `order` summary:\n- `id`, `order_number`, `status`, `status_group`, `status_group_label`\n- `scheduled_at`, `estimated_duration_minutes`, `queue_position`\n- `customer`, `customer_address`, `service_category`, `company`\n- `custom_problem_text`, `customer_notes`\n\nAccept via `POST .../accept` → order becomes `assigned` + enqueued (`queue_position` + `scheduled_at`)."
           }
         },
         {
           "name": "Accept offer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.order_id) pm.collectionVariables.set('order_id', String(j.order_id));",
+                  "  if (j.data && j.data.id) pm.collectionVariables.set('offer_id', String(j.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -333,11 +493,16 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Authorization",
                 "value": "Bearer {{technician_token}}"
               }
             ],
-            "url": "{{base_url}}/api/v1/technician/order-offers/{{offer_id}}/accept"
+            "url": "{{base_url}}/api/v1/technician/order-offers/{{offer_id}}/accept",
+            "description": "Assigns technician, transitions order to `assigned`, enqueues with `scheduled_at` + duration.\n\nJob-level accept is still a separate step: `PATCH .../orders/{id}/status` with `accepted` when `can_accept=true`.\n\nResponse: `{ data: OrderOfferResource, order_id }`."
           }
         },
         {
@@ -348,6 +513,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",
@@ -362,7 +531,8 @@
               "mode": "raw",
               "raw": "{\n  \"response_note\": \"Busy\"\n}"
             },
-            "url": "{{base_url}}/api/v1/technician/order-offers/{{offer_id}}/reject"
+            "url": "{{base_url}}/api/v1/technician/order-offers/{{offer_id}}/reject",
+            "description": "Optional `response_note`. Does not auto-reassign."
           }
         }
       ]
@@ -371,7 +541,7 @@
       "name": "Orders",
       "item": [
         {
-          "name": "List orders (paid inspection only)",
+          "name": "List orders (work queue)",
           "event": [
             {
               "listen": "test",
@@ -379,7 +549,11 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "  const data = pm.response.json().data || [];",
-                  "  if (data[0]) pm.collectionVariables.set('order_id', String(data[0].id));",
+                  "  const accept = data.find(o => o.can_accept === true);",
+                  "  const withOffer = data.find(o => o.pending_offer_id);",
+                  "  const pick = accept || withOffer || data[0];",
+                  "  if (pick && pick.id) pm.collectionVariables.set('order_id', String(pick.id));",
+                  "  if (pick && pick.pending_offer_id) pm.collectionVariables.set('offer_id', String(pick.pending_offer_id));",
                   "}"
                 ]
               }
@@ -393,16 +567,37 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Authorization",
                 "value": "Bearer {{technician_token}}"
               }
             ],
             "url": "{{base_url}}/api/v1/technician/orders",
-            "description": "Work queue. Hidden until inspection paid. Includes customer, status_group, can_accept, allowed_next_statuses, scheduled_at, estimated_duration_minutes."
+            "description": "Work queue + history for this technician (inspection paid only).\n\nSorted: `queue_position` ASC (nulls last), then `assigned_at`, then `id` DESC.\n\nEach row includes:\n```json\n{\n  \"id\": 1,\n  \"order_number\": \"...\",\n  \"status\": \"assigned\",\n  \"status_label\": \"تم تعيين فني\",\n  \"status_group\": \"waiting\",\n  \"status_group_label\": \"في الانتظار\",\n  \"customer\": { \"id\": 1, \"user\": { \"name\": \"...\", \"phone\": \"...\" } },\n  \"service_category\": { },\n  \"company\": { },\n  \"scheduled_at\": \"2026-11-12T13:00:00+00:00\",\n  \"estimated_duration_minutes\": 60,\n  \"queue_position\": 1,\n  \"can_accept\": true,\n  \"can_start_trip\": false,\n  \"can_mark_arrived\": false,\n  \"can_move_to_payment\": false,\n  \"can_complete\": false,\n  \"can_cancel\": false,\n  \"pending_offer_id\": null,\n  \"allowed_next_statuses\": [\n    { \"value\": \"accepted\", \"label\": \"...\", \"status_group\": \"waiting\", \"status_group_label\": \"في الانتظار\" }\n  ]\n}\n```\n\nUI: show Accept when `can_accept === true`."
           }
         },
         {
           "name": "Show order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const order = pm.response.json().order;",
+                  "  if (order && order.id) pm.collectionVariables.set('order_id', String(order.id));",
+                  "  if (order && order.pending_offer_id) pm.collectionVariables.set('offer_id', String(order.pending_offer_id));",
+                  "  if (order && order.items && order.items[0] && order.items[0].id) {",
+                  "    pm.collectionVariables.set('item_id', String(order.items[0].id));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -411,12 +606,16 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Authorization",
                 "value": "Bearer {{technician_token}}"
               }
             ],
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}",
-            "description": "Full detail: customer (+user name/phone), customer_address, service_problem, items, payments, status_histories, intake_answers, action flags."
+            "description": "Full detail. Response wrapper: `{ \"order\": { ... } }` (not top-level `data`).\n\nAdds on top of list fields:\n- `customer_address`\n- `service_problem`\n- `items`, `payments`\n- `status_histories` (timeline)\n- `intake_answers`\n- `custom_problem_text`, `customer_notes`\n\nUse this endpoint for the detail screen — do not rely on list-only payload."
           }
         },
         {
@@ -429,6 +628,10 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               },
@@ -439,10 +642,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"accepted\",\n  \"estimated_duration_minutes\": 90\n}"
+              "raw": "{\n  \"status\": \"accepted\",\n  \"estimated_duration_minutes\": 90,\n  \"note\": \"Accepted from Postman\"\n}"
             },
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
-            "description": "Accept when can_accept=true. Optional estimated_duration_minutes sets per-order duration and recalculates scheduled_at for the queue."
+            "description": "When `can_accept=true` (`status=assigned`).\n\nBody:\n- `status` (required): `accepted`\n- `estimated_duration_minutes` (optional, 1–10080): sets **this order's** duration and recalculates queue `scheduled_at` values\n- `note` (optional)\n\nAfter success: `can_accept=false`, `can_start_trip=true`, `status_group=waiting`."
           }
         },
         {
@@ -453,6 +656,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",
@@ -467,7 +674,8 @@
               "mode": "raw",
               "raw": "{\n  \"status\": \"technician_on_way\"\n}"
             },
-            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status"
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
+            "description": "When `can_start_trip=true`. Sets `status_group=on_way`."
           }
         },
         {
@@ -478,6 +686,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",
@@ -492,7 +704,38 @@
               "mode": "raw",
               "raw": "{\n  \"status\": \"arrived\"\n}"
             },
-            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status"
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
+            "description": "When `can_mark_arrived=true`. Sets `status_group=in_progress`. Then add quote items + request payment."
+          }
+        },
+        {
+          "name": "Move to waiting customer payment (via status)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"waiting_customer_payment\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
+            "description": "Preferred production path is `POST .../request-payment` (sends invoice). Direct status patch is available when `can_move_to_payment=true` / listed in `allowed_next_statuses`."
           }
         },
         {
@@ -503,6 +746,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",
@@ -518,7 +765,37 @@
               "raw": "{\n  \"status\": \"completed\"\n}"
             },
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
-            "description": "Only from started after final invoice paid."
+            "description": "Only from `started` after final invoice paid (`can_complete=true`). Clears queue fields (`queue_position`, `estimated_duration_minutes`, `scheduled_at`)."
+          }
+        },
+        {
+          "name": "Cancel order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"cancelled\",\n  \"cancellation_reason\": \"Customer unreachable\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/status",
+            "description": "Only when `can_cancel=true`. Blocked with 422 while `is_accepting_orders=true` — turn off receiving orders in job-preferences first."
           }
         }
       ]
@@ -550,21 +827,61 @@
                 "value": "application/json"
               },
               {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
                 "key": "Authorization",
                 "value": "Bearer {{technician_token}}"
               }
             ],
-            "url": "{{base_url}}/api/v1/technician/price-list?q="
+            "url": {
+              "raw": "{{base_url}}/api/v1/technician/price-list?q=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "technician",
+                "price-list"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Optional search text"
+                }
+              ]
+            }
           }
         },
         {
           "name": "Add item from price list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  const item = j.item || j.data || j;",
+                  "  if (item && item.id) pm.collectionVariables.set('item_id', String(item.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",
@@ -580,7 +897,7 @@
               "raw": "{\n  \"company_price_item_id\": {{company_price_item_id}},\n  \"name_ar\": \"خدمة\",\n  \"name_en\": \"Service\",\n  \"quantity\": 1,\n  \"unit_price\": 10.000\n}"
             },
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/items",
-            "description": "Only while status=arrived (or waiting_customer_payment before customer accepts)."
+            "description": "Only while status=`arrived` (or `waiting_customer_payment` before customer accepts invoice)."
           }
         },
         {
@@ -591,6 +908,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",
@@ -606,7 +927,7 @@
               "raw": "{\n  \"extra_amount\": 2.500,\n  \"extra_name_ar\": \"مبلغ إضافي\",\n  \"extra_name_en\": \"Extra amount\"\n}"
             },
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/request-payment",
-            "description": "Moves order to waiting_customer_payment and notifies customer. Work starts only after customer accept-invoice + pay."
+            "description": "Moves order to `waiting_customer_payment` (`status_group=in_progress`) and notifies customer. Work starts only after customer accept-invoice + pay → `started`."
           }
         },
         {
@@ -617,6 +938,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
               },
               {
                 "key": "Content-Type",

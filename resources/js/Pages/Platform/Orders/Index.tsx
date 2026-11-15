@@ -53,7 +53,7 @@ function localizedName(
     return row.name_ar || row.name_en || row.name;
 }
 
-function formatDate(value: string | null, locale: string): string {
+function formatDateTime(value: string | null, locale: string): string {
     if (!value) {
         return '—';
     }
@@ -67,6 +67,8 @@ function formatDate(value: string | null, locale: string): string {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     }).format(date);
 }
 
@@ -193,7 +195,7 @@ export default function PlatformOrdersIndex({
                 key: 'created_at',
                 label: t.col_created_at ?? 'Created at',
                 header: t.col_created_at ?? 'Created at',
-                render: (o) => <span dir="ltr">{formatDate(o.created_at, locale)}</span>,
+                render: (o) => <span dir="ltr">{formatDateTime(o.created_at, locale)}</span>,
                 searchText: (o) => o.created_at ?? '',
             },
             {
