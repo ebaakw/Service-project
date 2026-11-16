@@ -136,6 +136,29 @@ class OrderPolicy
         return $user->isCustomer() && $this->ownsCustomerOrder($user, $order);
     }
 
+    public function updateScheduleTechnician(User $user, Order $order): bool
+    {
+        return $this->updateStatusTechnician($user, $order) && $order->allowsScheduleUpdates();
+    }
+
+    public function updateScheduleCustomer(User $user, Order $order): bool
+    {
+        return $user->isCustomer()
+            && $this->ownsCustomerOrder($user, $order)
+            && $order->allowsScheduleUpdates()
+            && $order->technician_id !== null;
+    }
+
+    public function messageTechnician(User $user, Order $order): bool
+    {
+        return $this->updateScheduleTechnician($user, $order);
+    }
+
+    public function messageCustomer(User $user, Order $order): bool
+    {
+        return $this->updateScheduleCustomer($user, $order);
+    }
+
     private function sameCompany(User $user, Order $order): bool
     {
         $company = current_company();

@@ -152,6 +152,13 @@ class BookingPreviewService
         $technician->setAttribute('queued_orders_count', $queue['queued_orders_count']);
         $technician->setAttribute('estimated_wait_minutes', $queue['estimated_wait_minutes']);
         $technician->setAttribute('estimated_wait_label', $queue['estimated_wait_label']);
+        $technician->setAttribute('estimated_wait_working_days', $queue['estimated_wait_working_days']);
+        $technician->setAttribute('estimated_busy_label', $queue['estimated_busy_label']);
+        $technician->setAttribute('estimated_next_available_at', $queue['estimated_next_available_at']);
+        $technician->setAttribute(
+            'estimated_next_available_relative_label',
+            $queue['estimated_next_available_relative_label']
+        );
 
         $priceList = $this->resolvePriceList($company, $category);
         $priceItems = $this->resolvePriceItems($company, $category, $priceList, $search);

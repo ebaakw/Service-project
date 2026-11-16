@@ -1956,7 +1956,7 @@
                 }
               ]
             },
-            "description": "Auth-optional (except filter=favorites → 401 without token). Returns TechnicianResource with rating_*, availability_status, distance_km, is_favorite, user.avatar_url, company.logo_url + active_discount_*. No ETA from server — mobile derives minutes from distance_km.\n\nEach technician includes: is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label. Use filter=all to browse busy technicians and show queue wait before booking.",
+            "description": "Auth-optional (except filter=favorites → 401 without token). Returns TechnicianResource with rating_*, availability_status, distance_km, is_favorite, user.avatar_url, company.logo_url + active_discount_*. No ETA from server — mobile derives minutes from distance_km.\n\nEach technician includes: is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label. Use filter=all to browse busy technicians and show queue wait before booking.\n\nWorking-day ETA fields: estimated_wait_working_days, estimated_busy_label, estimated_next_available_at, estimated_next_available_relative_label. Prefer for copy like: هذا الفني مشغول لمدة يومي عمل — أقرب موعد بعد غد.",
             "auth": {
               "type": "noauth"
             }
@@ -2022,7 +2022,7 @@
                 }
               ]
             },
-            "description": "Auth-optional guest screen for technician card + company offer + searchable price list + inspection fee CTA.\n\nResponse `data`:\n- `technician` — TechnicianResource including is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label\n- `company` — CompanyResource\n- `price_list` / `price_items[]`\n- `inspection_fee`, `currency`, `is_favorite`\n- `queue` — {queued_orders_count, estimated_wait_minutes, estimated_wait_label, is_accepting_orders, estimated_job_duration_minutes}\n\nShow wait copy like: '3 orders in queue — you will wait about 2 hours' using queue fields.\nCreate order blocked when is_accepting_orders=false.",
+            "description": "Auth-optional guest screen for technician card + company offer + searchable price list + inspection fee CTA.\n\nResponse `data`:\n- `technician` — TechnicianResource including is_accepting_orders, queued_orders_count, estimated_wait_minutes, estimated_wait_label\n- `company` — CompanyResource\n- `price_list` / `price_items[]`\n- `inspection_fee`, `currency`, `is_favorite`\n- `queue` — {queued_orders_count, estimated_wait_minutes, estimated_wait_label, is_accepting_orders, estimated_job_duration_minutes}\n\nShow wait copy like: '3 orders in queue — you will wait about 2 hours' using queue fields.\nCreate order blocked when is_accepting_orders=false.\n\nWorking-day ETA fields: estimated_wait_working_days, estimated_busy_label, estimated_next_available_at, estimated_next_available_relative_label. Prefer for copy like: هذا الفني مشغول لمدة يومي عمل — أقرب موعد بعد غد.",
             "auth": {
               "type": "noauth"
             }
@@ -2589,7 +2589,149 @@
                 "{{order_id}}"
               ]
             },
-            "description": "",
+            "description": "Order detail includes schedule fields: `scheduled_at`, `estimated_duration_minutes`, `schedule_note`, `schedule_summary`, `can_update_schedule`, `is_schedule_manual`. Use these for the appointment block — not the technician account default duration.\n\nAlso: scheduled_at_relative_label and schedule_summary prefer relative day (اليوم/غدًا/بعد غد).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update order schedule",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_at\": \"2026-11-17T10:00:00+03:00\",\n  \"estimated_duration_minutes\": 60,\n  \"schedule_note\": \"أفضل الصباح\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/orders/{{order_id}}/schedule",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "orders",
+                "{{order_id}}",
+                "schedule"
+              ]
+            },
+            "description": "Customer proposes/changes this order's appointment when `can_update_schedule=true`. Creates a schedule_update chat message for the technician.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List order messages (chat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/orders/{{order_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "orders",
+                "{{order_id}}",
+                "messages"
+              ]
+            },
+            "description": "Chat with the assigned technician on this order (text + schedule_update).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send order message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"هل يمكننا تأخير الموعد ساعة؟\",\n  \"scheduled_at\": \"2026-11-17T11:00:00+03:00\",\n  \"schedule_note\": \"اقتراح من العميل\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/customer/orders/{{order_id}}/messages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customer",
+                "orders",
+                "{{order_id}}",
+                "messages"
+              ]
+            },
+            "description": "`body` required. Optional schedule fields update the order appointment and append a schedule_update line in chat.",
             "auth": {
               "type": "bearer",
               "bearer": [

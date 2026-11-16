@@ -43,6 +43,8 @@ class OrderStateService
                 $order->queue_position = null;
                 $order->estimated_duration_minutes = null;
                 $order->scheduled_at = null;
+                $order->schedule_note = null;
+                $order->is_schedule_manual = false;
             }
 
             $order->status = $to;

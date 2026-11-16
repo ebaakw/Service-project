@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Technician Mobile API (v1)",
-    "description": "# Technician Mobile API\n\nSource: `routes/api.php` under `/api/v1/technician`.\n\n## Flow\n1. Login (or demo-login for store review)\n2. Register FCM device + subscribe to `private-technician.{id}`\n3. **My Account statuses** via `GET/PATCH /me` (availability + accepting orders + default duration)\n4. Orders appear only after customer pays inspection fee\n5. **Work queue** `GET /orders`: each order has per-order `queue_position`, `estimated_duration_minutes`, `scheduled_at` (ETA). Sorted by queue_position.\n6. Show **Accept** when `can_accept=true` → `PATCH .../status` `{ \"status\": \"accepted\", \"estimated_duration_minutes\": 90 }`\n7. Drive next buttons from `allowed_next_statuses` / flags: `can_start_trip` → `technician_on_way` → `can_mark_arrived` → `arrived`\n8. Add price-list items + `POST .../request-payment` → `waiting_customer_payment`\n9. After customer accepts invoice + pays → status becomes `started`\n10. `PATCH` `{ \"status\": \"completed\" }` when done\n\n## My Account (حسابي)\nPreferred single endpoint for the account screen:\n- `GET /api/v1/technician/me` → current profile + `availability_options`\n- `PATCH /api/v1/technician/me` → update any of:\n  - `availability_status`: `offline` | `available` | `busy` | `on_break`\n  - `is_accepting_orders`: bool\n  - `estimated_job_duration_minutes`: default only (not per-order display)\n\nAlso available separately:\n- `PATCH /availability`\n- `PATCH /job-preferences`\n\n`availability_options` example:\n```json\n[\n  { \"value\": \"offline\", \"label\": \"غير متصل\" },\n  { \"value\": \"available\", \"label\": \"متاح\" },\n  { \"value\": \"busy\", \"label\": \"مشغول\" },\n  { \"value\": \"on_break\", \"label\": \"في استراحة\" }\n]\n```\n\n## UI status groups (`status_group`)\n| group | backend statuses | AR label |\n|---|---|---|\n| `waiting` | `assigned`, `accepted` | في الانتظار |\n| `on_way` | `technician_on_way` | في الطريق |\n| `in_progress` | `arrived`, `waiting_customer_payment`, `started` | جاري العمل |\n| `completed` | `completed` | تم الانتهاء |\n| `cancelled` | `cancelled`, `expired` | ملغي |\n\n## Order action fields (list + show)\n- `customer` (+ `user.name` / `phone`)\n- `scheduled_at`, `estimated_duration_minutes`, `queue_position`\n- `status_group`, `status_group_label`\n- `can_accept`, `can_start_trip`, `can_mark_arrived`, `can_move_to_payment`, `can_complete`, `can_cancel`\n- `pending_offer_id` (secondary offer path)\n- `allowed_next_statuses[]`: `{ value, label, status_group, status_group_label }`\n\n## Show-only extras\n`customer_address`, `service_problem`, `items`, `payments`, `status_histories`, `intake_answers`\n\nResponse shape:\n- List: `{ data: [Order...], links, meta }`\n- Show / status: `{ order: { ... } }`\n- Me / update me: `{ user, technician, availability_options }`\n\n## Defaults vs per-order duration\n`PATCH /me` or `/job-preferences` → technician default only. **Never** use `estimated_job_duration_minutes` to display an order — use `order.scheduled_at` + `order.estimated_duration_minutes`.\n\nCancel/reject blocked while `is_accepting_orders=true`.\n\n## Auth\nSanctum Bearer. Login returns `{ token, token_type, user, technician, availability_options }`.\nDemo: `POST /technician/demo-login` (when `TECHNICIAN_DEMO_LOGIN_ENABLED=true`).\nSeed: `technician-demo@example.test` / `password`",
+    "description": "# Technician Mobile API\n\nSource: `routes/api.php` under `/api/v1/technician`.\n\n## Flow\n1. Login (or demo-login for store review)\n2. Register FCM device + subscribe to `private-technician.{id}`\n3. **My Account statuses** via `GET/PATCH /me` (availability + accepting orders + default duration)\n4. Orders appear only after customer pays inspection fee\n5. **Work queue** `GET /orders`: each order has per-order `queue_position`, `estimated_duration_minutes`, `scheduled_at`. Sorted by queue_position.\n5b. **Per-order schedule + chat**: `PATCH /orders/{id}/schedule` and `GET|POST /orders/{id}/messages` (`schedule_note`, `schedule_summary`, `can_update_schedule`, `is_schedule_manual`). Account duration is NOT the order appointment.\n6. Show **Accept** when `can_accept=true` → `PATCH .../status` `{ \"status\": \"accepted\", \"estimated_duration_minutes\": 90 }`\n7. Drive next buttons from `allowed_next_statuses` / flags: `can_start_trip` → `technician_on_way` → `can_mark_arrived` → `arrived`\n8. Add price-list items + `POST .../request-payment` → `waiting_customer_payment`\n9. After customer accepts invoice + pays → status becomes `started`\n10. `PATCH` `{ \"status\": \"completed\" }` when done\n\n## My Account (حسابي)\nPreferred single endpoint for the account screen:\n- `GET /api/v1/technician/me` → current profile + `availability_options`\n- `PATCH /api/v1/technician/me` → update any of:\n  - `availability_status`: `offline` | `available` | `busy` | `on_break`\n  - `is_accepting_orders`: bool\n  - `estimated_job_duration_minutes`: default only (not per-order display)\n\nAlso available separately:\n- `PATCH /availability`\n- `PATCH /job-preferences`\n\n`availability_options` example:\n```json\n[\n  { \"value\": \"offline\", \"label\": \"غير متصل\" },\n  { \"value\": \"available\", \"label\": \"متاح\" },\n  { \"value\": \"busy\", \"label\": \"مشغول\" },\n  { \"value\": \"on_break\", \"label\": \"في استراحة\" }\n]\n```\n\n## UI status groups (`status_group`)\n| group | backend statuses | AR label |\n|---|---|---|\n| `waiting` | `assigned`, `accepted` | في الانتظار |\n| `on_way` | `technician_on_way` | في الطريق |\n| `in_progress` | `arrived`, `waiting_customer_payment`, `started` | جاري العمل |\n| `completed` | `completed` | تم الانتهاء |\n| `cancelled` | `cancelled`, `expired` | ملغي |\n\n## Order action fields (list + show)\n- `customer` (+ `user.name` / `phone`)\n- `scheduled_at`, `estimated_duration_minutes`, `schedule_note`, `schedule_summary`, `can_update_schedule`, `queue_position`\n- `status_group`, `status_group_label`\n- `can_accept`, `can_start_trip`, `can_mark_arrived`, `can_move_to_payment`, `can_complete`, `can_cancel`\n- `pending_offer_id` (secondary offer path)\n- `allowed_next_statuses[]`: `{ value, label, status_group, status_group_label }`\n\n## Show-only extras\n`customer_address`, `service_problem`, `items`, `payments`, `status_histories`, `intake_answers`\n\nResponse shape:\n- List: `{ data: [Order...], links, meta }`\n- Show / status: `{ order: { ... } }`\n- Me / update me: `{ user, technician, availability_options }`\n\n## Working-day ETA\nQueue wait also exposes `estimated_wait_working_days`, `estimated_busy_label`, `estimated_next_available_at`, `estimated_next_available_relative_label` (today / tomorrow / day after). Auto `scheduled_at` uses working days (480 min/day) not wall-clock minutes.\n\n## Defaults vs per-order duration\n`PATCH /me` or `/job-preferences` → technician default only. **Never** use `estimated_job_duration_minutes` to display an order — use `order.scheduled_at` + `order.estimated_duration_minutes`.\n\nCancel/reject blocked while `is_accepting_orders=true`.\n\n## Auth\nSanctum Bearer. Login returns `{ token, token_type, user, technician, availability_options }`.\nDemo: `POST /technician/demo-login` (when `TECHNICIAN_DEMO_LOGIN_ENABLED=true`).\nSeed: `technician-demo@example.test` / `password`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -145,7 +145,7 @@
               }
             ],
             "url": "{{base_url}}/api/v1/technician/me",
-            "description": "Account screen bootstrap.\n\nResponse:\n```json\n{\n  \"user\": { },\n  \"technician\": {\n    \"availability_status\": \"available\",\n    \"availability_status_label\": \"متاح\",\n    \"is_accepting_orders\": true,\n    \"estimated_job_duration_minutes\": 60,\n    \"queued_orders_count\": 0,\n    \"estimated_wait_minutes\": 0,\n    \"estimated_wait_label\": \"...\"\n  },\n  \"availability_options\": [\n    { \"value\": \"offline\", \"label\": \"غير متصل\" },\n    { \"value\": \"available\", \"label\": \"متاح\" },\n    { \"value\": \"busy\", \"label\": \"مشغول\" },\n    { \"value\": \"on_break\", \"label\": \"في استراحة\" }\n  ]\n}\n```\n\n`estimated_job_duration_minutes` is a default for settings/queue math — not for displaying a specific order."
+            "description": "Account screen bootstrap.\n\nResponse:\n```json\n{\n  \"user\": { },\n  \"technician\": {\n    \"availability_status\": \"available\",\n    \"availability_status_label\": \"متاح\",\n    \"is_accepting_orders\": true,\n    \"estimated_job_duration_minutes\": 60,\n    \"queued_orders_count\": 0,\n    \"estimated_wait_minutes\": 0,\n    \"estimated_wait_label\": \"...\"\n  },\n  \"availability_options\": [\n    { \"value\": \"offline\", \"label\": \"غير متصل\" },\n    { \"value\": \"available\", \"label\": \"متاح\" },\n    { \"value\": \"busy\", \"label\": \"مشغول\" },\n    { \"value\": \"on_break\", \"label\": \"في استراحة\" }\n  ]\n}\n```\n\n`estimated_job_duration_minutes` is a default for settings/queue math — not for displaying a specific order.\n\nQueue snapshot may include estimated_wait_working_days, estimated_busy_label, estimated_next_available_at, estimated_next_available_relative_label."
           }
         },
         {
@@ -615,7 +615,89 @@
               }
             ],
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}",
-            "description": "Full detail. Response wrapper: `{ \"order\": { ... } }` (not top-level `data`).\n\nAdds on top of list fields:\n- `customer_address`\n- `service_problem`\n- `items`, `payments`\n- `status_histories` (timeline)\n- `intake_answers`\n- `custom_problem_text`, `customer_notes`\n\nUse this endpoint for the detail screen — do not rely on list-only payload."
+            "description": "Full detail. Response wrapper: `{ \"order\": { ... } }` (not top-level `data`).\n\nAdds on top of list fields:\n- `customer_address`\n- `service_problem`\n- `items`, `payments`\n- `status_histories` (timeline)\n- `intake_answers`\n- `custom_problem_text`, `customer_notes`\n- Schedule: `scheduled_at`, `estimated_duration_minutes`, `schedule_note`, `schedule_summary`, `is_schedule_manual`, `can_update_schedule`, `schedule_updated_by`\n\nDo **not** show account `estimated_job_duration_minutes` as this order's appointment."
+          }
+        },
+        {
+          "name": "Update order schedule",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_at\": \"2026-11-17T14:30:00+03:00\",\n  \"estimated_duration_minutes\": 90,\n  \"schedule_note\": \"موعد تقريبي بعد الظهر\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/schedule",
+            "description": "Set **this order's** appointment from order details when `can_update_schedule=true`.\n\nBody (at least one field):\n- `scheduled_at` ISO8601\n- `estimated_duration_minutes` 1–10080\n- `schedule_note` written note shown in details\n\nSets `is_schedule_manual=true` (queue will not overwrite this appointment) and posts a `schedule_update` message into the order chat.\n\nResponse: `{ order }` including `schedule_summary`."
+          }
+        },
+        {
+          "name": "List order messages (chat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/messages",
+            "description": "Chat thread with the customer on this order. Includes `text` and `schedule_update` messages."
+          }
+        },
+        {
+          "name": "Send order message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept-Language",
+                "value": "{{locale}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{technician_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"هل يناسبك الموعد المقترح؟\",\n  \"scheduled_at\": \"2026-11-17T15:00:00+03:00\",\n  \"estimated_duration_minutes\": 75,\n  \"schedule_note\": \"اقتراح موعد بديل\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/messages",
+            "description": "`body` required. Optional schedule fields also apply a schedule update (and add a schedule_update chat line).\n\nResponse: `{ message, order }`."
           }
         },
         {

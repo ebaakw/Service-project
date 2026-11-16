@@ -49,6 +49,10 @@ class Order extends Model
         'assigned_at',
         'queue_position',
         'estimated_duration_minutes',
+        'schedule_note',
+        'schedule_updated_at',
+        'schedule_updated_by_user_id',
+        'is_schedule_manual',
         'accept_sla_breached_at',
         'accepted_at',
         'technician_on_way_at',
@@ -76,6 +80,8 @@ class Order extends Model
             'assigned_at' => 'datetime',
             'queue_position' => 'integer',
             'estimated_duration_minutes' => 'integer',
+            'schedule_updated_at' => 'datetime',
+            'is_schedule_manual' => 'boolean',
             'accept_sla_breached_at' => 'datetime',
             'accepted_at' => 'datetime',
             'technician_on_way_at' => 'datetime',
@@ -142,6 +148,31 @@ class Order extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderByDesc('id');
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class)->orderBy('id');
+    }
+
+    public function scheduleUpdatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'schedule_updated_by_user_id');
+    }
+
+    /**
+     * Whether schedule can still be negotiated on this order.
+     */
+    public function allowsScheduleUpdates(): bool
+    {
+        return in_array($this->status, [
+            OrderStatus::Assigned,
+            OrderStatus::Accepted,
+            OrderStatus::TechnicianOnWay,
+            OrderStatus::Arrived,
+            OrderStatus::WaitingCustomerPayment,
+            OrderStatus::Started,
+        ], true);
     }
 
     public function items(): HasMany

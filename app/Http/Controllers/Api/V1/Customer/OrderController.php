@@ -159,6 +159,7 @@ class OrderController extends Controller
             'technician.user',
             'serviceCategory',
             'serviceProblem',
+            'scheduleUpdatedBy',
             'items',
             'payments',
             'statusHistories',

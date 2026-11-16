@@ -155,11 +155,11 @@ class TechnicianQueueTest extends TestCase
         $this->assertSame(2, (int) $order->queue_position);
         $this->assertSame(60, (int) $order->estimated_duration_minutes);
         $this->assertNotNull($order->scheduled_at);
-        $this->assertTrue(
-            $order->scheduled_at->greaterThanOrEqualTo(now()->addMinutes(55)->subSecond())
-        );
-        $this->assertTrue(
-            $order->scheduled_at->lessThanOrEqualTo(now()->addMinutes(65)->addSecond())
+        /** @var TechnicianQueueService $queue */
+        $queue = app(TechnicianQueueService::class);
+        $this->assertSame(
+            __('orders.schedule.relative_tomorrow'),
+            $queue->relativeDayLabel($order->scheduled_at)
         );
     }
 

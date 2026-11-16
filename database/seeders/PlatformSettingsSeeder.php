@@ -18,6 +18,7 @@ class PlatformSettingsSeeder extends Seeder
         $settings->setGlobal('technician_accept_sla_minutes', 5, SettingValueType::Number, 'orders', 'Minutes allowed for technician to accept after assignment');
         $settings->setGlobal('technician_arrival_sla_minutes', 45, SettingValueType::Number, 'orders', 'Minutes allowed for technician to arrive after acceptance');
         $settings->setGlobal('default_job_duration_minutes', 60, SettingValueType::Number, 'orders', 'Default estimated job duration in minutes for technician queue wait estimates');
+        $settings->setGlobal('working_minutes_per_day', 480, SettingValueType::Number, 'orders', 'Working minutes per day used to express queue ETA as working days (tomorrow / day after)');
         $settings->setGlobal('platform_commission_percentage', 0, SettingValueType::Number, 'billing', 'Platform commission percent');
         $settings->setGlobal('support_phone', null, SettingValueType::String, 'support', 'Public support phone', true);
         $settings->setGlobal('support_email', null, SettingValueType::String, 'support', 'Public support email', true);

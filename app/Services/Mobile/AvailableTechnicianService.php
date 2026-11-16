@@ -210,6 +210,13 @@ class AvailableTechnicianService
             $technician->setAttribute('queued_orders_count', $snapshot['queued_orders_count']);
             $technician->setAttribute('estimated_wait_minutes', $snapshot['estimated_wait_minutes']);
             $technician->setAttribute('estimated_wait_label', $snapshot['estimated_wait_label']);
+            $technician->setAttribute('estimated_wait_working_days', $snapshot['estimated_wait_working_days']);
+            $technician->setAttribute('estimated_busy_label', $snapshot['estimated_busy_label']);
+            $technician->setAttribute('estimated_next_available_at', $snapshot['estimated_next_available_at']);
+            $technician->setAttribute(
+                'estimated_next_available_relative_label',
+                $snapshot['estimated_next_available_relative_label']
+            );
 
             return $technician;
         })->values();

@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\V1\Customer\FeedbackController as CustomerFeedbackC
 use App\Http\Controllers\Api\V1\Customer\HomeController as CustomerHomeController;
 use App\Http\Controllers\Api\V1\Customer\NotificationController as CustomerNotificationController;
 use App\Http\Controllers\Api\V1\Customer\OrderController as CustomerOrderController;
+use App\Http\Controllers\Api\V1\Customer\OrderMessageController as CustomerOrderMessageController;
+use App\Http\Controllers\Api\V1\Customer\OrderScheduleController as CustomerOrderScheduleController;
 use App\Http\Controllers\Api\V1\Customer\SearchController as CustomerSearchController;
 use App\Http\Controllers\Api\V1\Customer\ServiceCategoryController as CustomerServiceCategoryController;
 use App\Http\Controllers\Api\V1\MyFatoorahPaymentController;
@@ -28,8 +30,10 @@ use App\Http\Controllers\Api\V1\Technician\JobPreferencesController as Technicia
 use App\Http\Controllers\Api\V1\Technician\LocationController as TechnicianLocationController;
 use App\Http\Controllers\Api\V1\Technician\OrderController as TechnicianOrderController;
 use App\Http\Controllers\Api\V1\Technician\OrderItemController as TechnicianOrderItemController;
+use App\Http\Controllers\Api\V1\Technician\OrderMessageController as TechnicianOrderMessageController;
 use App\Http\Controllers\Api\V1\Technician\OrderOfferController as TechnicianOrderOfferController;
 use App\Http\Controllers\Api\V1\Technician\OrderPaymentRequestController as TechnicianOrderPaymentRequestController;
+use App\Http\Controllers\Api\V1\Technician\OrderScheduleController as TechnicianOrderScheduleController;
 use App\Http\Controllers\Api\V1\Technician\PriceListController as TechnicianPriceListController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -118,6 +122,9 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/orders', [CustomerOrderController::class, 'index']);
             Route::post('/orders', [CustomerOrderController::class, 'store']);
             Route::get('/orders/{order}', [CustomerOrderController::class, 'show']);
+            Route::patch('/orders/{order}/schedule', [CustomerOrderScheduleController::class, 'update']);
+            Route::get('/orders/{order}/messages', [CustomerOrderMessageController::class, 'index']);
+            Route::post('/orders/{order}/messages', [CustomerOrderMessageController::class, 'store']);
             Route::post('/orders/{order}/pay-inspection-placeholder', [CustomerOrderController::class, 'payInspectionPlaceholder']);
             Route::get('/orders/{order}/invoice', [CustomerOrderController::class, 'invoice']);
             Route::post('/orders/{order}/accept-invoice', [CustomerOrderController::class, 'acceptInvoice']);
@@ -152,6 +159,9 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/orders', [TechnicianOrderController::class, 'index']);
             Route::get('/orders/{order}', [TechnicianOrderController::class, 'show']);
             Route::patch('/orders/{order}/status', [TechnicianOrderController::class, 'updateStatus']);
+            Route::patch('/orders/{order}/schedule', [TechnicianOrderScheduleController::class, 'update']);
+            Route::get('/orders/{order}/messages', [TechnicianOrderMessageController::class, 'index']);
+            Route::post('/orders/{order}/messages', [TechnicianOrderMessageController::class, 'store']);
             Route::post('/orders/{order}/request-payment', [TechnicianOrderPaymentRequestController::class, 'store']);
 
             Route::post('/orders/{order}/items', [TechnicianOrderItemController::class, 'store']);

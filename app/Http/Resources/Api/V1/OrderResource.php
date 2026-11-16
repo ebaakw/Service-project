@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\OrderOffer;
 use App\Services\Orders\OrderStateService;
+use App\Services\Orders\TechnicianQueueService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -57,6 +58,16 @@ class OrderResource extends JsonResource
             'discount_amount' => (string) $this->discount_amount,
             'total_amount' => (string) $this->total_amount,
             'scheduled_at' => $this->scheduled_at?->toIso8601String(),
+            'scheduled_at_relative_label' => $this->scheduledAtRelativeLabel(),
+            'estimated_duration_minutes' => $this->estimated_duration_minutes !== null
+                ? (int) $this->estimated_duration_minutes
+                : null,
+            'schedule_note' => $this->schedule_note,
+            'schedule_updated_at' => $this->schedule_updated_at?->toIso8601String(),
+            'schedule_updated_by' => $this->scheduleUpdatedByPayload(),
+            'is_schedule_manual' => (bool) $this->is_schedule_manual,
+            'can_update_schedule' => $this->canUpdateSchedule($request),
+            'schedule_summary' => $this->scheduleSummary(),
             'inspection_paid_at' => $this->inspection_paid_at?->toIso8601String(),
             'assigned_at' => $this->assigned_at?->toIso8601String(),
             'queue_position' => $this->queue_position !== null ? (int) $this->queue_position : null,
@@ -64,9 +75,6 @@ class OrderResource extends JsonResource
                 ? __('orders.queue.position_label')
                 : null,
             'inspection_paid_banner' => $this->inspectionPaymentBanner(),
-            'estimated_duration_minutes' => $this->estimated_duration_minutes !== null
-                ? (int) $this->estimated_duration_minutes
-                : null,
             'accepted_at' => $this->accepted_at?->toIso8601String(),
             'technician_on_way_at' => $this->technician_on_way_at?->toIso8601String(),
             'arrived_at' => $this->arrived_at?->toIso8601String(),
@@ -167,5 +175,94 @@ class OrderResource extends JsonResource
             'message' => __('orders.customer.inspection_paid_message'),
             'badge' => __('orders.customer.inspection_paid_badge'),
         ];
+    }
+
+    private function canUpdateSchedule(Request $request): bool
+    {
+        if (! $this->resource->allowsScheduleUpdates() || $this->technician_id === null) {
+            return false;
+        }
+
+        $user = $request->user();
+        if ($user === null) {
+            return false;
+        }
+
+        if ($user->isTechnician()) {
+            return (int) $this->technician_id === (int) $user->technician?->getKey();
+        }
+
+        if ($user->isCustomer()) {
+            return (int) $this->customer_id === (int) $user->customerProfile?->getKey();
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array{id: int, name: string|null, role: string|null}|null
+     */
+    private function scheduleUpdatedByPayload(): ?array
+    {
+        if (! $this->relationLoaded('scheduleUpdatedBy') || $this->scheduleUpdatedBy === null) {
+            return null;
+        }
+
+        $user = $this->scheduleUpdatedBy;
+        $role = null;
+        if ($user->isTechnician()) {
+            $role = 'technician';
+        } elseif ($user->isCustomer()) {
+            $role = 'customer';
+        }
+
+        return [
+            'id' => (int) $user->getKey(),
+            'name' => $user->localized('name') ?: $user->name,
+            'role' => $role,
+        ];
+    }
+
+    private function scheduledAtRelativeLabel(): ?string
+    {
+        if ($this->scheduled_at === null) {
+            return null;
+        }
+
+        return app(TechnicianQueueService::class)->relativeDayLabel($this->scheduled_at);
+    }
+
+    private function scheduleSummary(): ?string
+    {
+        if ($this->scheduled_at === null
+            && $this->estimated_duration_minutes === null
+            && blank($this->schedule_note)) {
+            return null;
+        }
+
+        $parts = [];
+
+        if ($this->scheduled_at !== null) {
+            $relative = $this->scheduledAtRelativeLabel();
+            $time = $this->scheduled_at->timezone(config('app.timezone'))->format('H:i');
+            $parts[] = __('orders.schedule.summary_when_relative', [
+                'relative' => $relative,
+                'time' => $time,
+            ]);
+        }
+
+        if ($this->estimated_duration_minutes !== null) {
+            $parts[] = __('orders.schedule.summary_duration', [
+                'minutes' => (int) $this->estimated_duration_minutes,
+            ]);
+        }
+
+        if ($this->schedule_note) {
+            $parts[] = __('orders.schedule.summary_note', [
+                'note' => $this->schedule_note,
+            ]);
+        }
+
+        return implode(' — ', $parts);
     }
 }

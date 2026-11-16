@@ -7,12 +7,17 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Technician;
 use App\Services\Settings\SettingsService;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class TechnicianQueueService
 {
     public const DEFAULT_JOB_DURATION_MINUTES = 60;
+
+    public const DEFAULT_WORKING_MINUTES_PER_DAY = 480;
+
+    public const DEFAULT_APPOINTMENT_HOUR = 10;
 
     /**
      * @return list<OrderStatus>
@@ -32,6 +37,72 @@ class TechnicianQueueService
     public function __construct(
         private readonly SettingsService $settings,
     ) {}
+
+    public function workingMinutesPerDay(): int
+    {
+        $value = (int) $this->settings->getGlobal(
+            'working_minutes_per_day',
+            self::DEFAULT_WORKING_MINUTES_PER_DAY
+        );
+
+        return $value > 0 ? $value : self::DEFAULT_WORKING_MINUTES_PER_DAY;
+    }
+
+    public function workingDaysFromMinutes(int $minutes): int
+    {
+        if ($minutes <= 0) {
+            return 0;
+        }
+
+        return (int) ceil($minutes / $this->workingMinutesPerDay());
+    }
+
+    public function formatBusyWorkingDaysLabel(int $workingDays): string
+    {
+        if ($workingDays <= 0) {
+            return __('orders.queue.busy_none');
+        }
+
+        if ($workingDays === 1) {
+            return __('orders.queue.busy_working_day');
+        }
+
+        if ($workingDays === 2) {
+            return __('orders.queue.busy_working_days_dual');
+        }
+
+        return __('orders.queue.busy_working_days', ['count' => $workingDays]);
+    }
+
+    public function nextAvailableAtFromMinutes(int $minutesAhead): CarbonInterface
+    {
+        $daysAhead = $this->workingDaysFromMinutes($minutesAhead);
+        $tz = config('app.timezone');
+        $slot = now($tz)->startOfDay()->addDays($daysAhead)->setTime(self::DEFAULT_APPOINTMENT_HOUR, 0);
+
+        if ($daysAhead === 0 && $slot->lessThan(now($tz))) {
+            return now($tz)->addMinute()->seconds(0);
+        }
+
+        return $slot;
+    }
+
+    public function relativeDayLabel(CarbonInterface $at): string
+    {
+        $tz = config('app.timezone');
+        $target = $at->copy()->timezone($tz)->startOfDay();
+        $today = now($tz)->startOfDay();
+        $diff = (int) $today->diffInDays($target, false);
+
+        return match ($diff) {
+            0 => __('orders.schedule.relative_today'),
+            1 => __('orders.schedule.relative_tomorrow'),
+            2 => __('orders.schedule.relative_day_after'),
+            default => __('orders.schedule.relative_on_date', [
+                'date' => $at->timezone($tz)->format('Y-m-d'),
+            ]),
+        };
+    }
 
     public function resolveJobDurationMinutes(Technician $technician, ?Company $company = null): int
     {
@@ -107,6 +178,10 @@ class TechnicianQueueService
      *     queued_orders_count: int,
      *     estimated_wait_minutes: int,
      *     estimated_wait_label: string,
+     *     estimated_wait_working_days: int,
+     *     estimated_busy_label: string,
+     *     estimated_next_available_at: string,
+     *     estimated_next_available_relative_label: string,
      *     is_accepting_orders: bool,
      *     estimated_job_duration_minutes: int
      * }
@@ -116,13 +191,12 @@ class TechnicianQueueService
         $count = $this->queuedOrdersCount($technician);
         $waitMinutes = $this->estimatedWaitMinutes($technician);
 
-        return [
-            'queued_orders_count' => $count,
-            'estimated_wait_minutes' => $waitMinutes,
-            'estimated_wait_label' => $this->formatWaitLabel($waitMinutes),
-            'is_accepting_orders' => (bool) $technician->is_accepting_orders,
-            'estimated_job_duration_minutes' => $this->resolveJobDurationMinutes($technician),
-        ];
+        return $this->buildSnapshotPayload(
+            $count,
+            $waitMinutes,
+            (bool) $technician->is_accepting_orders,
+            $this->resolveJobDurationMinutes($technician),
+        );
     }
 
     public function formatWaitLabel(int $minutes): string
@@ -191,13 +265,17 @@ class TechnicianQueueService
             $position = $this->nextQueuePosition($technician);
         }
 
-        $minutesAhead = $this->minutesAheadOfPosition($technician, (int) $position, (int) $order->getKey());
-
-        $order->forceFill([
+        $payload = [
             'queue_position' => $position,
             'estimated_duration_minutes' => $duration,
-            'scheduled_at' => now()->addMinutes($minutesAhead),
-        ])->save();
+        ];
+
+        if (! $order->is_schedule_manual) {
+            $minutesAhead = $this->minutesAheadOfPosition($technician, (int) $position, (int) $order->getKey());
+            $payload['scheduled_at'] = $this->nextAvailableAtFromMinutes($minutesAhead);
+        }
+
+        $order->forceFill($payload)->save();
     }
 
     /**
@@ -243,9 +321,11 @@ class TechnicianQueueService
         $minutesAhead = 0;
 
         foreach ($orders as $order) {
-            $order->forceFill([
-                'scheduled_at' => now()->addMinutes($minutesAhead),
-            ])->save();
+            if (! $order->is_schedule_manual) {
+                $order->forceFill([
+                    'scheduled_at' => $this->nextAvailableAtFromMinutes($minutesAhead),
+                ])->save();
+            }
 
             $minutes = $order->estimated_duration_minutes;
             $minutesAhead += ($minutes !== null && (int) $minutes > 0) ? (int) $minutes : $fallback;
@@ -289,6 +369,8 @@ class TechnicianQueueService
             'queue_position' => null,
             'estimated_duration_minutes' => null,
             'scheduled_at' => null,
+            'schedule_note' => null,
+            'is_schedule_manual' => false,
         ])->save();
     }
 
@@ -298,6 +380,10 @@ class TechnicianQueueService
      *     queued_orders_count: int,
      *     estimated_wait_minutes: int,
      *     estimated_wait_label: string,
+     *     estimated_wait_working_days: int,
+     *     estimated_busy_label: string,
+     *     estimated_next_available_at: string,
+     *     estimated_next_available_relative_label: string,
      *     is_accepting_orders: bool,
      *     estimated_job_duration_minutes: int
      * }>
@@ -339,13 +425,12 @@ class TechnicianQueueService
                 $wait += ($minutes !== null && (int) $minutes > 0) ? (int) $minutes : $fallback;
             }
 
-            $result[$technicianId] = [
-                'queued_orders_count' => $techOrders->count(),
-                'estimated_wait_minutes' => $wait,
-                'estimated_wait_label' => $this->formatWaitLabel($wait),
-                'is_accepting_orders' => (bool) $technician->is_accepting_orders,
-                'estimated_job_duration_minutes' => $fallback,
-            ];
+            $result[$technicianId] = $this->buildSnapshotPayload(
+                $techOrders->count(),
+                $wait,
+                (bool) $technician->is_accepting_orders,
+                $fallback,
+            );
         }
 
         return $result;
@@ -354,10 +439,48 @@ class TechnicianQueueService
     public function attachSnapshotAttributes(Technician $technician): Technician
     {
         $snapshot = $this->queueSnapshot($technician);
-        $technician->setAttribute('queued_orders_count', $snapshot['queued_orders_count']);
-        $technician->setAttribute('estimated_wait_minutes', $snapshot['estimated_wait_minutes']);
-        $technician->setAttribute('estimated_wait_label', $snapshot['estimated_wait_label']);
+        foreach ($snapshot as $key => $value) {
+            if ($key === 'is_accepting_orders' || $key === 'estimated_job_duration_minutes') {
+                continue;
+            }
+            $technician->setAttribute($key, $value);
+        }
 
         return $technician;
+    }
+
+    /**
+     * @return array{
+     *     queued_orders_count: int,
+     *     estimated_wait_minutes: int,
+     *     estimated_wait_label: string,
+     *     estimated_wait_working_days: int,
+     *     estimated_busy_label: string,
+     *     estimated_next_available_at: string,
+     *     estimated_next_available_relative_label: string,
+     *     is_accepting_orders: bool,
+     *     estimated_job_duration_minutes: int
+     * }
+     */
+    private function buildSnapshotPayload(
+        int $count,
+        int $waitMinutes,
+        bool $isAcceptingOrders,
+        int $jobDurationMinutes,
+    ): array {
+        $workingDays = $this->workingDaysFromMinutes($waitMinutes);
+        $nextAt = $this->nextAvailableAtFromMinutes($waitMinutes);
+
+        return [
+            'queued_orders_count' => $count,
+            'estimated_wait_minutes' => $waitMinutes,
+            'estimated_wait_label' => $this->formatWaitLabel($waitMinutes),
+            'estimated_wait_working_days' => $workingDays,
+            'estimated_busy_label' => $this->formatBusyWorkingDaysLabel($workingDays),
+            'estimated_next_available_at' => $nextAt->toIso8601String(),
+            'estimated_next_available_relative_label' => $this->relativeDayLabel($nextAt),
+            'is_accepting_orders' => $isAcceptingOrders,
+            'estimated_job_duration_minutes' => $jobDurationMinutes,
+        ];
     }
 }

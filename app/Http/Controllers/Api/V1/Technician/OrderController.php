@@ -73,6 +73,7 @@ class OrderController extends Controller
             'customer.user',
             'serviceCategory',
             'serviceProblem',
+            'scheduleUpdatedBy',
             'items',
             'payments',
             'statusHistories',
