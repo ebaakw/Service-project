@@ -38,7 +38,7 @@ class OrderScheduleController extends Controller
             'scheduleUpdatedBy',
             'items',
             'payments',
-            'statusHistories',
+            'statusHistories.changedBy',
             'intakeAnswers',
         ]);
 

@@ -60,7 +60,7 @@ class OrderPaymentRequestController extends Controller
             'serviceCategory',
             'items',
             'payments',
-            'statusHistories',
+            'statusHistories.changedBy',
         ]);
 
         return response()->json([

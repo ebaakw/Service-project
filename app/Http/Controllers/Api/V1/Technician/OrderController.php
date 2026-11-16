@@ -76,7 +76,7 @@ class OrderController extends Controller
             'scheduleUpdatedBy',
             'items',
             'payments',
-            'statusHistories',
+            'statusHistories.changedBy',
             'intakeAnswers',
             'offers' => static fn ($q) => $q
                 ->where('technician_id', $technicianId)
@@ -140,7 +140,7 @@ class OrderController extends Controller
             'serviceProblem',
             'items',
             'payments',
-            'statusHistories',
+            'statusHistories.changedBy',
             'intakeAnswers',
             'offers' => static fn ($q) => $q
                 ->where('technician_id', $technicianId)

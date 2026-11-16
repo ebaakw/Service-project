@@ -33,10 +33,14 @@ class OrderResource extends JsonResource
         $canCancel = in_array(OrderStatus::Cancelled->value, $nextValues, true)
             && (! $isAssignedToMe || ! $acceptingOrders);
 
+        $orderNumber = $request->user()?->isTechnician()
+            ? $this->resource->shortOrderNumber()
+            : $this->order_number;
+
         return [
             'id' => $this->id,
             'ulid' => $this->ulid,
-            'order_number' => $this->order_number,
+            'order_number' => $orderNumber,
             'status' => $status?->value,
             'status_label' => $status?->label(),
             'status_group' => $status?->statusGroup(),

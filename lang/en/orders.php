@@ -63,4 +63,25 @@ return [
             'system' => 'System',
         ],
     ],
+    'history' => [
+        'title_created' => 'Status recorded: :status',
+        'title_changed' => 'Status changed from “:from” to “:to”',
+        'title_set' => ':status',
+        'system_actor' => 'System',
+        'role' => [
+            'customer' => 'Customer',
+            'technician' => 'Technician',
+            'company' => 'Company',
+            'system' => 'System',
+        ],
+        'notes' => [
+            'inspection_fee_paid' => 'Inspection fee paid',
+            'technician_pre_selected' => 'Technician pre-selected',
+            'awaiting_technician_assignment' => 'Awaiting technician assignment',
+            'final_invoice_paid' => 'Final invoice paid — work may begin',
+            'technician_assigned_by_company' => 'Technician assigned by company',
+            'force_completed' => 'Force completed',
+            'final_invoice_sent' => 'Final invoice sent',
+        ],
+    ],
 ];

@@ -134,19 +134,19 @@ class PaymentProcessingService
 
         $order->refresh();
 
-        $this->orderStateService->transition($order, OrderStatus::PaidInspection, null, 'Inspection fee paid');
+        $this->orderStateService->transition($order, OrderStatus::PaidInspection, null, 'inspection_fee_paid');
 
         $order->refresh();
 
         if ($order->technician_id !== null) {
-            $this->orderStateService->transition($order, OrderStatus::Assigned, null, 'Technician pre-selected');
+            $this->orderStateService->transition($order, OrderStatus::Assigned, null, 'technician_pre_selected');
             $assigned = $order->fresh(['technician', 'company']);
             if ($assigned !== null) {
                 $this->technicianQueueService->enqueueAssignedOrder($assigned);
             }
             $this->orderAssignmentNotifier->notifyPaidAssignment($order->fresh());
         } else {
-            $this->orderStateService->transition($order, OrderStatus::SearchingTechnician, null, 'Awaiting technician assignment');
+            $this->orderStateService->transition($order, OrderStatus::SearchingTechnician, null, 'awaiting_technician_assignment');
             NewOrderForCompany::notifyViewers($order->fresh());
         }
     }
@@ -171,6 +171,6 @@ class PaymentProcessingService
             ])->save();
         }
 
-        $this->orderStateService->transition($order, OrderStatus::Started, null, 'Final invoice paid — work may begin');
+        $this->orderStateService->transition($order, OrderStatus::Started, null, 'final_invoice_paid');
     }
 }

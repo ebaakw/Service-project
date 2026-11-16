@@ -63,4 +63,25 @@ return [
             'system' => 'النظام',
         ],
     ],
+    'history' => [
+        'title_created' => 'تم تسجيل الحالة: :status',
+        'title_changed' => 'تغيير الحالة من «:from» إلى «:to»',
+        'title_set' => ':status',
+        'system_actor' => 'النظام',
+        'role' => [
+            'customer' => 'العميل',
+            'technician' => 'الفني',
+            'company' => 'الشركة',
+            'system' => 'النظام',
+        ],
+        'notes' => [
+            'inspection_fee_paid' => 'تم دفع رسوم المعاينة',
+            'technician_pre_selected' => 'تم اختيار فني مسبقًا',
+            'awaiting_technician_assignment' => 'بانتظار تعيين فني',
+            'final_invoice_paid' => 'تم دفع الفاتورة النهائية — يمكن بدء العمل',
+            'technician_assigned_by_company' => 'تم تعيين الفني من قبل الشركة',
+            'force_completed' => 'تم الإكمال إجباريًا',
+            'final_invoice_sent' => 'تم إرسال الفاتورة النهائية',
+        ],
+    ],
 ];

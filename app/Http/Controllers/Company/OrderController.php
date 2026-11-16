@@ -173,7 +173,7 @@ class OrderController extends Controller
 
         $order->forceFill(['technician_id' => $technician->getKey()])->save();
 
-        $this->orderStateService->transition($order, OrderStatus::Assigned, $request->user(), 'Technician assigned by company');
+        $this->orderStateService->transition($order, OrderStatus::Assigned, $request->user(), 'technician_assigned_by_company');
 
         $assigned = $order->fresh(['technician', 'company']);
         if ($assigned !== null) {
@@ -243,7 +243,7 @@ class OrderController extends Controller
             $order,
             OrderStatus::Completed,
             $request->user(),
-            $validated['note'] ?? 'Force completed',
+            $validated['note'] ?? 'force_completed',
             [
                 'force' => true,
                 'force_complete_authorized' => true,

@@ -14,6 +14,7 @@ use App\Models\Customer;
 use App\Models\CustomerAddress;
 use App\Models\Order;
 use App\Models\OrderOffer;
+use App\Models\OrderStatusHistory;
 use App\Models\ServiceCategory;
 use App\Models\Technician;
 use App\Models\User;
@@ -110,6 +111,7 @@ class TechnicianOrderActionsTest extends TestCase
             'customer_address_id' => $ctx['address']->getKey(),
             'technician_id' => $ctx['technician']->getKey(),
             'service_category_id' => $ctx['category']->getKey(),
+            'order_number' => 'ORD-2026-00020',
             'status' => OrderStatus::Assigned,
             'inspection_payment_status' => PaymentStatus::Paid,
             'queue_position' => 1,
@@ -119,11 +121,21 @@ class TechnicianOrderActionsTest extends TestCase
             'customer_notes' => 'Please call on arrival',
         ]);
 
+        OrderStatusHistory::query()->create([
+            'order_id' => $order->getKey(),
+            'old_status' => OrderStatus::PaidInspection->value,
+            'new_status' => OrderStatus::Assigned->value,
+            'changed_by_user_id' => null,
+            'note' => 'Inspection fee paid',
+            'created_at' => now(),
+        ]);
+
         Sanctum::actingAs($ctx['technicianUser']);
 
-        $response = $this->getJson('/api/v1/technician/orders/'.$order->getKey())
+        $response = $this->getJson('/api/v1/technician/orders/'.$order->getKey().'?locale=ar')
             ->assertOk()
             ->assertJsonPath('order.id', $order->getKey())
+            ->assertJsonPath('order.order_number', '20')
             ->assertJsonPath('order.can_accept', true)
             ->assertJsonPath('order.status_group', 'waiting')
             ->assertJsonPath('order.customer.id', $ctx['customer']->getKey())
@@ -133,8 +145,23 @@ class TechnicianOrderActionsTest extends TestCase
             ->assertJsonPath('order.estimated_duration_minutes', 60);
 
         $this->assertNotNull($response->json('order.scheduled_at'));
-        $this->assertIsArray($response->json('order.status_histories'));
         $this->assertIsArray($response->json('order.allowed_next_statuses'));
+
+        $history = collect($response->json('order.status_histories'))->first();
+        $this->assertIsArray($history);
+        $this->assertSame('تم دفع رسوم المعاينة', $history['note']);
+        $this->assertSame('تم تعيين فني', $history['new_status_label']);
+        $this->assertNotEmpty($history['title']);
+        $this->assertNotEmpty($history['created_at_label']);
+        $this->assertSame('system', $history['changed_by']['role']);
+        $this->assertSame('النظام', $history['changed_by']['name']);
+
+        $en = $this->getJson('/api/v1/technician/orders/'.$order->getKey().'?locale=en')
+            ->assertOk();
+        $enHistory = collect($en->json('order.status_histories'))->first();
+        $this->assertSame('Inspection fee paid', $enHistory['note']);
+        $this->assertSame('Technician assigned', $enHistory['new_status_label']);
+        $this->assertNotEmpty($enHistory['created_at_label']);
     }
 
     public function test_accept_can_set_per_order_duration(): void

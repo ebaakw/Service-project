@@ -28,7 +28,7 @@ class OrderOfferResource extends JsonResource
                 return [
                     'id' => $order->id,
                     'ulid' => $order->ulid,
-                    'order_number' => $order->order_number,
+                    'order_number' => $order->shortOrderNumber(),
                     'status' => $order->status?->value,
                     'status_label' => $order->status?->label(),
                     'status_group' => $order->status?->statusGroup(),

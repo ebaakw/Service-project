@@ -105,6 +105,18 @@ class Order extends Model
             && $this->quote_accepted_at === null;
     }
 
+    /**
+     * Numeric display id for mobile UIs (e.g. ORD-2026-00020 → "20").
+     */
+    public function shortOrderNumber(): string
+    {
+        if (preg_match('/(\d+)$/', (string) $this->order_number, $matches) === 1) {
+            return (string) (int) $matches[1];
+        }
+
+        return (string) $this->getKey();
+    }
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

@@ -66,7 +66,7 @@ class OrderFinalInvoiceDispatchService
                 $order,
                 OrderStatus::WaitingCustomerPayment,
                 $actor,
-                'Final invoice sent',
+                'final_invoice_sent',
             );
 
             $invoice = $invoice->fresh();

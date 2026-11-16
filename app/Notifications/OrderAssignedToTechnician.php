@@ -33,7 +33,7 @@ class OrderAssignedToTechnician extends Notification implements ShouldQueue
             'type' => 'order_awaiting_accept',
             'order_id' => $order->getKey(),
             'order_ulid' => $order->ulid,
-            'order_number' => $order->order_number,
+            'order_number' => $order->shortOrderNumber(),
         ];
     }
 
@@ -46,7 +46,7 @@ class OrderAssignedToTechnician extends Notification implements ShouldQueue
 
         return [
             'title' => 'New paid order',
-            'body' => $order->order_number,
+            'body' => $order->shortOrderNumber(),
             'data' => [
                 'type' => 'order_awaiting_accept',
                 'order_id' => (string) $order->getKey(),
