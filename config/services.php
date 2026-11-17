@@ -36,6 +36,9 @@ return [
     ],
 
     'fcm' => [
+        // Preferred: Firebase HTTP v1 via service-account JSON path.
+        'credentials' => env('FCM_CREDENTIALS'),
+        // Optional fallback only (Legacy API is deprecated/often unavailable).
         'server_key' => env('FCM_SERVER_KEY'),
     ],
 

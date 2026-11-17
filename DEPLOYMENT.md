@@ -54,13 +54,14 @@ Fill at least:
 | `PLATFORM_ADMIN_EMAIL`, `PLATFORM_ADMIN_PASSWORD` | Used by `PlatformAdminSeeder` (see below) |
 | `SANCTUM_STATEFUL_DOMAINS` | Comma-separated hosts for SPA cookie auth if needed |
 | `FRONTEND_URL` | If you use a separate SPA origin |
-| `FCM_SERVER_KEY` | Firebase Cloud Messaging **Server key** (Cloud Messaging → Project settings). Required for mobile push on order chat/schedule. Without it, pushes are skipped safely. |
+| `FCM_CREDENTIALS` | Path to Firebase **service-account JSON** (HTTP v1). Preferred. |
+| `FCM_SERVER_KEY` | Legacy server key only (often unavailable on new projects). |
 
 ### Firebase / FCM (mobile push)
 
-1. Create or open a Firebase project; add Android/iOS apps for customer and technician.
-2. Enable Cloud Messaging and copy the legacy **Server key** into `FCM_SERVER_KEY`.
-3. Run `php artisan config:clear` after changing `.env`.
+1. Create/open a Firebase project. Confirm **Firebase Cloud Messaging API (V1)** is Enabled.
+2. Project settings → **Service accounts** → **Generate new private key** → save JSON on the server (e.g. `storage/app/firebase/service-account.json`, not web-public).
+3. Set `FCM_CREDENTIALS` in `.env` to that file path, then `php artisan config:clear`.
 4. Apps register tokens via `POST /api/v1/{customer|technician}/devices` with `{ device_type, fcm_token }`.
 5. Keep a queue worker running (`php artisan queue:work`) so `ShouldQueue` notifications reach FCM.
 

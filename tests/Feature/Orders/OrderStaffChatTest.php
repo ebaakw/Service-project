@@ -248,12 +248,39 @@ class OrderStaffChatTest extends TestCase
         $this->assertContains('from customer', collect($techList->json('data'))->pluck('body')->all());
     }
 
-    public function test_fcm_push_is_attempted_when_server_key_and_device_exist(): void
+    public function test_fcm_push_is_attempted_when_v1_credentials_and_device_exist(): void
     {
-        Http::fake([
-            'fcm.googleapis.com/*' => Http::response(['success' => 1], 200),
+        $credentialsPath = storage_path('app/firebase-test-sa.json');
+        if (! is_dir(dirname($credentialsPath))) {
+            mkdir(dirname($credentialsPath), 0755, true);
+        }
+
+        $key = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
         ]);
-        config(['services.fcm.server_key' => 'test-server-key']);
+        $this->assertNotFalse($key);
+        openssl_pkey_export($key, $privateKeyPem);
+
+        file_put_contents($credentialsPath, json_encode([
+            'type' => 'service_account',
+            'project_id' => 'demo-project',
+            'client_email' => 'firebase-adminsdk@demo-project.iam.gserviceaccount.com',
+            'private_key' => $privateKeyPem,
+        ], JSON_THROW_ON_ERROR));
+
+        config([
+            'services.fcm.credentials' => $credentialsPath,
+            'services.fcm.server_key' => null,
+        ]);
+
+        Http::fake([
+            'oauth2.googleapis.com/token' => Http::response([
+                'access_token' => 'ya29.test-access-token',
+                'expires_in' => 3600,
+            ], 200),
+            'fcm.googleapis.com/*' => Http::response(['name' => 'projects/demo/messages/1'], 200),
+        ]);
 
         $ctx = $this->seedAssignedOrderContext();
         UserDevice::factory()->create([
@@ -268,9 +295,16 @@ class OrderStaffChatTest extends TestCase
         ])->assertCreated();
 
         Http::assertSent(function ($request) {
-            return str_contains($request->url(), 'fcm.googleapis.com/fcm/send')
-                && $request['to'] === 'customer-device-token-xyz'
-                && ($request['notification']['body'] ?? null) === 'push me';
+            if (! str_contains($request->url(), 'fcm.googleapis.com/v1/projects/demo-project/messages:send')) {
+                return false;
+            }
+
+            $payload = $request->data();
+
+            return ($payload['message']['token'] ?? null) === 'customer-device-token-xyz'
+                && ($payload['message']['notification']['body'] ?? null) === 'push me';
         });
+
+        @unlink($credentialsPath);
     }
 }
