@@ -53,6 +53,7 @@ return [
         'forbidden' => 'You are not allowed to message on this order.',
         'no_technician' => 'No technician is assigned yet.',
         'notification_title' => 'New order message',
+        'staff_on_behalf_notification_title' => 'Company replied on order chat',
         'type' => [
             'text' => 'Message',
             'schedule_update' => 'Schedule update',
@@ -62,6 +63,24 @@ return [
             'technician' => 'Technician',
             'system' => 'System',
         ],
+        'actor_context' => [
+            'customer' => 'Customer',
+            'technician' => 'Technician',
+            'company' => 'Company',
+            'platform' => 'Platform',
+        ],
+        'on_behalf' => [
+            'company' => 'On behalf of technician via company',
+            'platform' => 'On behalf of technician via support',
+        ],
+        'chat_title' => 'Order chat',
+        'chat_empty' => 'No messages yet.',
+        'chat_placeholder' => 'Write a message on behalf of the technician…',
+        'chat_send' => 'Send',
+        'chat_load_older' => 'Load older messages',
+        'chat_locked' => 'Messaging is not available for this order status.',
+        'last_message' => 'Last message',
+        'has_messages' => 'Has chat',
     ],
     'history' => [
         'title_created' => 'Status recorded: :status',

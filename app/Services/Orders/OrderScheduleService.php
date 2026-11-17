@@ -2,11 +2,11 @@
 
 namespace App\Services\Orders;
 
+use App\Enums\OrderMessageActorContext;
 use App\Enums\OrderMessageSenderRole;
 use App\Enums\OrderMessageType;
 use App\Events\OrderScheduleUpdated;
 use App\Models\Order;
-use App\Models\OrderMessage;
 use App\Models\User;
 use App\Notifications\OrderScheduleUpdatedNotification;
 use Carbon\CarbonInterface;
@@ -19,6 +19,11 @@ class OrderScheduleService
     public function __construct(
         private readonly TechnicianQueueService $technicianQueueService,
     ) {}
+
+    private function messageService(): OrderMessageService
+    {
+        return app(OrderMessageService::class);
+    }
 
     /**
      * @param  array{
@@ -91,9 +96,14 @@ class OrderScheduleService
 
             $body = $this->buildScheduleMessageBody($order, $actorRole);
 
-            OrderMessage::query()->create([
-                'order_id' => $order->getKey(),
+            $context = $actorRole === OrderMessageSenderRole::Customer
+                ? OrderMessageActorContext::Customer
+                : OrderMessageActorContext::Technician;
+
+            $this->messageService()->createMessage($order, [
                 'sender_user_id' => $actor->getKey(),
+                'actor_user_id' => $actor->getKey(),
+                'actor_context' => $context,
                 'sender_role' => $actorRole,
                 'type' => OrderMessageType::ScheduleUpdate,
                 'body' => $body,

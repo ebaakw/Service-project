@@ -75,6 +75,7 @@ return [
     'orders.items.manage' => 'Manage order items',
     'orders.send_invoice' => 'Send final invoice',
     'orders.force_complete' => 'Force complete order',
+    'orders.chat.reply' => 'Reply on order chat on behalf of technician',
     'invoices.view' => 'View invoices',
     'reports.view' => 'View reports',
     'settings.manage' => 'Manage settings',
@@ -107,4 +108,3 @@ return [
     // UI helpers
     'role_key' => 'Role key (system name)',
 ];
-

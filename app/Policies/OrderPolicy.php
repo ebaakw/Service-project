@@ -159,6 +159,22 @@ class OrderPolicy
         return $this->updateScheduleCustomer($user, $order);
     }
 
+    public function replyToChat(User $user, Order $order): bool
+    {
+        if ($user->isPlatformAdmin()) {
+            return $order->allowsScheduleUpdates() && $order->technician_id !== null;
+        }
+
+        if ($user->isCompanyUser()) {
+            return $this->sameCompany($user, $order)
+                && $user->hasPermission('orders.chat.reply', $order->company_id)
+                && $order->allowsScheduleUpdates()
+                && $order->technician_id !== null;
+        }
+
+        return false;
+    }
+
     private function sameCompany(User $user, Order $order): bool
     {
         $company = current_company();

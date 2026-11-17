@@ -75,6 +75,7 @@ return [
     'orders.items.manage' => 'إدارة عناصر الطلب',
     'orders.send_invoice' => 'إرسال الفاتورة النهائية',
     'orders.force_complete' => 'إغلاق/إكمال الطلب بالقوة',
+    'orders.chat.reply' => 'الرد في شات الطلب نيابة عن الفني',
     'invoices.view' => 'عرض الفواتير',
     'reports.view' => 'عرض التقارير',
     'settings.manage' => 'إدارة الإعدادات',
@@ -107,4 +108,3 @@ return [
     // UI helpers
     'role_key' => 'مفتاح الدور (اسم النظام)',
 ];
-

@@ -62,6 +62,7 @@ class CompanyRoleService
         'orders.items.manage',
         'orders.send_invoice',
         'orders.force_complete',
+        'orders.chat.reply',
         'invoices.view',
 
         // Pricing (tenant area today uses pricing.manage)
@@ -146,4 +147,3 @@ class CompanyRoleService
         });
     }
 }
-

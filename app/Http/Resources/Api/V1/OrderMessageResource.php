@@ -30,6 +30,20 @@ class OrderMessageResource extends JsonResource
                     'display_name' => $this->sender->localized('name'),
                 ];
             }),
+            'actor_context' => $this->actor_context?->value,
+            'actor_context_label' => $this->actor_context?->label(),
+            'on_behalf_label' => $this->resource->onBehalfLabel(),
+            'actor' => $this->whenLoaded('actor', function () {
+                if ($this->actor === null) {
+                    return null;
+                }
+
+                return [
+                    'id' => $this->actor->id,
+                    'name' => $this->actor->name,
+                    'display_name' => $this->actor->localized('name'),
+                ];
+            }),
             'body' => $this->body,
             'proposed_scheduled_at' => $this->proposed_scheduled_at?->toIso8601String(),
             'proposed_duration_minutes' => $this->proposed_duration_minutes !== null

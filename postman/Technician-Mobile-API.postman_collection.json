@@ -667,7 +667,7 @@
               }
             ],
             "url": "{{base_url}}/api/v1/technician/orders/{{order_id}}/messages",
-            "description": "Chat thread with the customer on this order. Includes `text` and `schedule_update` messages."
+            "description": "Chat thread with the customer on this order. Includes `text` and `schedule_update` messages.\n\nEach message may include `actor_context`, `on_behalf_label`, and `actor` when company/platform replied on behalf of the technician (`sender_role` stays `technician`)."
           }
         },
         {

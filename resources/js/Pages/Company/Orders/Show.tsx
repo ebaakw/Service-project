@@ -1,3 +1,4 @@
+import OrderChatPanel from '@/Components/Orders/OrderChatPanel';
 import CompanyDashboardLayout from '@/Layouts/CompanyDashboardLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { FormEvent, useMemo } from 'react';
@@ -40,9 +41,19 @@ type OrderPageProps = {
         payment_url: string | null;
     } | null;
     technicians: { id: number; user: { name: string } }[];
+    canReplyChat: boolean;
+    messagesIndexUrl: string;
+    messagesStoreUrl: string;
 };
 
-export default function CompanyOrderShow({ order, inspectionPayment, technicians }: OrderPageProps) {
+export default function CompanyOrderShow({
+    order,
+    inspectionPayment,
+    technicians,
+    canReplyChat,
+    messagesIndexUrl,
+    messagesStoreUrl,
+}: OrderPageProps) {
     const flash = usePage().props.flash as { message?: string } | undefined;
 
     const statusForm = useForm({
@@ -373,6 +384,12 @@ export default function CompanyOrderShow({ order, inspectionPayment, technicians
                             ))}
                         </ul>
                     </div>
+
+                    <OrderChatPanel
+                        indexUrl={messagesIndexUrl}
+                        storeUrl={messagesStoreUrl}
+                        canReplyChat={canReplyChat}
+                    />
                 </div>
             </div>
         </CompanyDashboardLayout>

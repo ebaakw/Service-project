@@ -53,6 +53,7 @@ return [
         'forbidden' => 'غير مصرح لك بالمراسلة على هذا الطلب.',
         'no_technician' => 'لا يوجد فني معيّن بعد للمراسلة.',
         'notification_title' => 'رسالة جديدة على الطلب',
+        'staff_on_behalf_notification_title' => 'رد الشركة على شات الطلب',
         'type' => [
             'text' => 'رسالة',
             'schedule_update' => 'تحديث موعد',
@@ -62,6 +63,24 @@ return [
             'technician' => 'الفني',
             'system' => 'النظام',
         ],
+        'actor_context' => [
+            'customer' => 'العميل',
+            'technician' => 'الفني',
+            'company' => 'الشركة',
+            'platform' => 'المنصة',
+        ],
+        'on_behalf' => [
+            'company' => 'نيابة عن الفني عبر الشركة',
+            'platform' => 'نيابة عن الفني عبر الدعم',
+        ],
+        'chat_title' => 'محادثة الطلب',
+        'chat_empty' => 'لا توجد رسائل بعد.',
+        'chat_placeholder' => 'اكتب رسالة نيابة عن الفني…',
+        'chat_send' => 'إرسال',
+        'chat_load_older' => 'تحميل رسائل أقدم',
+        'chat_locked' => 'المراسلة غير متاحة في حالة هذا الطلب.',
+        'last_message' => 'آخر رسالة',
+        'has_messages' => 'يوجد محادثة',
     ],
     'history' => [
         'title_created' => 'تم تسجيل الحالة: :status',

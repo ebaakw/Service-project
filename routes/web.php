@@ -5,6 +5,7 @@ use App\Http\Controllers\Company\CompanySettingsController;
 use App\Http\Controllers\Company\FeedbackTicketController as CompanyFeedbackTicketController;
 use App\Http\Controllers\Company\OrderController as CompanyOrderController;
 use App\Http\Controllers\Company\OrderItemController as CompanyOrderItemController;
+use App\Http\Controllers\Company\OrderMessageController as CompanyOrderMessageController;
 use App\Http\Controllers\Company\PortfolioMediaController;
 use App\Http\Controllers\Company\PortfolioProjectController;
 use App\Http\Controllers\Company\RoleController as CompanyRoleController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Platform\ContentPageController;
 use App\Http\Controllers\Platform\CustomerController as PlatformCustomerController;
 use App\Http\Controllers\Platform\InvoiceController as PlatformInvoiceController;
 use App\Http\Controllers\Platform\OrderController as PlatformOrderController;
+use App\Http\Controllers\Platform\OrderMessageController as PlatformOrderMessageController;
 use App\Http\Controllers\Platform\PlatformFeedbackTicketController;
 use App\Http\Controllers\Platform\PlatformPortfolioMediaController;
 use App\Http\Controllers\Platform\PlatformPortfolioProjectController;
@@ -141,6 +143,12 @@ Route::middleware(['auth', 'verified', 'platform.admin'])->prefix('platform')->n
     Route::resource('content-pages', ContentPageController::class)->except(['show']);
 
     Route::get('/orders', [PlatformOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [PlatformOrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}/messages', [PlatformOrderMessageController::class, 'index'])
+        ->name('orders.messages.index');
+    Route::post('/orders/{order}/messages', [PlatformOrderMessageController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('orders.messages.store');
     Route::get('/invoices', [PlatformInvoiceController::class, 'index'])->name('invoices.index');
 
     Route::get('/reports/technicians', PlatformTechnicianReportController::class)->name('reports.technicians');
@@ -194,6 +202,11 @@ Route::middleware(['auth', 'verified', 'company.user', 'company.resolve'])->pref
     Route::get('alerts/awaiting-accept', CompanyAwaitingAcceptAlertController::class)->name('alerts.awaiting-accept');
 
     Route::resource('orders', CompanyOrderController::class)->only(['index', 'show']);
+    Route::get('orders/{order}/messages', [CompanyOrderMessageController::class, 'index'])
+        ->name('orders.messages.index');
+    Route::post('orders/{order}/messages', [CompanyOrderMessageController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('orders.messages.store');
     Route::post('orders/{order}/assign-technician', [CompanyOrderController::class, 'assignTechnician'])
         ->name('orders.assign-technician');
     Route::patch('orders/{order}/status', [CompanyOrderController::class, 'updateStatus'])

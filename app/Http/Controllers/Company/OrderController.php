@@ -41,6 +41,7 @@ class OrderController extends Controller
         $status = trim((string) $request->string('status')->toString());
         $dateFrom = trim((string) $request->string('date_from')->toString());
         $dateTo = trim((string) $request->string('date_to')->toString());
+        $hasMessages = $request->boolean('has_messages');
 
         $allowedStatuses = array_map(
             static fn (OrderStatus $case): string => $case->value,
@@ -98,8 +99,16 @@ class OrderController extends Controller
             $ordersQuery->whereDate('created_at', '<=', $dateTo);
         }
 
+        if ($hasMessages) {
+            $ordersQuery
+                ->whereNotNull('last_message_at')
+                ->orderByDesc('last_message_at')
+                ->orderByDesc('id');
+        } else {
+            $ordersQuery->orderByDesc('id');
+        }
+
         $orders = $ordersQuery
-            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -110,6 +119,7 @@ class OrderController extends Controller
                 'status' => $status,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
+                'has_messages' => $hasMessages,
                 'per_page' => $perPage,
             ],
         ]);
@@ -150,6 +160,9 @@ class OrderController extends Controller
             'order' => $order,
             'inspectionPayment' => $inspectionPayment,
             'technicians' => $technicians,
+            'canReplyChat' => request()->user()?->can('replyToChat', $order) ?? false,
+            'messagesIndexUrl' => route('company.orders.messages.index', $order),
+            'messagesStoreUrl' => route('company.orders.messages.store', $order),
         ]);
     }
 

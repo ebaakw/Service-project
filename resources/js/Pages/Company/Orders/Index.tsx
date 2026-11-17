@@ -19,6 +19,9 @@ type OrderRow = {
     inspection_payment_status: string;
     final_payment_status: string;
     created_at: string | null;
+    last_message_at?: string | null;
+    last_message_preview?: string | null;
+    last_message_sender_role?: string | null;
     customer: {
         user: {
             name: string;
@@ -49,6 +52,7 @@ type Filters = {
     status: string;
     date_from: string;
     date_to: string;
+    has_messages?: boolean;
     per_page?: number;
 };
 
@@ -135,6 +139,7 @@ export default function CompanyOrdersIndex({
     const [status, setStatus] = useState(filters.status ?? '');
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? '');
     const [dateTo, setDateTo] = useState(filters.date_to ?? '');
+    const [hasMessages, setHasMessages] = useState(Boolean(filters.has_messages));
     const [perPage, setPerPage] = useState<number>(Number(filters.per_page ?? 10) || 10);
     const [isFiltering, setIsFiltering] = useState(false);
     const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>([]);
@@ -142,7 +147,8 @@ export default function CompanyOrdersIndex({
         (filters.search ?? '').trim()
             || (filters.status ?? '').trim()
             || (filters.date_from ?? '').trim()
-            || (filters.date_to ?? '').trim(),
+            || (filters.date_to ?? '').trim()
+            || filters.has_messages,
     );
 
     const applyFilters = (nextPerPage = perPage) => {
@@ -154,6 +160,7 @@ export default function CompanyOrdersIndex({
                 status: status || undefined,
                 date_from: dateFrom || undefined,
                 date_to: dateTo || undefined,
+                has_messages: hasMessages ? 1 : undefined,
                 per_page: nextPerPage || undefined,
             },
             {
@@ -170,6 +177,7 @@ export default function CompanyOrdersIndex({
         setStatus('');
         setDateFrom('');
         setDateTo('');
+        setHasMessages(false);
         setPerPage(10);
         setIsFiltering(true);
         router.get(
@@ -281,6 +289,26 @@ export default function CompanyOrdersIndex({
                 searchText: (r) => `${paymentLabels[r.final_payment_status] ?? ''} ${r.final_payment_status}`.trim(),
             },
             {
+                id: 'last_message',
+                key: 'last_message',
+                label: t.col_last_message ?? 'Last message',
+                header: t.col_last_message ?? 'Last message',
+                render: (r) =>
+                    r.last_message_at ? (
+                        <div>
+                            <div className="small text-truncate" style={{ maxWidth: 220 }}>
+                                {r.last_message_preview || '—'}
+                            </div>
+                            <div className="text-muted" style={{ fontSize: 11 }} dir="ltr">
+                                {formatDate(r.last_message_at, locale)}
+                            </div>
+                        </div>
+                    ) : (
+                        '—'
+                    ),
+                searchText: (r) => `${r.last_message_preview ?? ''} ${r.last_message_at ?? ''}`.trim(),
+            },
+            {
                 id: 'actions',
                 key: 'actions',
                 label: t.col_actions ?? 'Actions',
@@ -385,6 +413,21 @@ export default function CompanyOrdersIndex({
                                 onChange={(e) => setDateTo(e.target.value)}
                                 style={{ textAlign: isRtl ? 'right' : 'left' }}
                             />
+                        </div>
+
+                        <div className="col-sm-12 col-md-3 mb-3 d-flex align-items-end">
+                            <div className="custom-control custom-checkbox mb-2">
+                                <input
+                                    type="checkbox"
+                                    className="custom-control-input"
+                                    id="company-orders-has-messages"
+                                    checked={hasMessages}
+                                    onChange={(e) => setHasMessages(e.target.checked)}
+                                />
+                                <label className="custom-control-label" htmlFor="company-orders-has-messages">
+                                    {t.has_messages ?? 'Has chat'}
+                                </label>
+                            </div>
                         </div>
 
                         <div className="col-sm-12" style={{ textAlign: isRtl ? 'right' : 'left' }}>

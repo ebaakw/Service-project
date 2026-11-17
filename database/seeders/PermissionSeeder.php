@@ -55,6 +55,7 @@ class PermissionSeeder extends Seeder
             ['key' => 'orders.items.manage', 'name' => 'Manage order items', 'group' => 'orders'],
             ['key' => 'orders.send_invoice', 'name' => 'Send final invoice', 'group' => 'orders'],
             ['key' => 'orders.force_complete', 'name' => 'Force complete order', 'group' => 'orders'],
+            ['key' => 'orders.chat.reply', 'name' => 'Reply on order chat on behalf of technician', 'group' => 'orders'],
 
             ['key' => 'invoices.view', 'name' => 'View invoices', 'group' => 'invoices'],
 
